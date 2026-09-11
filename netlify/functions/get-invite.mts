@@ -1,11 +1,12 @@
 import { getDatabase } from "@netlify/database";
 import type { Config } from "@netlify/functions";
+import { secureJson } from "./_shared/domain.mjs";
 
 export default async (req: Request) => {
   if (req.method !== "GET") return new Response("Method Not Allowed", { status: 405 });
   const url = new URL(req.url);
-  const code = url.searchParams.get("code");
-  if (!code) return Response.json({ error: "الرابط غير صالح" }, { status: 400 });
+  const code = String(url.searchParams.get("code") || "").trim().slice(0, 32);
+  if (!code) return secureJson({ error: "الرابط غير صالح" }, 400);
   const db = getDatabase();
   const [invite] = await db.sql`
     SELECT g.id AS guest_id, g.name AS guest_name, g.rsvp_status, g.companion_count, g.children_count, g.note, g.companion_names, g.share_consent, g.share_total, g.attendance_state, g.payment_status, g.payment_amount,
@@ -14,9 +15,9 @@ export default async (req: Request) => {
     FROM guests g JOIN events e ON e.id=g.event_id
     WHERE g.code=${code}
   `;
-  if (!invite) return Response.json({ error: "الدعوة غير موجودة" }, { status: 404 });
+  if (!invite) return secureJson({ error: "الدعوة غير موجودة" }, 404);
   await db.sql`UPDATE guests SET viewed_at=COALESCE(viewed_at, NOW()) WHERE code=${code}`;
-  return Response.json({ invite });
+  return secureJson({ invite });
 };
 
 export const config: Config = { path: "/api/invite" };
