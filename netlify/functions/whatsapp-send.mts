@@ -1,5 +1,6 @@
 import { getDatabase } from "@netlify/database";
 import type { Config } from "@netlify/functions";
+import { isSameOriginRequest, ownerTokenFrom } from "./_shared/domain.mjs";
 
 function normalizePhone(phone: string) {
   let p = String(phone || "").replace(/\D/g, "");
@@ -36,6 +37,7 @@ function formatSaudiDate(dateValue: unknown, timeValue?: unknown) {
 
 export default async (req: Request) => {
   if (req.method !== "POST") return json({ error: "Method not allowed" }, 405);
+  if (!isSameOriginRequest(req)) return json({ error: "Request not allowed" }, 403);
 
   const apiKey = Netlify.env.get("D360_API_KEY");
   const apiBase = (Netlify.env.get("D360_API_BASE") || "https://waba-sandbox.360dialog.io/v1").replace(/\/$/, "");
@@ -43,7 +45,8 @@ export default async (req: Request) => {
   if (!apiKey) return json({ error: "WhatsApp API is not configured", code: "D360_NOT_CONFIGURED" }, 503);
 
   const body: any = await req.json().catch(() => ({}));
-  const { eventId, ownerToken, guestId, reminder = false } = body;
+  const { eventId, guestId, reminder = false } = body;
+  const ownerToken = ownerTokenFrom(req, body).slice(0, 120);
   if (!eventId || !ownerToken || !guestId) return json({ error: "Missing fields" }, 400);
 
   const db = getDatabase();
