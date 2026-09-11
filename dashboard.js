@@ -1,16 +1,23 @@
 const root=document.getElementById('dashRoot');
 const saved=JSON.parse(localStorage.getItem('noortoonaOwner')||'null');
 const qs=new URLSearchParams(location.search); const eventId=qs.get('event')||saved?.eventId; const token=qs.get('token')||saved?.ownerToken;
+if(eventId&&token){
+ localStorage.setItem('noortoonaOwner',JSON.stringify({eventId,ownerToken:token}));
+ if(qs.has('token')){qs.delete('token');const cleanQuery=qs.toString();history.replaceState(null,'',`${location.pathname}${cleanQuery?`?${cleanQuery}`:''}${location.hash}`)}
+}
+const ownerHeaders={'content-type':'application/json','x-noortoona-owner-token':token||''};
 const esc=s=>String(s??'').replace(/[&<>'"]/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'}[m]));
 let dashboardData=null;
-let filters={q:'',status:'all',view:'all'};
+let filters={q:'',status:'all',view:'all',arrival:'all'};
 let importPreview=[];
+let scannerControls=null;
+let scannerBusy=false;
 
 async function load(){
  if(!eventId||!token){root.innerHTML='<div class="dash-empty"><h1>لا توجد مناسبة مرتبطة بهذا الجهاز</h1><p>أنشئ دعوتك أولًا من الصفحة الرئيسية.</p><a href="/" class="gold-btn">إنشاء دعوة</a></div>';return;}
  root.classList.add('is-loading');
  try{
-  const res=await fetch(`/api/dashboard?event=${encodeURIComponent(eventId)}&token=${encodeURIComponent(token)}`); const data=await res.json();
+  const res=await fetch(`/api/dashboard?event=${encodeURIComponent(eventId)}`,{headers:{'x-noortoona-owner-token':token}}); const data=await res.json();
   if(!res.ok){root.innerHTML=`<div class="dash-empty"><h1>تعذر فتح اللوحة</h1><p>${esc(data.error)}</p></div>`;return;}
   localStorage.setItem('noortoonaOwner',JSON.stringify({eventId,ownerToken:token})); dashboardData=data; render(data);
  }catch{root.innerHTML='<div class="dash-empty"><h1>تعذر الاتصال</h1><p>تحقق من الاتصال وحاول مرة أخرى.</p><button class="gold-btn" onclick="load()">إعادة المحاولة</button></div>'}
@@ -22,7 +29,8 @@ function getFilteredGuests(guests){
   const matchQ=!q || String(g.name||'').toLowerCase().includes(q) || String(g.phone||'').includes(q);
   const matchStatus=filters.status==='all' || (filters.status==='pending' ? !g.rsvp_status || g.rsvp_status==='pending' : g.rsvp_status===filters.status);
   const matchView=filters.view==='all' || (filters.view==='viewed'?!!g.viewed_at:!g.viewed_at);
-  return matchQ&&matchStatus&&matchView;
+  const matchArrival=filters.arrival==='all' || (filters.arrival==='checked'?!!g.checked_in_at:!g.checked_in_at);
+  return matchQ&&matchStatus&&matchView&&matchArrival;
  });
 }
 function statusLabel(g){return g.rsvp_status==='accepted'?'مؤكد':g.rsvp_status==='declined'?'معتذر':g.rsvp_status==='maybe'?'ربما':'بانتظار الرد'}
@@ -37,6 +45,7 @@ function paymentLabel(g){return g.payment_status==='paid'?'مدفوعة':'غير
 function render({event,guests}){
  const isActivity=event.occasion==='تجمع ونشاط';
  const viewed=guests.filter(g=>g.viewed_at).length;
+ const checkedIn=guests.filter(g=>g.checked_in_at).length;
  const acceptedGuests=guests.filter(g=>g.rsvp_status==='accepted');
  const confirmed=acceptedGuests.filter(g=>g.attendance_state!=='waitlist');
  const waitlisted=acceptedGuests.filter(g=>g.attendance_state==='waitlist');
@@ -63,46 +72,114 @@ function render({event,guests}){
    </div>
    ${capacity?`<div class="capacity-bar"><span style="width:${Math.min(100,(expected/capacity)*100)}%"></span></div><p>${expected} من ${capacity} مكان محجوز</p>`:''}
   </section>`:'';
- root.innerHTML=`<div class="dash-title-row"><div><span class="eyebrow dark">${isActivity?'لوحة منظم النشاط':'لوحة صاحب المناسبة'}</span><h1>${esc(event.title)}</h1><p>${esc(event.location||'')}</p></div><div class="dash-title-actions"><button id="refreshBtn" class="outline-btn dark-outline">↻ تحديث</button><button id="exportBtn" class="outline-btn dark-outline">↓ تصدير CSV</button></div></div>
- <div class="dash-stat-grid dash-stat-grid-7"><div><small>إجمالي الضيوف</small><strong>${guests.length}</strong></div><div><small>شاهدوا</small><strong>${viewed}</strong></div><div><small>أكدوا</small><strong>${accepted}</strong></div><div><small>ربما</small><strong>${maybe}</strong></div><div><small>بانتظار الرد</small><strong>${pending}</strong></div><div><small>اعتذروا</small><strong>${declined}</strong></div><div class="accent-stat"><small>${isActivity?'المشاركون الفعليون':'الحضور المتوقع'}</small><strong>${expected}</strong><em>مع المرافقين</em></div></div>
+ root.innerHTML=`<div class="dash-title-row"><div><span class="eyebrow dark">${isActivity?'لوحة منظم النشاط':'لوحة صاحب المناسبة'}</span><h1>${esc(event.title)}</h1><p>${esc(event.location||'')}</p></div><div class="dash-title-actions"><button id="scanBtn" class="gold-btn scan-open-btn">▣ مسح QR</button><button id="refreshBtn" class="outline-btn dark-outline">↻ تحديث</button><button id="exportBtn" class="outline-btn dark-outline">↓ تصدير CSV</button></div></div>
+ <div class="dash-stat-grid dash-stat-grid-8"><div><small>إجمالي الضيوف</small><strong>${guests.length}</strong></div><div><small>شاهدوا</small><strong>${viewed}</strong></div><div class="checked-stat"><small>وصلوا</small><strong>${checkedIn}</strong></div><div><small>أكدوا</small><strong>${accepted}</strong></div><div><small>ربما</small><strong>${maybe}</strong></div><div><small>بانتظار الرد</small><strong>${pending}</strong></div><div><small>اعتذروا</small><strong>${declined}</strong></div><div class="accent-stat"><small>${isActivity?'المشاركون الفعليون':'الحضور المتوقع'}</small><strong>${expected}</strong><em>مع المرافقين</em></div></div>
  ${activityPanel}
  <section class="dash-panel"><div class="panel-head"><div><h2>إدارة الضيوف</h2><p>أضف يدويًا أو استورد قائمة كاملة من Excel / CSV.</p></div><div class="panel-actions"><button id="importBtn" class="outline-btn dark-outline small-gold">⇧ استيراد Excel / CSV</button><button id="remindBtn" class="gold-btn small-gold">تذكير غير المستجيبين</button></div></div>
  <form id="guestForm" class="guest-form"><input name="name" placeholder="اسم الضيف" required><input name="phone" inputmode="tel" placeholder="رقم الجوال (اختياري)"><button class="gold-btn">+ إضافة ضيف</button></form>
  <div class="import-help"><span>صيغة الملف:</span> عمود للاسم، وعمود اختياري للجوال. نتعرف تلقائيًا على عناوين مثل <b>الاسم / Name</b> و <b>الجوال / Phone</b>.</div>
- <div class="guest-tools"><label class="search-box"><span>⌕</span><input id="guestSearch" value="${esc(filters.q)}" placeholder="ابحث بالاسم أو الجوال"></label><select id="statusFilter"><option value="all">كل حالات الرد</option><option value="accepted" ${filters.status==='accepted'?'selected':''}>مؤكد</option><option value="maybe" ${filters.status==='maybe'?'selected':''}>ربما</option><option value="pending" ${filters.status==='pending'?'selected':''}>بانتظار الرد</option><option value="declined" ${filters.status==='declined'?'selected':''}>معتذر</option></select><select id="viewFilter"><option value="all">كل المشاهدات</option><option value="viewed" ${filters.view==='viewed'?'selected':''}>شاهد الدعوة</option><option value="unviewed" ${filters.view==='unviewed'?'selected':''}>لم يفتح</option></select><span class="result-count">${list.length} ضيف</span></div>
+ <div class="guest-tools"><label class="search-box"><span>⌕</span><input id="guestSearch" value="${esc(filters.q)}" placeholder="ابحث بالاسم أو الجوال"></label><select id="statusFilter"><option value="all">كل حالات الرد</option><option value="accepted" ${filters.status==='accepted'?'selected':''}>مؤكد</option><option value="maybe" ${filters.status==='maybe'?'selected':''}>ربما</option><option value="pending" ${filters.status==='pending'?'selected':''}>بانتظار الرد</option><option value="declined" ${filters.status==='declined'?'selected':''}>معتذر</option></select><select id="viewFilter"><option value="all">كل المشاهدات</option><option value="viewed" ${filters.view==='viewed'?'selected':''}>شاهد الدعوة</option><option value="unviewed" ${filters.view==='unviewed'?'selected':''}>لم يفتح</option></select><select id="arrivalFilter"><option value="all">كل حالات الدخول</option><option value="checked" ${filters.arrival==='checked'?'selected':''}>تم الدخول</option><option value="unchecked" ${filters.arrival==='unchecked'?'selected':''}>لم يصل</option></select><span class="result-count">${list.length} ضيف</span></div>
  <div class="table-wrap"><table><thead><tr><th>الضيف</th><th>الرد</th><th>المشاهدة</th><th>المرافقون</th>${isActivity?'<th>أسماء المرافقين</th><th>القطّة</th><th>الدفع</th>':'<th>الأطفال</th><th>ملاحظة</th>'}<th>واتساب</th><th>الإجراءات</th></tr></thead><tbody>${list.length?list.map(g=>{
    const names=parseCompanionNames(g.companion_names);
    const wait=g.attendance_state==='waitlist';
-   return `<tr class="${wait?'waitlist-row':''}"><td><strong>${esc(g.name)}</strong><small>${esc(g.phone||'بدون رقم')}</small></td><td><span class="status ${wait?'maybe':(g.rsvp_status||'pending')}">${wait?'قائمة انتظار':statusLabel(g)}</span></td><td><span class="view-state ${g.viewed_at?'seen':'unseen'}">${g.viewed_at?'● تمت المشاهدة':'○ لم يفتح'}</span></td><td>${g.rsvp_status==='accepted'?Number(g.companion_count||0):'—'}</td>${isActivity?`<td><small>${names.length?names.map(esc).join('، '):'—'}</small></td><td><strong>${g.rsvp_status==='accepted'?money(g.share_total)+' ر.س':'—'}</strong></td><td>${g.rsvp_status==='accepted'&&!wait?`<button class="payment-pill ${g.payment_status==='paid'?'paid':''}" data-payment-id="${esc(g.id)}" data-payment-status="${g.payment_status==='paid'?'unpaid':'paid'}">${paymentLabel(g)}</button>`:'—'}</td>`:`<td>${g.rsvp_status==='accepted'?Number(g.children_count||0):'—'}</td><td><small>${esc(g.note||'—')}</small></td>`}<td><span class="wa-state ${esc(g.whatsapp_status||'idle')}">${waStatusLabel(g)}</span></td><td><div class="invite-actions"><button class="copy-link" data-code="${esc(g.code)}">نسخ الرابط</button><button class="wa-link" data-code="${esc(g.code)}" data-phone="${esc(g.phone||'')}" data-name="${esc(g.name)}" data-id="${esc(g.id)}">واتساب</button><button class="delete-guest danger-link" data-id="${esc(g.id)}" data-name="${esc(g.name)}">حذف</button></div></td></tr>`
+   return `<tr class="${wait?'waitlist-row':''} ${g.checked_in_at?'checked-in-row':''}"><td><strong>${esc(g.name)}</strong><small>${esc(g.phone||'بدون رقم')}</small>${g.checked_in_at?'<em class="checkin-badge">✓ تم الدخول</em>':''}</td><td><span class="status ${wait?'maybe':(g.rsvp_status||'pending')}">${wait?'قائمة انتظار':statusLabel(g)}</span></td><td><span class="view-state ${g.viewed_at?'seen':'unseen'}">${g.viewed_at?'● تمت المشاهدة':'○ لم يفتح'}</span></td><td>${g.rsvp_status==='accepted'?Number(g.companion_count||0):'—'}</td>${isActivity?`<td><small>${names.length?names.map(esc).join('، '):'—'}</small></td><td><strong>${g.rsvp_status==='accepted'?money(g.share_total)+' ر.س':'—'}</strong></td><td>${g.rsvp_status==='accepted'&&!wait?`<button class="payment-pill ${g.payment_status==='paid'?'paid':''}" data-payment-id="${esc(g.id)}" data-payment-status="${g.payment_status==='paid'?'unpaid':'paid'}">${paymentLabel(g)}</button>`:'—'}</td>`:`<td>${g.rsvp_status==='accepted'?Number(g.children_count||0):'—'}</td><td><small>${esc(g.note||'—')}</small></td>`}<td><span class="wa-state ${esc(g.whatsapp_status||'idle')}">${waStatusLabel(g)}</span></td><td><div class="invite-actions"><button class="copy-link" data-code="${esc(g.code)}">نسخ الرابط</button><button class="wa-link" data-code="${esc(g.code)}" data-phone="${esc(g.phone||'')}" data-name="${esc(g.name)}" data-id="${esc(g.id)}">واتساب</button><button class="delete-guest danger-link" data-id="${esc(g.id)}" data-name="${esc(g.name)}">حذف</button></div></td></tr>`
   }).join(''):`<tr><td colspan="${isActivity?10:8}" class="empty-row">لا يوجد ضيوف مطابقون للفلاتر.</td></tr>`}</tbody></table></div></section>`;
  bind(event,guests);
 }
 function bind(event,guests){
- document.getElementById('refreshBtn').onclick=load; document.getElementById('guestForm').onsubmit=addGuest; document.getElementById('exportBtn').onclick=()=>exportCSV(event,guests); document.getElementById('remindBtn').onclick=()=>openReminderQueue(event,guests); document.getElementById('importBtn').onclick=()=>document.getElementById('bulkGuestFile').click();
+ document.getElementById('scanBtn').onclick=openScanner; document.getElementById('refreshBtn').onclick=load; document.getElementById('guestForm').onsubmit=addGuest; document.getElementById('exportBtn').onclick=()=>exportCSV(event,guests); document.getElementById('remindBtn').onclick=()=>openReminderQueue(event,guests); document.getElementById('importBtn').onclick=()=>document.getElementById('bulkGuestFile').click();
  const fileInput=document.getElementById('bulkGuestFile'); fileInput.onchange=async e=>{const file=e.target.files?.[0]; if(file)await parseGuestFile(file); e.target.value=''};
  document.getElementById('guestSearch').oninput=e=>{filters.q=e.target.value;render(dashboardData)};
  document.getElementById('statusFilter').onchange=e=>{filters.status=e.target.value;render(dashboardData)};
  document.getElementById('viewFilter').onchange=e=>{filters.view=e.target.value;render(dashboardData)};
+ document.getElementById('arrivalFilter').onchange=e=>{filters.arrival=e.target.value;render(dashboardData)};
  document.querySelectorAll('.copy-link').forEach(b=>b.onclick=()=>copyInvite(b.dataset.code)); document.querySelectorAll('.wa-link').forEach(b=>b.onclick=()=>sendWhatsApp(b.dataset.phone,b.dataset.name,b.dataset.code,event,false,b.dataset.id));
  document.querySelectorAll('.delete-guest').forEach(b=>b.onclick=()=>deleteGuest(b.dataset.id,b.dataset.name));
  document.querySelectorAll('.payment-pill').forEach(b=>b.onclick=()=>setPaymentStatus(b.dataset.paymentId,b.dataset.paymentStatus));
 }
+function stopScanner(){
+ try{scannerControls?.stop()}catch{}
+ scannerControls=null;
+ document.querySelectorAll('#scannerModal video').forEach(video=>video.srcObject?.getTracks?.().forEach(track=>track.stop()));
+}
+function closeScanner(){stopScanner();document.getElementById('scannerModal')?.remove();scannerBusy=false}
+function scannerMessage(message,type='info'){
+ const box=document.getElementById('scannerStatus');
+ if(box){box.className=`scanner-status ${type}`;box.textContent=message}
+}
+function scannerCode(value){
+ const raw=String(value||'').trim();
+ if(!raw)return '';
+ try{const url=new URL(raw,location.origin);const match=url.pathname.match(/\/i\/([^/?#]+)/);if(match)return decodeURIComponent(match[1])}catch{}
+ return raw.replace(/^.*\/i\//,'').split(/[?#]/)[0].trim();
+}
+async function submitCheckIn(value){
+ const code=scannerCode(value);
+ if(!code){scannerMessage('أدخل رابط الدعوة أو الكود أولًا','error');return}
+ if(scannerBusy)return;
+ scannerBusy=true;stopScanner();scannerMessage('جاري التحقق من الدعوة…','loading');
+ try{
+  const res=await fetch('/api/check-in',{method:'POST',headers:ownerHeaders,body:JSON.stringify({eventId,code})});
+  const data=await res.json().catch(()=>({}));
+  if(!res.ok){scannerMessage(data.error||'تعذر التحقق من الدعوة','error');return}
+  const result=document.getElementById('scannerResult');
+  const warning=data.warning?`<p class="scanner-warning">${esc(data.warning)}</p>`:'';
+  result.innerHTML=`<div class="checkin-success"><span>✓</span><small>${data.alreadyCheckedIn?'مسجّل مسبقًا':'تم تسجيل الوصول'}</small><h3>${esc(data.guest.name)}</h3><p>${statusLabel(data.guest)} · ${Number(data.guest.companion_count||0)} مرافق · ${Number(data.guest.children_count||0)} طفل</p>${warning}<button class="gold-btn scan-again">مسح ضيف آخر</button></div>`;
+  document.getElementById('scannerCapture').classList.add('hidden');result.classList.remove('hidden');
+  result.querySelector('.scan-again').onclick=()=>{result.classList.add('hidden');document.getElementById('scannerCapture').classList.remove('hidden');scannerMessage('اختر طريقة قراءة الدعوة');scannerBusy=false};
+  await load();
+ }catch{scannerMessage('تعذر الاتصال. تحقق من الشبكة وحاول مجددًا.','error')}
+ finally{scannerBusy=false}
+}
+async function startCameraScanner(){
+ if(!window.ZXingBrowser){scannerMessage('تعذر تحميل قارئ QR. استخدم الصورة أو الإدخال اليدوي.','error');return}
+ stopScanner();scannerMessage('وجّه الكاميرا نحو رمز QR','loading');
+ try{
+  const reader=new ZXingBrowser.BrowserMultiFormatReader();
+  scannerControls=await reader.decodeFromConstraints({audio:false,video:{facingMode:{ideal:'environment'}}},document.getElementById('scannerVideo'),(result,error,controls)=>{
+   scannerControls=controls;
+   if(result&&!scannerBusy)submitCheckIn(result.getText());
+   else if(error && error.name!=='NotFoundException' && error.name!=='ChecksumException' && error.name!=='FormatException')scannerMessage('لم نتمكن من قراءة الرمز. قرّب الكاميرا أو استخدم صورة.','error');
+  });
+ }catch(err){
+  console.error(err);scannerMessage('لم تُمنح صلاحية الكاميرا. يمكنك اختيار صورة QR أو كتابة الكود.','error');
+ }
+}
+async function scanImage(file){
+ if(!file)return;
+ if(!window.ZXingBrowser){scannerMessage('تعذر تحميل قارئ QR. استخدم الإدخال اليدوي.','error');return}
+ stopScanner();scannerMessage('جاري قراءة الصورة…','loading');
+ const imageUrl=URL.createObjectURL(file);
+ try{const reader=new ZXingBrowser.BrowserMultiFormatReader();const result=await reader.decodeFromImageUrl(imageUrl);await submitCheckIn(result.getText())}
+ catch{scannerMessage('لم يظهر رمز QR واضح في الصورة. جرّب صورة أقرب أو أدخل الكود يدويًا.','error')}
+ finally{URL.revokeObjectURL(imageUrl)}
+}
+function openScanner(){
+ closeScanner();
+ const modal=document.createElement('div');modal.id='scannerModal';modal.className='dash-modal scanner-modal';
+ modal.innerHTML=`<div class="dash-modal-card scanner-card"><div class="modal-head"><div><span class="eyebrow dark">بوابة الدخول</span><h3>مسح دعوة الضيف</h3><p>اقرأ QR من الدعوة لتسجيل وصول الضيف لهذه المناسبة.</p></div><button class="modal-close" aria-label="إغلاق">×</button></div><div id="scannerCapture"><div class="scanner-viewport"><video id="scannerVideo" playsinline muted></video><i></i></div><div id="scannerStatus" class="scanner-status">اختر طريقة قراءة الدعوة</div><div class="scanner-actions"><button id="cameraScanBtn" class="gold-btn" type="button">فتح الكاميرا</button><label class="outline-btn dark-outline scanner-file">اختيار صورة QR<input id="scannerImage" type="file" accept="image/*" capture="environment" hidden></label></div><form id="manualScanForm" class="scanner-manual"><label for="manualScanCode">أو أدخل رابط الدعوة / الكود</label><div><input id="manualScanCode" autocomplete="off" placeholder="مثال: AB12CD34"><button class="outline-btn dark-outline">تحقق</button></div></form></div><div id="scannerResult" class="hidden"></div></div>`;
+ document.body.appendChild(modal);
+ modal.querySelector('.modal-close').onclick=closeScanner;modal.onclick=e=>{if(e.target===modal)closeScanner()};
+ modal.querySelector('#cameraScanBtn').onclick=startCameraScanner;
+ modal.querySelector('#scannerImage').onchange=e=>scanImage(e.target.files?.[0]);
+ modal.querySelector('#manualScanForm').onsubmit=e=>{e.preventDefault();submitCheckIn(modal.querySelector('#manualScanCode').value)};
+}
 async function setPaymentStatus(guestId,paymentStatus){
- try{const res=await fetch('/api/guests',{method:'PATCH',headers:{'content-type':'application/json'},body:JSON.stringify({eventId,ownerToken:token,guestId,paymentStatus})});const data=await res.json();if(!res.ok)return toast(data.error||'تعذر تحديث الدفع');await load();toast(paymentStatus==='paid'?'تم تسجيل القطّة كمدفوعة ✓':'تم إرجاع حالة القطّة إلى غير مدفوعة');}catch{toast('تعذر تحديث حالة الدفع')}
+ try{const res=await fetch('/api/guests',{method:'PATCH',headers:ownerHeaders,body:JSON.stringify({eventId,guestId,paymentStatus})});const data=await res.json();if(!res.ok)return toast(data.error||'تعذر تحديث الدفع');await load();toast(paymentStatus==='paid'?'تم تسجيل القطّة كمدفوعة ✓':'تم إرجاع حالة القطّة إلى غير مدفوعة');}catch{toast('تعذر تحديث حالة الدفع')}
 }
 
 async function addGuest(e){e.preventDefault();const fd=new FormData(e.target);const btn=e.submitter;btn.disabled=true;btn.textContent='جاري الإضافة…';
- const res=await fetch('/api/guests',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({eventId,ownerToken:token,name:fd.get('name'),phone:fd.get('phone')})});const data=await res.json();
+ const res=await fetch('/api/guests',{method:'POST',headers:ownerHeaders,body:JSON.stringify({eventId,name:fd.get('name'),phone:fd.get('phone')})});const data=await res.json();
  btn.disabled=false;btn.textContent='+ إضافة ضيف';if(!res.ok)return toast(data.error||'تعذر إضافة الضيف');e.target.reset();await load();toast('تمت إضافة الضيف وإنشاء رابطه الخاص ✨');}
 async function deleteGuest(id,name){
  if(!confirm(`حذف ${name} من قائمة الضيوف؟\nسيصبح رابط دعوته غير صالح.`))return;
- const res=await fetch('/api/guests',{method:'DELETE',headers:{'content-type':'application/json'},body:JSON.stringify({eventId,ownerToken:token,guestId:id})}); const data=await res.json();
+ const res=await fetch('/api/guests',{method:'DELETE',headers:ownerHeaders,body:JSON.stringify({eventId,guestId:id})}); const data=await res.json();
  if(!res.ok)return toast(data.error||'تعذر حذف الضيف'); await load(); toast('تم حذف الضيف');
 }
 function normalizePhone(phone){let p=String(phone||'').replace(/[^0-9]/g,'');if(p.startsWith('00'))p=p.slice(2);if(p.startsWith('0')&&p.length===10)p='966'+p.slice(1);if(p.length===9&&p.startsWith('5'))p='966'+p;return p;}
 function formatEventDate(event){if(!event?.event_date)return '';const raw=String(event.event_date).slice(0,10);const d=new Date(`${raw}T12:00:00+03:00`);if(Number.isNaN(d.getTime()))return String(event.event_date);const day=new Intl.DateTimeFormat('ar-SA-u-nu-latn',{weekday:'long',day:'numeric',month:'long',year:'numeric',timeZone:'Asia/Riyadh'}).format(d);const m=String(event.event_time||'').match(/^(\d{1,2}):(\d{2})/);if(!m)return day;const td=new Date(`${raw}T${m[1].padStart(2,'0')}:${m[2]}:00+03:00`);const clock=new Intl.DateTimeFormat('ar-SA-u-nu-latn',{hour:'numeric',minute:'2-digit',hour12:true,timeZone:'Asia/Riyadh'}).format(td);return `${day} — ${clock}`}
 function makeMessage(name,code,event,reminder=false){const url=`${location.origin}/i/${code}`,date=formatEventDate(event);return `${reminder?'تذكير لطيف ✨\n\n':''}مرحبًا ${name} ✨\nيشرفنا دعوتكم إلى ${event.title}.\n${date?`📅 ${date}\n`:''}${event.location?`📍 ${event.location}\n`:''}\n${reminder?'يسعدنا تأكيد حضوركم من الرابط:\n':'لمشاهدة الدعوة وتأكيد الحضور:\n'}${url}`}
-async function sendWhatsApp(phone,name,code,event,reminder=false,guestId=null){const p=normalizePhone(phone);if(!p){toast('أضف رقم جوال الضيف أولًا');return;}if(guestId){try{const res=await fetch('/api/whatsapp/send',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({eventId,ownerToken:token,guestId,reminder})});const data=await res.json().catch(()=>({}));if(res.ok){toast(reminder?'تم إرسال التذكير عبر WhatsApp ✓':'تم إرسال الدعوة عبر WhatsApp ✓');setTimeout(load,900);return;}if(data.code==='D360_TEMPLATE_REQUIRED')toast('ربط واتساب جاهز تقنيًا؛ بقي اعتماد قالب الرسالة للإنتاج');else if(data.code!=='D360_NOT_CONFIGURED')toast(data.error||'تعذر الإرسال الآلي');}catch{} }window.open(`https://wa.me/${p}?text=${encodeURIComponent(makeMessage(name,code,event,reminder))}`,'_blank','noopener');}
+async function sendWhatsApp(phone,name,code,event,reminder=false,guestId=null){const p=normalizePhone(phone);if(!p){toast('أضف رقم جوال الضيف أولًا');return;}if(guestId){try{const res=await fetch('/api/whatsapp/send',{method:'POST',headers:ownerHeaders,body:JSON.stringify({eventId,guestId,reminder})});const data=await res.json().catch(()=>({}));if(res.ok){toast(reminder?'تم إرسال التذكير عبر WhatsApp ✓':'تم إرسال الدعوة عبر WhatsApp ✓');setTimeout(load,900);return;}if(data.code==='D360_TEMPLATE_REQUIRED')toast('ربط واتساب جاهز تقنيًا؛ بقي اعتماد قالب الرسالة للإنتاج');else if(data.code!=='D360_NOT_CONFIGURED')toast(data.error||'تعذر الإرسال الآلي');}catch{} }window.open(`https://wa.me/${p}?text=${encodeURIComponent(makeMessage(name,code,event,reminder))}`,'_blank','noopener');}
 function openReminderQueue(event,guests){
  const pending=guests.filter(g=>(!g.rsvp_status||g.rsvp_status==='pending'||g.rsvp_status==='maybe')&&normalizePhone(g.phone));
  if(!pending.length){toast('لا يوجد ضيوف بحاجة لتذكير ولديهم أرقام جوال');return;}
@@ -116,8 +193,8 @@ function showReminderPanel(event,guests){
 }
 function csvCell(v){return `"${String(v??'').replaceAll('"','""')}"`}
 function exportCSV(event,guests){
- const isActivity=event.occasion==='تجمع ونشاط'; const headers=isActivity?['الاسم','الجوال','حالة الرد','شاهد الدعوة','عدد المرافقين','أسماء المرافقين','إجمالي القطّة','حالة الدفع','ملاحظة','رابط الدعوة']:['الاسم','الجوال','حالة الرد','شاهد الدعوة','عدد المرافقين','عدد الأطفال','ملاحظة','رابط الدعوة'];
- const rows=guests.map(g=>isActivity?[g.name,g.phone||'',g.attendance_state==='waitlist'?'قائمة انتظار':statusLabel(g),g.viewed_at?'نعم':'لا',g.companion_count||0,parseCompanionNames(g.companion_names).join('، '),g.share_total||0,paymentLabel(g),g.note||'',`${location.origin}/i/${g.code}`]:[g.name,g.phone||'',statusLabel(g),g.viewed_at?'نعم':'لا',g.companion_count||0,g.children_count||0,g.note||'',`${location.origin}/i/${g.code}`]);
+ const isActivity=event.occasion==='تجمع ونشاط'; const headers=isActivity?['الاسم','الجوال','حالة الرد','شاهد الدعوة','حالة الدخول','وقت الدخول','عدد المرافقين','أسماء المرافقين','إجمالي القطّة','حالة الدفع','ملاحظة','رابط الدعوة']:['الاسم','الجوال','حالة الرد','شاهد الدعوة','حالة الدخول','وقت الدخول','عدد المرافقين','عدد الأطفال','ملاحظة','رابط الدعوة'];
+ const rows=guests.map(g=>isActivity?[g.name,g.phone||'',g.attendance_state==='waitlist'?'قائمة انتظار':statusLabel(g),g.viewed_at?'نعم':'لا',g.checked_in_at?'تم الدخول':'لم يصل',g.checked_in_at||'',g.companion_count||0,parseCompanionNames(g.companion_names).join('، '),g.share_total||0,paymentLabel(g),g.note||'',`${location.origin}/i/${g.code}`]:[g.name,g.phone||'',statusLabel(g),g.viewed_at?'نعم':'لا',g.checked_in_at?'تم الدخول':'لم يصل',g.checked_in_at||'',g.companion_count||0,g.children_count||0,g.note||'',`${location.origin}/i/${g.code}`]);
  const csv='\ufeff'+[headers,...rows].map(r=>r.map(csvCell).join(',')).join('\n'); const blob=new Blob([csv],{type:'text/csv;charset=utf-8'}); const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=`noortoona-${String(event.title||'guests').replace(/[^\p{L}\p{N}-]+/gu,'-')}.csv`;a.click();URL.revokeObjectURL(a.href);toast('تم تصدير قائمة الضيوف');
 }
 async function parseGuestFile(file){
@@ -175,7 +252,7 @@ function showImportPreview(filename,guests){
 async function bulkImportGuests(modal,guests){
  const btn=modal.querySelector('.confirm-import'),progress=modal.querySelector('.import-progress'); btn.disabled=true;btn.textContent='جاري الاستيراد…';progress.classList.remove('hidden');
  try{
-  const res=await fetch('/api/guests',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({eventId,ownerToken:token,guests})}); const data=await res.json();
+  const res=await fetch('/api/guests',{method:'POST',headers:ownerHeaders,body:JSON.stringify({eventId,guests})}); const data=await res.json();
   if(!res.ok)throw new Error(data.error||'تعذر الاستيراد'); progress.querySelector('span').style.width='100%'; await load(); modal.remove(); toast(`تم استيراد ${data.count||guests.length} ضيف وإنشاء الروابط ✨`);
  }catch(err){btn.disabled=false;btn.textContent=`إعادة المحاولة`;toast(err.message)}
 }
