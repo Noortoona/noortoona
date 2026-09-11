@@ -1,5 +1,6 @@
 import { getDatabase } from "@netlify/database";
 import type { Config } from "@netlify/functions";
+import { isSameOriginRequest, ownerTokenFrom, secureJson } from "./_shared/domain.mjs";
 
 function makeCode() {
   const alphabet = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
@@ -16,15 +17,18 @@ function cleanGuest(input: any) {
 
 export default async (req: Request) => {
   if (!["POST", "DELETE", "PATCH"].includes(req.method)) return new Response("Method Not Allowed", { status: 405 });
+  if (!isSameOriginRequest(req)) return secureJson({ error: "طلب غير مسموح" }, 403);
+  if (Number(req.headers.get("content-length") || 0) > 1_000_000) return secureJson({ error: "حجم الطلب أكبر من المسموح" }, 413);
   try {
     const data = await req.json();
+    const ownerToken = ownerTokenFrom(req, data).slice(0, 120);
     const db = getDatabase();
 
 
     if (req.method === "PATCH") {
-      if (!data.eventId || !data.ownerToken || !data.guestId) return Response.json({ error: "بيانات التحديث ناقصة" }, { status: 400 });
-      const [event] = await db.sql`SELECT id FROM events WHERE id=${String(data.eventId)} AND owner_token=${String(data.ownerToken)}`;
-      if (!event) return Response.json({ error: "غير مصرح" }, { status: 403 });
+      if (!data.eventId || !ownerToken || !data.guestId) return secureJson({ error: "بيانات التحديث ناقصة" }, 400);
+      const [event] = await db.sql`SELECT id FROM events WHERE id=${String(data.eventId)} AND owner_token=${ownerToken}`;
+      if (!event) return secureJson({ error: "غير مصرح" }, 403);
       const paymentStatus = data.paymentStatus === "paid" ? "paid" : "unpaid";
       const [guest] = await db.sql`
         UPDATE guests
@@ -34,26 +38,26 @@ export default async (req: Request) => {
         WHERE id=${String(data.guestId)} AND event_id=${String(data.eventId)}
         RETURNING id, payment_status, payment_amount, paid_at
       `;
-      if (!guest) return Response.json({ error: "الضيف غير موجود" }, { status: 404 });
-      return Response.json({ guest });
+      if (!guest) return secureJson({ error: "الضيف غير موجود" }, 404);
+      return secureJson({ guest });
     }
 
     if (req.method === "DELETE") {
-      if (!data.eventId || !data.ownerToken || !data.guestId) return Response.json({ error: "بيانات الحذف ناقصة" }, { status: 400 });
-      const [event] = await db.sql`SELECT id FROM events WHERE id=${String(data.eventId)} AND owner_token=${String(data.ownerToken)}`;
-      if (!event) return Response.json({ error: "غير مصرح" }, { status: 403 });
+      if (!data.eventId || !ownerToken || !data.guestId) return secureJson({ error: "بيانات الحذف ناقصة" }, 400);
+      const [event] = await db.sql`SELECT id FROM events WHERE id=${String(data.eventId)} AND owner_token=${ownerToken}`;
+      if (!event) return secureJson({ error: "غير مصرح" }, 403);
       const [guest] = await db.sql`DELETE FROM guests WHERE id=${String(data.guestId)} AND event_id=${String(data.eventId)} RETURNING id`;
-      if (!guest) return Response.json({ error: "الضيف غير موجود" }, { status: 404 });
-      return Response.json({ ok: true });
+      if (!guest) return secureJson({ error: "الضيف غير موجود" }, 404);
+      return secureJson({ ok: true });
     }
 
-    if (!data.eventId || !data.ownerToken) return Response.json({ error: "بيانات المناسبة ناقصة" }, { status: 400 });
-    const [event] = await db.sql`SELECT id FROM events WHERE id=${String(data.eventId)} AND owner_token=${String(data.ownerToken)}`;
-    if (!event) return Response.json({ error: "غير مصرح" }, { status: 403 });
+    if (!data.eventId || !ownerToken) return secureJson({ error: "بيانات المناسبة ناقصة" }, 400);
+    const [event] = await db.sql`SELECT id FROM events WHERE id=${String(data.eventId)} AND owner_token=${ownerToken}`;
+    if (!event) return secureJson({ error: "غير مصرح" }, 403);
 
     if (Array.isArray(data.guests)) {
       const guests = data.guests.map(cleanGuest).filter((g: { name: string }) => g.name).slice(0, 1000);
-      if (!guests.length) return Response.json({ error: "لا توجد أسماء صالحة للاستيراد" }, { status: 400 });
+      if (!guests.length) return secureJson({ error: "لا توجد أسماء صالحة للاستيراد" }, 400);
       const client = await db.pool.connect();
       const created = [];
       try {
@@ -74,11 +78,11 @@ export default async (req: Request) => {
       } finally {
         client.release();
       }
-      return Response.json({ guests: created, count: created.length });
+      return secureJson({ guests: created, count: created.length });
     }
 
     const single = cleanGuest(data);
-    if (!single.name) return Response.json({ error: "بيانات الضيف ناقصة" }, { status: 400 });
+    if (!single.name) return secureJson({ error: "بيانات الضيف ناقصة" }, 400);
     const id = crypto.randomUUID();
     const code = makeCode();
     const [guest] = await db.sql`
@@ -86,10 +90,10 @@ export default async (req: Request) => {
       VALUES (${id}, ${String(data.eventId)}, ${single.name}, ${single.phone}, ${code})
       RETURNING id, name, phone, code, rsvp_status, created_at
     `;
-    return Response.json({ guest, invitePath: `/i/${code}` });
+    return secureJson({ guest, invitePath: `/i/${code}` });
   } catch (error) {
     console.error(error);
-    return Response.json({ error: req.method === "DELETE" ? "تعذر حذف الضيف" : "تعذر إضافة الضيوف" }, { status: 500 });
+    return secureJson({ error: req.method === "DELETE" ? "تعذر حذف الضيف" : "تعذر إضافة الضيوف" }, 500);
   }
 };
 
