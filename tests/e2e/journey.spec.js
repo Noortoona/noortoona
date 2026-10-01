@@ -108,3 +108,20 @@ test('قارئ QR يشغّل الكاميرا الخلفية ويسجل الوص
   await expect(page.locator('.checkin-success')).toContainText('تم تسجيل الوصول');
   expect(await page.evaluate(() => window.__cameraConstraints)).toEqual({ audio: false, video: { facingMode: { ideal: 'environment' } } });
 });
+
+test('إرسال واتساب لا يفتح الرقم الشخصي عند غياب الربط الرسمي', async ({ page }) => {
+  const payload = {
+    event: { id: 'event-wa', title: 'ليلة هلا', location: 'الرياض', occasion: 'زواج', capacity: null },
+    guests: [{ id: 'guest-wa', name: 'ضيف واتساب', phone: '0500000000', code: 'WA123', rsvp_status: 'pending', whatsapp_status: 'idle' }],
+  };
+  await page.route('**/api/dashboard?event=event-wa', route => route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(payload) }));
+  await page.route('**/api/whatsapp/send', route => route.fulfill({ status: 503, contentType: 'application/json', body: JSON.stringify({ code: 'D360_NOT_CONFIGURED' }) }));
+  let popupOpened = false;
+  page.on('popup', () => { popupOpened = true; });
+
+  await page.goto('/dashboard.html?event=event-wa&token=wa-owner');
+  await page.getByRole('button', { name: 'إرسال من هلا' }).click();
+
+  await expect(page.locator('#toast')).toContainText('الإرسال من رقم هلا غير مفعّل');
+  expect(popupOpened).toBe(false);
+});
