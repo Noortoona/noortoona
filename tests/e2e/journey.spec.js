@@ -68,7 +68,7 @@ test('دعوة الضيف تحسب القطّة وتسجل الرد', async ({ p
 });
 
 test('لوحة المضيف تخفي الرمز وتدعم تسجيل QR اليدوي', async ({ page }) => {
-  const payload = { event: { id: 'event-e2e', title: 'ليلة نورتونا', location: 'الرياض', occasion: 'زواج', capacity: null }, guests: [] };
+  const payload = { event: { id: 'event-e2e', title: 'ليلة هلا', location: 'الرياض', occasion: 'زواج', capacity: null }, guests: [] };
   await page.route('**/api/dashboard?event=event-e2e', async route => {
     expect(route.request().headers()['x-noortoona-owner-token']).toBe('secret-owner');
     await route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(payload) });

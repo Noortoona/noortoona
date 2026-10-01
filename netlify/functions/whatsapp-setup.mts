@@ -63,7 +63,7 @@ export default async (req: Request) => {
 
     return json({
       ok: true,
-      message: "تم تسجيل Webhook لنورتونا بنجاح",
+      message: "تم تسجيل Webhook لهلا بنجاح",
       mode,
       webhookUrl,
       providerStatus: response.status,

@@ -50,7 +50,7 @@
     const custom=design.image?`background-image:url('${String(design.image).replaceAll("'",'%27')}');background-size:cover;background-position:center;`:'';
     return `<article class="invite-canvas" data-layout="${esc(design.layout||'classic')}" style="${styleFor(t)};--invite-accent:${esc(accent)};--invite-font:${fonts[design.font]||'Aref Ruqaa'}">
       <div class="invite-art-layer" ${custom?`style="${custom}"`:''}></div><div class="invite-shade"></div>
-      <header class="invite-brand"><b>✦ نورتونا</b><small>NOORTOONA</small></header>
+      <header class="invite-brand"><b>✦ هلا</b><small>HALA</small></header>
       <div class="invite-copy">
         <span class="invite-type">${esc(label)}</span>
         ${opts.guestName?`<p class="invite-personal">دعوة خاصة إلى <strong>${esc(opts.guestName)}</strong></p>`:''}

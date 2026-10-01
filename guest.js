@@ -82,7 +82,7 @@ async function loadInvite(){
     card.innerHTML=window.NOORTOONA.canvas({...i,date:i.event_date,time:i.event_time,occasionKey,activityKey,activityType:i.activity_type,design},{guestName:i.guest_name})+`
       <div class="guest-light-sweep"></div>
       <div class="occasion-art art-${activityArtKey(i)}" aria-hidden="true"></div>
-      <span class="guest-brand">✦ نورتونا <small>NOORTOONA</small></span>
+      <span class="guest-brand">✦ هلا <small>HALA</small></span>
       <span class="guest-occasion">${esc(i.occasion)}</span>
       <p class="guest-for">دعوة خاصة إلى <strong>${esc(i.guest_name)}</strong></p>
       <div class="guest-frame">

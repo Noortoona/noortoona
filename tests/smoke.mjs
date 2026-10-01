@@ -55,6 +55,9 @@ assert.match(guestJs, /window\.NOORTOONA\.canvas/, 'guest must use shared invita
 assert.match(guestJs, /safeExternalUrl/, 'guest links must be restricted to safe web URLs');
 assert.ok(guestHtml.indexOf('invitation-renderer.js') < guestHtml.indexOf('guest.js'), 'shared renderer must load before guest app');
 assert.match(indexHtml, /https:\/\/noortoona\.com\//, 'official domain metadata');
+assert.match(indexHtml, /هلا \| كل مناسبة تبدأ بهلا/, 'HALA public brand metadata');
+assert.match(indexHtml, /assets\/brand\/hala-icon\.svg/, 'HALA logo asset');
+assert.match(guestJs, /✦ هلا/, 'guest invitation uses HALA branding');
 assert.doesNotMatch(indexHtml, /قيد التجهيز|التحديث القادم|قالب جاهز أو محرر مرن أو AI/, 'no visible unfinished feature copy');
 assert.match(css, /occasion-choice-grid\{grid-template-columns:repeat\(3,1fr\)/, 'three-column mobile occasion grid');
 assert.match(css, /visual-template-grid\{grid-template-columns:repeat\(2,1fr\)/, 'two-column mobile template grid');
@@ -75,4 +78,4 @@ assert.match(whatsapp, /message_status|whatsapp|template/i, 'WhatsApp sending re
 assert.match(netlifyConfig, /from = "\/i\/\*"[\s\S]*to = "\/guest\.html\?code=:splat"/, 'unique invitation route');
 assert.match(netlifyConfig, /from = "\/dashboard"[\s\S]*to = "\/dashboard\.html"/, 'dashboard route');
 
-console.log(`NOORTOONA smoke passed: ${N.occasions.length} occasions, ${N.activities.length} activities, ${Object.values(N.catalog).flat().length} visual templates.`);
+console.log(`HALA smoke passed: ${N.occasions.length} occasions, ${N.activities.length} activities, ${Object.values(N.catalog).flat().length} visual templates.`);
