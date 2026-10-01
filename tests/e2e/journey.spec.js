@@ -86,3 +86,25 @@ test('لوحة المضيف تخفي الرمز وتدعم تسجيل QR الي�
   await expect(page.locator('.checkin-success')).toContainText('محمد');
   await expect(page.locator('.checkin-success')).toContainText('تم تسجيل الوصول');
 });
+
+test('قارئ QR يشغّل الكاميرا الخلفية ويسجل الوصول بعد قراءة الرمز', async ({ page }) => {
+  const payload = { event: { id: 'event-camera', title: 'ليلة هلا', location: 'الرياض', occasion: 'تجمع ونشاط', activity_type: 'فيفا', capacity: 8, share_amount: 0 }, guests: [] };
+  await page.route('https://cdn.jsdelivr.net/npm/@zxing/browser@0.2.1/umd/zxing-browser.min.js', route => route.fulfill({
+    status: 200,
+    contentType: 'application/javascript',
+    body: `window.ZXingBrowser={BrowserMultiFormatReader:class{async decodeFromConstraints(constraints,video,callback){window.__cameraConstraints=constraints;const controls={stop(){window.__cameraStopped=true}};setTimeout(()=>callback({getText:()=>\"CAMERAQR\"},null,controls),20);return controls}}};`,
+  }));
+  await page.route('**/api/dashboard?event=event-camera', route => route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(payload) }));
+  await page.route('**/api/check-in', async route => {
+    expect(route.request().postDataJSON()).toEqual({ eventId: 'event-camera', code: 'CAMERAQR' });
+    await route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ ok: true, guest: { name: 'ضيف الكاميرا', rsvp_status: 'accepted', companion_count: 0, children_count: 0 }, alreadyCheckedIn: false }) });
+  });
+
+  await page.goto('/dashboard.html?event=event-camera&token=camera-owner');
+  await page.getByRole('button', { name: /مسح QR/ }).click();
+  await page.getByRole('button', { name: 'فتح الكاميرا' }).click();
+
+  await expect(page.locator('.checkin-success')).toContainText('ضيف الكاميرا');
+  await expect(page.locator('.checkin-success')).toContainText('تم تسجيل الوصول');
+  expect(await page.evaluate(() => window.__cameraConstraints)).toEqual({ audio: false, video: { facingMode: { ideal: 'environment' } } });
+});
