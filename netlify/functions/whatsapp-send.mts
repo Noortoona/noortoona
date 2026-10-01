@@ -40,8 +40,11 @@ export default async (req: Request) => {
   if (!isSameOriginRequest(req)) return json({ error: "Request not allowed" }, 403);
 
   const apiKey = Netlify.env.get("D360_API_KEY");
-  const apiBase = (Netlify.env.get("D360_API_BASE") || "https://waba-sandbox.360dialog.io/v1").replace(/\/$/, "");
-  const mode = Netlify.env.get("D360_MODE") || "sandbox";
+  const mode = (Netlify.env.get("D360_MODE") || "sandbox").toLowerCase();
+  const defaultApiBase = mode === "production"
+    ? "https://waba-v2.360dialog.io"
+    : "https://waba-sandbox.360dialog.io/v1";
+  const apiBase = (Netlify.env.get("D360_API_BASE") || defaultApiBase).replace(/\/$/, "");
   if (!apiKey) return json({ error: "WhatsApp API is not configured", code: "D360_NOT_CONFIGURED" }, 503);
 
   const body: any = await req.json().catch(() => ({}));
@@ -73,18 +76,50 @@ export default async (req: Request) => {
     RETURNING id
   `;
 
-  // Sandbox accepts free-form text. Production requires an approved template to initiate
-  // conversations, so production remains intentionally blocked until template settings exist.
-  if (mode !== "sandbox" && !Netlify.env.get("D360_ALLOW_FREEFORM_PRODUCTION")) {
+  // Business-initiated production messages must use a Meta-approved template. The body
+  // parameters below intentionally use the same order for invitations and reminders:
+  // guest name, event title, date/time, location, unique invitation URL.
+  const templateName = Netlify.env.get(reminder ? "D360_REMINDER_TEMPLATE" : "D360_INVITE_TEMPLATE");
+  const templateLanguage = Netlify.env.get("D360_TEMPLATE_LANGUAGE") || "ar";
+  if (mode === "production" && !templateName) {
     const error = "Production template is not configured";
     await db.sql`UPDATE whatsapp_messages SET status='failed', error=${error}, failed_at=NOW(), updated_at=NOW() WHERE id=${log.id}`;
     return json({ error, code: "D360_TEMPLATE_REQUIRED" }, 409);
   }
 
+  const messagePayload = mode === "production"
+    ? {
+        messaging_product: "whatsapp",
+        recipient_type: "individual",
+        to,
+        type: "template",
+        template: {
+          name: templateName,
+          language: { code: templateLanguage },
+          components: [{
+            type: "body",
+            parameters: [
+              { type: "text", text: String(row.name || "ضيف هلا") },
+              { type: "text", text: String(row.title || "مناسبة هلا") },
+              { type: "text", text: eventDate || "سيتم تحديد الموعد" },
+              { type: "text", text: String(row.location || "سيتم تحديد الموقع") },
+              { type: "text", text: inviteUrl },
+            ],
+          }],
+        },
+      }
+    : {
+        messaging_product: "whatsapp",
+        recipient_type: "individual",
+        to,
+        type: "text",
+        text: { body: text },
+      };
+
   const response = await fetch(`${apiBase}/messages`, {
     method: "POST",
     headers: { "content-type": "application/json", "D360-API-KEY": apiKey },
-    body: JSON.stringify({ messaging_product: "whatsapp", recipient_type: "individual", to, type: "text", text: { body: text } }),
+    body: JSON.stringify(messagePayload),
   });
   const data: any = await response.json().catch(() => ({}));
 
@@ -92,7 +127,10 @@ export default async (req: Request) => {
     const error = JSON.stringify(data);
     await db.sql`UPDATE whatsapp_messages SET status='failed', error=${error}, failed_at=NOW(), updated_at=NOW() WHERE id=${log.id}`;
     await db.sql`UPDATE guests SET whatsapp_status='failed', whatsapp_failed_at=NOW(), whatsapp_error=${error} WHERE id=${guestId}`;
-    return json({ error: "WhatsApp send failed", details: data }, 502);
+    const code = mode === "sandbox" && response.status === 403
+      ? "D360_SANDBOX_RECIPIENT_ONLY"
+      : "D360_SEND_FAILED";
+    return json({ error: "WhatsApp send failed", code, details: data }, 502);
   }
 
   const messageId = data?.messages?.[0]?.id || null;
