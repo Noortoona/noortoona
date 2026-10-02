@@ -1,4 +1,5 @@
 import { defineConfig, devices } from '@playwright/test';
+const port=process.env.PLAYWRIGHT_TEST_PORT||'4173';
 
 export default defineConfig({
   testDir: './tests/e2e',
@@ -6,7 +7,7 @@ export default defineConfig({
   fullyParallel: false,
   reporter: [['line']],
   use: {
-    baseURL: 'http://127.0.0.1:4173',
+    baseURL: `http://127.0.0.1:${port}`,
     locale: 'ar-SA',
     timezoneId: 'Asia/Riyadh',
     trace: 'retain-on-failure',
@@ -14,8 +15,8 @@ export default defineConfig({
   },
   projects: [{ name: 'iPhone', use: { ...devices['iPhone 13'], browserName: 'chromium' } }],
   webServer: {
-    command: 'python3 -m http.server 4173 --bind 127.0.0.1',
-    url: 'http://127.0.0.1:4173',
-    reuseExistingServer: true,
+    command: `python3 -m http.server ${port} --bind 127.0.0.1`,
+    url: `http://127.0.0.1:${port}`,
+    reuseExistingServer: false,
   },
 });

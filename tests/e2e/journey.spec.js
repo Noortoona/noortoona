@@ -120,8 +120,46 @@ test('إرسال واتساب لا يفتح الرقم الشخصي عند غي�
   page.on('popup', () => { popupOpened = true; });
 
   await page.goto('/dashboard.html?event=event-wa&token=wa-owner');
-  await page.getByRole('button', { name: 'إرسال من هلا' }).click();
+  await page.getByRole('button', { name: 'إرسال واتساب', exact:true }).click();
 
-  await expect(page.locator('#toast')).toContainText('الإرسال من رقم هلا غير مفعّل');
+  await expect(page.locator('#toast')).toContainText('مفتاح رقم هلا غير مضبوط');
+  await expect(page).toHaveURL(/dashboard.html/);
   expect(popupOpened).toBe(false);
+});
+
+test('قبول الطلب يظهر قيد الإرسال ثم يتحدث إلى وصلت عند تأكيد المزود', async ({ page }) => {
+ const guest={id:'delivery-guest',name:'ضيف التسليم',phone:'0500000000',code:'DELIVERY',rsvp_status:'pending',whatsapp_status:'idle'};
+ const payload={event:{id:'delivery-event',title:'اختبار تسليم هلا',occasion:'زواج'},guests:[guest]};
+ await page.route('**/api/dashboard?event=delivery-event',route=>route.fulfill({json:payload}));
+ await page.route('**/api/whatsapp/send',route=>{
+  guest.whatsapp_status='queued';guest.whatsapp_message_id='wamid.test.delivery';
+  return route.fulfill({status:202,json:{accepted:true,messageId:guest.whatsapp_message_id,status:'queued',deliveryConfirmed:false}});
+ });
+ await page.goto('/dashboard.html?event=delivery-event&token=test-owner');
+ await page.getByRole('button',{name:'إرسال واتساب',exact:true}).click();
+ await expect(page.locator('.wa-state')).toHaveText('قيد الإرسال');
+ await expect(page.locator('#toast')).toContainText('ننتظر تأكيد وصول');
+ guest.whatsapp_status='sent';
+ await expect(page.locator('.wa-state')).toHaveText('أُرسلت',{timeout:12000});
+ await expect(page.locator('.wa-detail')).toContainText('لم يتأكد وصولها');
+ guest.whatsapp_status='delivered';
+ await expect(page.locator('.wa-state')).toHaveText('وصلت',{timeout:12000});
+ await expect(page.locator('.wa-detail')).toHaveCount(0);
+ guest.whatsapp_status='read';
+ await expect(page.locator('.wa-state')).toHaveText('قُرئت',{timeout:12000});
+ const mobileWidths=await page.evaluate(()=>({page:document.documentElement.scrollWidth,viewport:innerWidth,table:document.querySelector('.table-wrap table').getBoundingClientRect().width}));
+ expect(mobileWidths.page).toBeLessThanOrEqual(mobileWidths.viewport);
+ expect(mobileWidths.table).toBeLessThanOrEqual(mobileWidths.viewport);
+ await page.screenshot({path:'test-results/whatsapp-iphone.png',fullPage:true});
+});
+
+test('لوحة المشرف تعرض سبب الفشل ومعرف الرسالة دون تنفيذ محتوى الملاحظة', async ({ page }) => {
+ await page.route('**/api/dashboard?event=failed-event',route=>route.fulfill({json:{
+  event:{id:'failed-event',title:'اختبار الفشل',occasion:'زواج'},
+  guests:[{id:'failed-guest',name:'ضيف',code:'FAIL',rsvp_status:'pending',whatsapp_status:'failed',whatsapp_message_id:'wamid.failure',whatsapp_error:JSON.stringify({code:131026,message:'Message undeliverable <script>window.injected=true</script>'})}]
+ }}));
+ await page.goto('/dashboard.html?event=failed-event&token=test-owner');
+ await expect(page.locator('.wa-state')).toHaveText('فشل الإرسال');
+ await expect(page.locator('.wa-detail')).toContainText('131026');
+ expect(await page.evaluate(()=>window.injected)).toBeUndefined();
 });

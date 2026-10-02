@@ -12,6 +12,9 @@ let filters={q:'',status:'all',view:'all',arrival:'all'};
 let importPreview=[];
 let scannerControls=null;
 let scannerBusy=false;
+const whatsappInFlight=new Set();
+let whatsappPollTimer=null;
+let whatsappPolls=0;
 
 async function load(){
  if(!eventId||!token){root.innerHTML='<div class="dash-empty"><h1>لا توجد مناسبة مرتبطة بهذا الجهاز</h1><p>أنشئ دعوتك أولًا من الصفحة الرئيسية.</p><a href="/" class="gold-btn">إنشاء دعوة</a></div>';return;}
@@ -34,7 +37,33 @@ function getFilteredGuests(guests){
  });
 }
 function statusLabel(g){return g.rsvp_status==='accepted'?'مؤكد':g.rsvp_status==='declined'?'معتذر':g.rsvp_status==='maybe'?'ربما':'بانتظار الرد'}
-function waStatusLabel(g){return g.whatsapp_status==='read'?'مقروءة':g.whatsapp_status==='delivered'?'وصلت':g.whatsapp_status==='sent'?'أُرسلت':g.whatsapp_status==='failed'?'فشل الإرسال':'لم تُرسل'}
+function waStatusLabel(g){return ({queued:'قيد الإرسال',sent:'أُرسلت',delivered:'وصلت',read:'قُرئت',failed:'فشل الإرسال'})[g.whatsapp_status]||'لم تُرسل'}
+function waDetails(g){
+ let error=null;try{error=JSON.parse(g.whatsapp_error||'null')}catch{}
+ const diagnostic=error?`${error.code||''} — ${error.message||'تعذر الإرسال'}`.slice(0,400):'';
+ const hint=diagnostic||(g.whatsapp_status==='queued'?'بانتظار تأكيد المزود؛ لم يتأكد التسليم':g.whatsapp_status==='sent'?'لم يتأكد وصولها إلى جهاز الضيف بعد':'');
+ return `<span class="wa-state ${esc(g.whatsapp_status||'idle')}">${waStatusLabel(g)}</span>${hint?`<small class="wa-detail">${esc(hint)}</small>`:''}${g.whatsapp_message_id?`<details class="wa-trace"><summary>معرّف الرسالة</summary><code dir="ltr">${esc(g.whatsapp_message_id)}</code></details>`:''}`;
+}
+function scheduleWhatsAppPoll(){
+ clearTimeout(whatsappPollTimer);
+ if(whatsappPolls>=24||!dashboardData?.guests.some(g=>['queued','sent','delivered'].includes(g.whatsapp_status)))return;
+ whatsappPollTimer=setTimeout(async()=>{
+  if(!document.hidden){
+   whatsappPolls++;
+   try{
+    const res=await fetch(`/api/dashboard?event=${encodeURIComponent(eventId)}`,{headers:{'x-noortoona-owner-token':token},cache:'no-store'});
+    if(res.ok){
+     const data=await res.json();dashboardData=data;
+     document.querySelectorAll('[data-wa-guest]').forEach(cell=>{
+      const g=data.guests.find(item=>item.id===cell.dataset.waGuest);if(g)cell.innerHTML=waDetails(g);
+     });
+    }
+   }catch{}
+  }
+  scheduleWhatsAppPoll();
+ },5000);
+}
+document.addEventListener('visibilitychange',()=>{if(!document.hidden)scheduleWhatsAppPoll()});
 function parseCompanionNames(v){
  if(Array.isArray(v))return v.filter(Boolean);
  if(!v)return [];
@@ -82,9 +111,12 @@ function render({event,guests}){
  <div class="table-wrap"><table><thead><tr><th>الضيف</th><th>الرد</th><th>المشاهدة</th><th>المرافقون</th>${isActivity?'<th>أسماء المرافقين</th><th>القطّة</th><th>الدفع</th>':'<th>الأطفال</th><th>ملاحظة</th>'}<th>واتساب</th><th>الإجراءات</th></tr></thead><tbody>${list.length?list.map(g=>{
    const names=parseCompanionNames(g.companion_names);
    const wait=g.attendance_state==='waitlist';
-   return `<tr class="${wait?'waitlist-row':''} ${g.checked_in_at?'checked-in-row':''}"><td><strong>${esc(g.name)}</strong><small>${esc(g.phone||'بدون رقم')}</small>${g.checked_in_at?'<em class="checkin-badge">✓ تم الدخول</em>':''}</td><td><span class="status ${wait?'maybe':(g.rsvp_status||'pending')}">${wait?'قائمة انتظار':statusLabel(g)}</span></td><td><span class="view-state ${g.viewed_at?'seen':'unseen'}">${g.viewed_at?'● تمت المشاهدة':'○ لم يفتح'}</span></td><td>${g.rsvp_status==='accepted'?Number(g.companion_count||0):'—'}</td>${isActivity?`<td><small>${names.length?names.map(esc).join('، '):'—'}</small></td><td><strong>${g.rsvp_status==='accepted'?money(g.share_total)+' ر.س':'—'}</strong></td><td>${g.rsvp_status==='accepted'&&!wait?`<button class="payment-pill ${g.payment_status==='paid'?'paid':''}" data-payment-id="${esc(g.id)}" data-payment-status="${g.payment_status==='paid'?'unpaid':'paid'}">${paymentLabel(g)}</button>`:'—'}</td>`:`<td>${g.rsvp_status==='accepted'?Number(g.children_count||0):'—'}</td><td><small>${esc(g.note||'—')}</small></td>`}<td><span class="wa-state ${esc(g.whatsapp_status||'idle')}">${waStatusLabel(g)}</span></td><td><div class="invite-actions"><button class="copy-link" data-code="${esc(g.code)}">نسخ الرابط</button><button class="wa-link" data-code="${esc(g.code)}" data-phone="${esc(g.phone||'')}" data-name="${esc(g.name)}" data-id="${esc(g.id)}">إرسال واتساب</button><button class="delete-guest danger-link" data-id="${esc(g.id)}" data-name="${esc(g.name)}">حذف</button></div></td></tr>`
+   return `<tr class="${wait?'waitlist-row':''} ${g.checked_in_at?'checked-in-row':''}"><td><strong>${esc(g.name)}</strong><small>${esc(g.phone||'بدون رقم')}</small>${g.checked_in_at?'<em class="checkin-badge">✓ تم الدخول</em>':''}</td><td><span class="status ${wait?'maybe':(g.rsvp_status||'pending')}">${wait?'قائمة انتظار':statusLabel(g)}</span></td><td><span class="view-state ${g.viewed_at?'seen':'unseen'}">${g.viewed_at?'● تمت المشاهدة':'○ لم يفتح'}</span></td><td>${g.rsvp_status==='accepted'?Number(g.companion_count||0):'—'}</td>${isActivity?`<td><small>${names.length?names.map(esc).join('، '):'—'}</small></td><td><strong>${g.rsvp_status==='accepted'?money(g.share_total)+' ر.س':'—'}</strong></td><td>${g.rsvp_status==='accepted'&&!wait?`<button class="payment-pill ${g.payment_status==='paid'?'paid':''}" data-payment-id="${esc(g.id)}" data-payment-status="${g.payment_status==='paid'?'unpaid':'paid'}">${paymentLabel(g)}</button>`:'—'}</td>`:`<td>${g.rsvp_status==='accepted'?Number(g.children_count||0):'—'}</td><td><small>${esc(g.note||'—')}</small></td>`}<td class="wa-cell" data-wa-guest="${esc(g.id)}">${waDetails(g)}</td><td><div class="invite-actions"><button class="copy-link" data-code="${esc(g.code)}">نسخ الرابط</button><button class="wa-link" data-code="${esc(g.code)}" data-phone="${esc(g.phone||'')}" data-name="${esc(g.name)}" data-id="${esc(g.id)}">إرسال واتساب</button><button class="delete-guest danger-link" data-id="${esc(g.id)}" data-name="${esc(g.name)}">حذف</button></div></td></tr>`
   }).join(''):`<tr><td colspan="${isActivity?10:8}" class="empty-row">لا يوجد ضيوف مطابقون للفلاتر.</td></tr>`}</tbody></table></div></section>`;
+ const columnLabels=[...root.querySelectorAll('.table-wrap th')].map(th=>th.textContent);
+ root.querySelectorAll('.table-wrap tbody tr').forEach(row=>[...row.children].forEach((cell,index)=>{if(!cell.hasAttribute('colspan'))cell.dataset.label=columnLabels[index]||''}));
  bind(event,guests);
+ scheduleWhatsAppPoll();
 }
 function bind(event,guests){
  document.getElementById('scanBtn').onclick=openScanner; document.getElementById('refreshBtn').onclick=load; document.getElementById('guestForm').onsubmit=addGuest; document.getElementById('exportBtn').onclick=()=>exportCSV(event,guests); document.getElementById('remindBtn').onclick=()=>openReminderQueue(event,guests); document.getElementById('importBtn').onclick=()=>document.getElementById('bulkGuestFile').click();
@@ -177,7 +209,39 @@ async function deleteGuest(id,name){
  if(!res.ok)return toast(data.error||'تعذر حذف الضيف'); await load(); toast('تم حذف الضيف');
 }
 function normalizePhone(phone){let p=String(phone||'').replace(/[^0-9]/g,'');if(p.startsWith('00'))p=p.slice(2);if(p.startsWith('0')&&p.length===10)p='966'+p.slice(1);if(p.length===9&&p.startsWith('5'))p='966'+p;return p;}
-async function sendWhatsApp(phone,name,code,event,reminder=false,guestId=null){const p=normalizePhone(phone);if(!p){toast('أضف رقم جوال الضيف أولًا');return false;}const inviteUrl=`${location.origin}/i/${code}`;const eventTitle=String(event?.title||'دعوتنا').trim();const message=reminder?`هلا ${name} 👋\nتذكير لطيف بخصوص ${eventTitle}.\nتقدر تفتح دعوتك وتأكيد حضورك من هنا:\n${inviteUrl}`:`هلا ${name} ✨\nيسعدنا دعوتك إلى ${eventTitle}.\nافتح دعوتك وأكد حضورك من هنا:\n${inviteUrl}`;const manual=()=>{window.location.href=`https://wa.me/${p}?text=${encodeURIComponent(message)}`;return true;};if(!guestId)return manual();try{const res=await fetch('/api/whatsapp/send',{method:'POST',headers:ownerHeaders,body:JSON.stringify({eventId,guestId,reminder})});const data=await res.json().catch(()=>({}));if(res.ok){toast(reminder?'تم إرسال التذكير من رقم هلا ✓':'تم إرسال الدعوة من رقم هلا ✓');setTimeout(load,900);return true;}toast('فتح واتساب للإرسال التجريبي من جوالك');return manual();}catch{toast('فتح واتساب للإرسال التجريبي من جوالك');return manual();}}
+async function sendWhatsApp(phone,name,code,event,reminder=false,guestId=null){
+ if(!normalizePhone(phone)){toast('أضف رقم جوال الضيف أولًا');return false}
+ if(!guestId){toast('تعذر تحديد الضيف');return false}
+ if(whatsappInFlight.has(guestId))return false;
+ whatsappInFlight.add(guestId);
+ const buttons=[...document.querySelectorAll('.wa-link')].filter(b=>b.dataset.id===guestId);
+ buttons.forEach(b=>b.disabled=true);
+ toast('جارٍ تقديم طلب الإرسال؛ لم يتأكد التسليم بعد');
+ try{
+  const res=await fetch('/api/whatsapp/send',{method:'POST',headers:ownerHeaders,body:JSON.stringify({eventId,guestId,reminder})});
+  const data=await res.json().catch(()=>({}));
+  if(res.ok&&data.accepted&&data.messageId){
+   await load();whatsappPolls=0;scheduleWhatsAppPoll();
+   toast('قُبل الطلب لدى المزود؛ ننتظر تأكيد وصول الرسالة');
+   return true;
+  }
+  await load();
+  const labels={
+   D360_MODE_REQUIRED:'لم يُحدد وضع واتساب؛ الإرسال متوقف لحين إكمال الربط',
+   D360_NOT_CONFIGURED:'مفتاح رقم هلا غير مضبوط',
+   D360_API_BASE_MISMATCH:'عنوان خدمة واتساب لا يتطابق مع وضع الإرسال',
+   D360_TEMPLATE_REQUIRED:'يلزم ضبط اسم القالب المعتمد ولغته',
+   D360_WEBHOOK_REQUIRED:'يلزم إكمال إعداد تتبع حالات واتساب',
+   D360_DUPLICATE:'توجد محاولة سابقة؛ راجع حالتها قبل إعادة الإرسال',
+   D360_OUTCOME_UNKNOWN:'نتيجة الطلب غير مؤكدة؛ لا تعد الإرسال قبل مراجعة المزود',
+   D360_MESSAGE_ID_MISSING:'لم يُرجع المزود معرّف الرسالة؛ لا يوجد تأكيد إرسال',
+   D360_TRACKING_FAILED:'تعذر حفظ التتبع؛ لا تعد الإرسال قبل المراجعة'
+  };
+  toast(labels[data.code]||`${data.error||'لم يتأكد الإرسال'}${data.providerCode?' · '+data.providerCode:''}`);
+  return false;
+ }catch{toast('انقطع الاتصال؛ لم يتأكد الإرسال أو التسليم. حدّث الحالة قبل المحاولة مجددًا.');return false}
+ finally{whatsappInFlight.delete(guestId);buttons.forEach(b=>b.disabled=false)}
+}
 function openReminderQueue(event,guests){
  const pending=guests.filter(g=>(!g.rsvp_status||g.rsvp_status==='pending'||g.rsvp_status==='maybe')&&normalizePhone(g.phone));
  if(!pending.length){toast('لا يوجد ضيوف بحاجة لتذكير ولديهم أرقام جوال');return;}

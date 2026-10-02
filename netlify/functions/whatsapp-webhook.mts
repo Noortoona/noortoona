@@ -1,44 +1,60 @@
 import { getDatabase } from "@netlify/database";
 import type { Config } from "@netlify/functions";
-
-function extractStatuses(payload: any) {
-  if (Array.isArray(payload?.statuses)) return payload.statuses;
-  const entries = Array.isArray(payload?.entry) ? payload.entry : [];
-  return entries.flatMap((entry: any) => (entry?.changes || []).flatMap((change: any) => change?.value?.statuses || []));
-}
+import { secureJson } from "./_shared/domain.mjs";
+import { extractStatuses, nextStatus, providerError } from "./_shared/whatsapp.mjs";
 
 export default async (req: Request) => {
-  // A GET is useful as a safe browser/monitor health check; 360dialog sends status payloads via POST.
-  if (req.method === "GET") return new Response(JSON.stringify({ ok: true, service: "noortoona-whatsapp-webhook" }), { headers: { "content-type": "application/json" } });
-  if (req.method !== "POST") return new Response("ok");
-
-  const payload: any = await req.json().catch(() => ({}));
-  const statuses = extractStatuses(payload);
+  if (req.method === "GET") return secureJson({ ok: true, service: "hala-whatsapp-webhook", version: "delivery-v2" });
+  if (req.method !== "POST") return new Response("Method Not Allowed", { status: 405 });
+  const token = Netlify.env.get("D360_WEBHOOK_TOKEN");
+  if (!token) return new Response("Webhook not configured", { status: 503 });
+  const encoder = new TextEncoder();
+  const [expected, supplied] = await Promise.all([`Bearer ${token}`,req.headers.get("authorization") || ""]
+    .map(async value => new Uint8Array(await crypto.subtle.digest('SHA-256', encoder.encode(value)))));
+  let difference = 0;
+  for (let i=0;i<expected.length;i++) difference |= expected[i] ^ supplied[i];
+  if (difference !== 0) return new Response("Unauthorized", { status: 401 });
+  const body = await req.text();
+  if (body.length > 256_000) return new Response("Payload too large", { status: 413 });
+  let payload: any;
+  try { payload = JSON.parse(body); } catch { return new Response("Invalid JSON", { status: 400 }); }
+  const statuses = extractStatuses(payload).filter((s: any) => typeof s?.id === "string" && ['sent','delivered','read','failed'].includes(s?.status));
   if (!statuses.length) return new Response("ok");
-
-  const db = getDatabase();
-  for (const s of statuses) {
-    const messageId = s?.id;
-    const status = s?.status;
-    if (!messageId || !["sent", "delivered", "read", "failed"].includes(status)) continue;
-    const error = s?.errors?.length ? JSON.stringify(s.errors) : null;
-
-    if (status === "sent") {
-      await db.sql`UPDATE whatsapp_messages SET status='sent', sent_at=COALESCE(sent_at,NOW()), updated_at=NOW() WHERE message_id=${messageId}`;
-      await db.sql`UPDATE guests SET whatsapp_status='sent', whatsapp_sent_at=COALESCE(whatsapp_sent_at,NOW()) WHERE whatsapp_message_id=${messageId}`;
-    } else if (status === "delivered") {
-      await db.sql`UPDATE whatsapp_messages SET status='delivered', delivered_at=NOW(), updated_at=NOW() WHERE message_id=${messageId}`;
-      await db.sql`UPDATE guests SET whatsapp_status='delivered', whatsapp_delivered_at=NOW() WHERE whatsapp_message_id=${messageId}`;
-    } else if (status === "read") {
-      await db.sql`UPDATE whatsapp_messages SET status='read', read_at=NOW(), delivered_at=COALESCE(delivered_at,NOW()), updated_at=NOW() WHERE message_id=${messageId}`;
-      await db.sql`UPDATE guests SET whatsapp_status='read', whatsapp_read_at=NOW(), whatsapp_delivered_at=COALESCE(whatsapp_delivered_at,NOW()) WHERE whatsapp_message_id=${messageId}`;
-    } else if (status === "failed") {
-      await db.sql`UPDATE whatsapp_messages SET status='failed', failed_at=NOW(), error=${error}, updated_at=NOW() WHERE message_id=${messageId}`;
-      await db.sql`UPDATE guests SET whatsapp_status='failed', whatsapp_failed_at=NOW(), whatsapp_error=${error} WHERE whatsapp_message_id=${messageId}`;
+  const client = await getDatabase().pool.connect();
+  try {
+    // Persist before acknowledgement so database errors cause provider retries.
+    await client.query("BEGIN");
+    await client.query("SET LOCAL lock_timeout = '2s'");
+    await client.query("SET LOCAL statement_timeout = '3s'");
+    for (const s of statuses) {
+      const found = (await client.query("SELECT id, guest_id FROM whatsapp_messages WHERE message_id=$1", [s.id])).rows[0];
+      if (!found) throw new Error("Message not persisted yet");
+      // Same lock order as sender; old attempts must never change the latest guest state.
+      await client.query("SELECT id FROM guests WHERE id=$1 FOR UPDATE", [found.guest_id]);
+      const row = (await client.query("SELECT status FROM whatsapp_messages WHERE id=$1 FOR UPDATE", [found.id])).rows[0];
+      const next = nextStatus(row.status, s.status);
+      if (next === row.status) continue;
+      const seconds = Number(s.timestamp);
+      const at = Number.isFinite(seconds) && seconds > 0 && seconds <= Date.now()/1000 + 300 ? new Date(seconds*1000) : new Date();
+      const error = next === 'failed' ? JSON.stringify(providerError({ errors: s.errors })) : null;
+      await client.query(`UPDATE whatsapp_messages SET status=$1, error=$2, updated_at=NOW(),
+        sent_at=CASE WHEN $1 IN ('sent','delivered','read') THEN COALESCE(sent_at,$3) ELSE sent_at END,
+        delivered_at=CASE WHEN $1 IN ('delivered','read') THEN COALESCE(delivered_at,$3) ELSE delivered_at END,
+        read_at=CASE WHEN $1='read' THEN COALESCE(read_at,$3) ELSE read_at END,
+        failed_at=CASE WHEN $1='failed' THEN COALESCE(failed_at,$3) ELSE NULL END WHERE id=$4`, [next,error,at,found.id]);
+      await client.query(`UPDATE guests SET whatsapp_status=$1, whatsapp_error=$2,
+        whatsapp_sent_at=CASE WHEN $1 IN ('sent','delivered','read') THEN COALESCE(whatsapp_sent_at,$3) ELSE whatsapp_sent_at END,
+        whatsapp_delivered_at=CASE WHEN $1 IN ('delivered','read') THEN COALESCE(whatsapp_delivered_at,$3) ELSE whatsapp_delivered_at END,
+        whatsapp_read_at=CASE WHEN $1='read' THEN COALESCE(whatsapp_read_at,$3) ELSE whatsapp_read_at END,
+        whatsapp_failed_at=CASE WHEN $1='failed' THEN COALESCE(whatsapp_failed_at,$3) ELSE NULL END
+        WHERE id=$4 AND whatsapp_message_id=$5`, [next,error,at,found.guest_id,s.id]);
     }
-  }
-
-  return new Response("ok");
+    await client.query("COMMIT");
+    return new Response("ok");
+  } catch {
+    await client.query("ROLLBACK").catch(() => undefined);
+    return new Response("Retry callback", { status: 503, headers: { "retry-after": "5" } });
+  } finally { client.release(); }
 };
 
 export const config: Config = { path: "/api/whatsapp/webhook" };
