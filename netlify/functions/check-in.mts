@@ -1,5 +1,6 @@
 import { getDatabase } from "@netlify/database";
 import type { Config } from "@netlify/functions";
+import { canAccessEvent, getAuth } from "./_shared/auth.mjs";
 import { isSameOriginRequest, ownerTokenFrom, secureJson } from "./_shared/domain.mjs";
 
 function inviteCode(value: unknown) {
@@ -9,9 +10,7 @@ function inviteCode(value: unknown) {
     const url = new URL(raw, "https://noortoona.com");
     const match = url.pathname.match(/\/i\/([^/?#]+)/i);
     if (match) return decodeURIComponent(match[1]).trim().slice(0, 32);
-  } catch {
-    // A plain invitation code is accepted below.
-  }
+  } catch {}
   return raw.replace(/^.*\/i\//i, "").split(/[?#]/)[0].trim().slice(0, 32);
 }
 
@@ -25,11 +24,16 @@ export default async (req: Request) => {
     const eventId = String(body.eventId || "").slice(0, 80);
     const ownerToken = ownerTokenFrom(req, body).slice(0, 120);
     const code = inviteCode(body.code || body.value);
-    if (!eventId || !ownerToken || !code) return secureJson({ error: "بيانات المسح ناقصة" }, 400);
+    if (!eventId || !code) return secureJson({ error: "بيانات المسح ناقصة" }, 400);
 
     const db = getDatabase();
-    const [event] = await db.sql`SELECT id FROM events WHERE id=${eventId} AND owner_token=${ownerToken}`;
-    if (!event) return secureJson({ error: "غير مصرح" }, 403);
+    const auth = await getAuth(req);
+    let authorized = auth ? await canAccessEvent(auth.user, eventId) : false;
+    if (!authorized && ownerToken) {
+      const [event] = await db.sql`SELECT id FROM events WHERE id=${eventId} AND owner_token=${ownerToken}`;
+      authorized = Boolean(event);
+    }
+    if (!authorized) return secureJson({ error: "غير مصرح" }, 403);
 
     const [guest] = await db.sql`
       WITH matched AS (
