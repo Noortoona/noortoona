@@ -43,7 +43,7 @@ function cleanTypeFields(){
 function eventTitle(){
   const base=eventLabel();
   if(state.occasionKey==='activity')return state.name1||activityLabel()||base;
-  if(state.occasionKey==='wedding'||state.occasionKey==='engagement')return `${base} ${state.name1}${state.name2?' و '+state.name2:''}`.trim();
+  if(['wedding','milkah','engagement'].includes(state.occasionKey))return `${base} ${state.name1}${state.name2?' و '+state.name2:''}`.trim();
   return `${base} ${state.name1||''}`.trim();
 }
 const progress=()=>`<div class="journey-progress" role="list" aria-label="مراحل إنشاء الدعوة">${stages.map((label,i)=>`<div class="journey-step ${i+1===state.step?'active':''} ${i+1<state.step?'done':''}" role="listitem"><span>${i+1<state.step?'✓':i+1}</span><small>${label}</small></div>`).join('')}</div>`;
@@ -137,11 +137,13 @@ function initHalaPlanner(){
   const form=$('#halaPlannerForm'),result=$('#plannerResult');if(!form||!result)return;
   const plans={
     wedding:['ثبّت القاعة والموقع أولًا','جهّز قائمة الضيوف حسب العائلات والفئات','اختر قالب الزواج وأدخل اسم العريس والعروس','اختبر الدعوة على واتساب قبل الإرسال','فعّل RSVP وQR قبل موعد المناسبة'],
-    engagement:['حدّد مكان الملكة / الخطوبة','أدخل الاسمين فقط لأن هذا النوع يحتاج طرفين','اختر الهوية والتنسيق المناسب','رتّب قائمة الضيوف والتأكيدات','راجع الموقع والوقت قبل الإرسال'],
+    milkah:['حدّد مكان الملكة','أدخل اسم العريس واسم العروس','اختر قالب الملكة المناسب','رتّب قائمة الضيوف والتأكيدات','راجع الموقع والوقت قبل الإرسال'],
+    engagement:['حدّد مكان الخطوبة','أدخل اسم الخطيب واسم الخطيبة','اختر هوية الخطوبة','رتّب قائمة الضيوف والتأكيدات','راجع الموقع والوقت قبل الإرسال'],
     graduation:['أدخل اسم الخريج أو الخريجة فقط','حدّد مكان الحفل والوقت','اختر قالب تخرج واضح','أضف المدعوين وأرسل تجربة','فعّل متابعة الحضور'],
     birthday:['أدخل اسم صاحب عيد الميلاد فقط','حدّد المكان والوقت','اختر طابع المناسبة','أضف الضيوف','تابع التأكيدات قبل الموعد'],
     activity:['سمّ النشاط أو التجمع — بدون اسم شخص ثانٍ','حدّد العدد الأقصى والموقع','فعّل القطّة والمرافقين إذا احتجتها','استخدم قائمة الانتظار عند اكتمال العدد','شارك الرابط وتابع المشاركين'],
-    conference:['اكتب اسم الاجتماع أو المؤتمر والجهة المنظمة','حدّد الموقع والموعد','قسّم المدعوين حسب الفئة','أرسل الدعوات الرسمية','استخدم QR لتسجيل الدخول']
+    meeting:['اكتب عنوان الاجتماع والجهة أو صاحب الدعوة','حدّد الموقع والموعد','أضف المدعوين للاجتماع','أرسل الدعوة الرسمية','تابع تأكيد الحضور'],
+    conference:['اكتب اسم المؤتمر والجهة المنظمة','حدّد الموقع والموعد','قسّم المدعوين حسب الفئة','أرسل الدعوات الرسمية','استخدم QR لتسجيل الدخول']
   };
   form.onsubmit=e=>{e.preventDefault();const type=$('#plannerType').value,city=$('#plannerCity').value.trim()||'مدينتك',guests=Math.max(1,Number($('#plannerGuests').value)||1),budget=Math.max(0,Number($('#plannerBudget').value)||0),steps=plans[type]||plans.wedding;result.innerHTML=`<span class="planner-star">✦</span><h3>خطة مبدئية من هلا</h3><p><strong>${guests.toLocaleString('ar-SA')}</strong> ضيف في <strong>${N.esc(city)}</strong>${budget?` بميزانية ${budget.toLocaleString('ar-SA')} ر.س`:''}.</p><ul>${steps.map(s=>`<li>${s}</li>`).join('')}</ul>`;};
 }
