@@ -23,6 +23,7 @@ function reset() {
   globalThis.__waDb={
     sql:async(parts,...args)=>{
       const sql=parts.join('?');calls.push({sql,args});
+      if(sql.includes('SELECT 1 FROM events'))return [{ok:1}];
       if(sql.includes('SELECT g.*'))return [{id:'guest',phone:'0500000000',name:'ضيف الاختبار',code:'INVITE',title:'اختبار هلا',location:'الرياض'}];
       return [];
     },
