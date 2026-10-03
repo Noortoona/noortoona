@@ -1,6 +1,7 @@
 import { getDatabase } from "@netlify/database";
 import type { Config } from "@netlify/functions";
 import { isSameOriginRequest, ownerTokenFrom, secureJson } from "./_shared/domain.mjs";
+import { canAccessEvent, getAuth } from "./_shared/auth.mjs";
 
 function makeCode() {
   const alphabet = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
@@ -23,12 +24,12 @@ export default async (req: Request) => {
     const data = await req.json();
     const ownerToken = ownerTokenFrom(req, data).slice(0, 120);
     const db = getDatabase();
-
+    const auth = await getAuth(req);
+    const authorized = async (eventId:string) => { if(ownerToken){const r=await db.sql`SELECT 1 FROM events WHERE id=${eventId} AND owner_token=${ownerToken} LIMIT 1`;if(r[0])return true;} return auth ? canAccessEvent(auth.user,eventId) : false; };
 
     if (req.method === "PATCH") {
-      if (!data.eventId || !ownerToken || !data.guestId) return secureJson({ error: "بيانات التحديث ناقصة" }, 400);
-      const [event] = await db.sql`SELECT id FROM events WHERE id=${String(data.eventId)} AND owner_token=${ownerToken}`;
-      if (!event) return secureJson({ error: "غير مصرح" }, 403);
+      if (!data.eventId || !data.guestId) return secureJson({ error: "بيانات التحديث ناقصة" }, 400);
+      if (!await authorized(String(data.eventId))) return secureJson({ error: "غير مصرح" }, 403);
       const paymentStatus = data.paymentStatus === "paid" ? "paid" : "unpaid";
       const [guest] = await db.sql`
         UPDATE guests
@@ -43,17 +44,15 @@ export default async (req: Request) => {
     }
 
     if (req.method === "DELETE") {
-      if (!data.eventId || !ownerToken || !data.guestId) return secureJson({ error: "بيانات الحذف ناقصة" }, 400);
-      const [event] = await db.sql`SELECT id FROM events WHERE id=${String(data.eventId)} AND owner_token=${ownerToken}`;
-      if (!event) return secureJson({ error: "غير مصرح" }, 403);
+      if (!data.eventId || !data.guestId) return secureJson({ error: "بيانات الحذف ناقصة" }, 400);
+      if (!await authorized(String(data.eventId))) return secureJson({ error: "غير مصرح" }, 403);
       const [guest] = await db.sql`DELETE FROM guests WHERE id=${String(data.guestId)} AND event_id=${String(data.eventId)} RETURNING id`;
       if (!guest) return secureJson({ error: "الضيف غير موجود" }, 404);
       return secureJson({ ok: true });
     }
 
-    if (!data.eventId || !ownerToken) return secureJson({ error: "بيانات المناسبة ناقصة" }, 400);
-    const [event] = await db.sql`SELECT id FROM events WHERE id=${String(data.eventId)} AND owner_token=${ownerToken}`;
-    if (!event) return secureJson({ error: "غير مصرح" }, 403);
+    if (!data.eventId) return secureJson({ error: "بيانات المناسبة ناقصة" }, 400);
+    if (!await authorized(String(data.eventId))) return secureJson({ error: "غير مصرح" }, 403);
 
     if (Array.isArray(data.guests)) {
       const guests = data.guests.map(cleanGuest).filter((g: { name: string }) => g.name).slice(0, 1000);
