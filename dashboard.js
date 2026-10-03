@@ -71,6 +71,69 @@ function parseCompanionNames(v){
 }
 function money(v){return Number(v||0).toLocaleString('ar-SA',{maximumFractionDigits:2})}
 function paymentLabel(g){return g.payment_status==='paid'?'مدفوعة':'غير مدفوعة'}
+function parseDesign(event){const v=event?.design_json;if(!v)return {};if(typeof v==='object')return v;try{return JSON.parse(v)}catch{return {}}}
+function dashboardType(event){
+ const d=parseDesign(event);if(d.occasionKey)return d.occasionKey;
+ if(event.occasion==='تجمع ونشاط')return'activity';
+ if(/زواج/.test(event.occasion||''))return'wedding';
+ if(/ملكة|خطوبة/.test(event.occasion||''))return'engagement';
+ if(/تخرج/.test(event.occasion||''))return'graduation';
+ if(/مولود/.test(event.occasion||''))return'newborn';
+ if(/ميلاد/.test(event.occasion||''))return'birthday';
+ if(/مؤتمر|اجتماع/.test(event.occasion||''))return'conference';
+ if(/افتتاح/.test(event.occasion||''))return'opening';
+ if(/تكريم/.test(event.occasion||''))return'honoring';
+ if(/عزاء/.test(event.occasion||''))return'condolence';
+ return'custom';
+}
+function taskStore(){try{return JSON.parse(localStorage.getItem('halaV6Tasks:'+eventId)||'{}')||{}}catch{return {}}}
+function setTask(key,value){const x=taskStore();x[key]=value;localStorage.setItem('halaV6Tasks:'+eventId,JSON.stringify(x))}
+function planFor(event,guests){
+ const type=dashboardType(event),sent=guests.some(g=>g.whatsapp_status&&g.whatsapp_status!=='failed'),responded=guests.some(g=>g.rsvp_status&&g.rsvp_status!=='pending'),base={
+  wedding:[['venue','تأكيد القاعة والموقع',Boolean(event.location)],['design','مراجعة أسماء العريس والعروس والتصميم',Boolean(event.name1&&event.name2&&event.template)],['guests','إكمال قائمة الضيوف',guests.length>0],['test','إرسال دعوة تجريبية وفحصها',sent],['rsvp','متابعة تأكيدات الحضور',responded],['entry','تجهيز QR والاستقبال',false]],
+  milkah:[['venue','تأكيد موقع الملكة',Boolean(event.location)],['design','مراجعة اسم العريس واسم العروس وتصميم الدعوة',Boolean(event.name1&&event.name2&&event.template)],['guests','إكمال قائمة الضيوف',guests.length>0],['test','اختبار دعوة الملكة قبل الإرسال',sent],['rsvp','متابعة ردود الحضور',responded]],
+  engagement:[['venue','تأكيد موقع الخطوبة',Boolean(event.location)],['design','مراجعة اسم الخطيب واسم الخطيبة وتصميم الدعوة',Boolean(event.name1&&event.name2&&event.template)],['guests','إكمال قائمة الضيوف',guests.length>0],['test','اختبار دعوة الخطوبة قبل الإرسال',sent],['rsvp','متابعة ردود الحضور',responded]],
+  graduation:[['details','مراجعة اسم الخريج والموقع',Boolean(event.name1&&event.location)],['design','اعتماد قالب التخرج',Boolean(event.template)],['guests','إضافة المدعوين',guests.length>0],['test','إرسال تجربة',sent],['rsvp','متابعة الردود',responded]],
+  newborn:[['details','مراجعة اسم المولود وبيانات المناسبة',Boolean(event.name1&&event.event_date)],['design','اعتماد قالب المولود',Boolean(event.template)],['guests','إضافة المدعوين',guests.length>0],['test','إرسال تجربة',sent]],
+  birthday:[['details','مراجعة اسم صاحب المناسبة والموعد',Boolean(event.name1&&event.event_date)],['design','اعتماد الطابع والتصميم',Boolean(event.template)],['guests','إضافة الضيوف',guests.length>0],['rsvp','متابعة التأكيدات',responded]],
+  meeting:[['details','تأكيد عنوان الاجتماع والجهة أو صاحب الدعوة',Boolean(event.name1)],['venue','تأكيد المكان والموعد',Boolean(event.location&&event.event_date)],['guests','إضافة المدعوين',guests.length>0],['test','اختبار دعوة الاجتماع',sent],['rsvp','متابعة تأكيد الحضور',responded]],
+  conference:[['details','تأكيد عنوان المؤتمر والجهة المنظمة',Boolean(event.name1)],['venue','تأكيد الموقع والموعد',Boolean(event.location&&event.event_date)],['guests','إضافة المدعوين حسب الفئات',guests.length>0],['test','اختبار الدعوة الرسمية',sent],['entry','تجهيز QR للتسجيل',false]],
+  opening:[['details','تأكيد اسم الافتتاح والجهة الداعية',Boolean(event.name1)],['venue','تأكيد الموقع',Boolean(event.location)],['guests','إضافة المدعوين',guests.length>0],['test','اختبار الدعوة',sent]],
+  honoring:[['details','مراجعة اسم المكرّم أو عنوان التكريم',Boolean(event.name1)],['venue','تأكيد المكان والموعد',Boolean(event.location&&event.event_date)],['guests','إضافة المدعوين',guests.length>0],['entry','تجهيز الدخول',false]],
+  condolence:[['details','مراجعة اسم المتوفى ومعلومات العزاء',Boolean(event.name1)],['venue','تأكيد المكان والوقت',Boolean(event.location&&event.event_date)],['guests','إضافة قائمة الإرسال عند الحاجة',guests.length>0]],
+  activity:[['details','تأكيد اسم النشاط والموعد والموقع',Boolean(event.name1&&event.location&&event.event_date)],['capacity','مراجعة العدد الأقصى',Number(event.capacity)>0],['share','ضبط القطّة إن كانت مطلوبة',Number(event.share_amount)>=0],['guests','إضافة المشاركين',guests.length>0],['wait','تفعيل قائمة الانتظار عند الحاجة',Boolean(event.waitlist_enabled)],['rsvp','متابعة المشاركين المؤكدين',responded]],
+  custom:[['details','مراجعة تفاصيل الدعوة',Boolean(event.name1&&event.event_date)],['design','اعتماد التصميم',Boolean(event.template)],['guests','إضافة المدعوين',guests.length>0],['test','اختبار الدعوة',sent]]
+ }[type]||[];
+ const stored=taskStore();return base.map(([key,label,auto])=>({key,label,done:stored[key]??auto}));
+}
+function servicesFor(event){
+ const type=dashboardType(event);
+ const maps={
+  wedding:['القاعات والمواقع','التصوير والفيديو','الورد والتنسيق','الضيافة والحلويات','الهدايا والتوزيعات'],
+  milkah:['القاعات والمواقع','التصوير','الورد والتنسيق','الضيافة والحلويات'],
+  engagement:['القاعات والمواقع','التصوير','الورد والتنسيق','الضيافة والحلويات'],
+  graduation:['التصوير','تنسيق الحفل','الضيافة','هدايا التخرج'],
+  newborn:['التصوير','الضيافة والحلويات','التوزيعات'],
+  birthday:['المكان','الكيك والحلويات','التنسيق','التصوير والترفيه'],
+  meeting:['غرف الاجتماعات','الشاشات والعرض','الضيافة الخفيفة'],
+  conference:['القاعات','الصوت والشاشات','الضيافة','التسجيل والاستقبال'],
+  opening:['الموقع','التصوير','التنسيق','الضيافة'],
+  honoring:['القاعات','التصوير','الدروع والهدايا','الضيافة'],
+  condolence:['الموقع','الضيافة'],
+  activity:['حجز الملعب / الموقع','المياه والضيافة','التصوير عند الحاجة','معدات النشاط'],
+  custom:['الموقع','التصوير','التنسيق','الضيافة']
+ };
+ return maps[type]||maps.custom;
+}
+function munasabatiPanel(event,guests){
+ const tasks=planFor(event,guests),done=tasks.filter(t=>t.done).length,pct=tasks.length?Math.round(done/tasks.length*100):0,services=servicesFor(event);
+ return `<section class="muna-panel">
+  <div class="muna-head"><div><span class="eyebrow dark">مناسبتي</span><h2>جاهزية ${esc(event.title)}</h2><p>خطة عملية مخصصة لهذا النوع من الدعوات، وليست قائمة موحدة لكل المناسبات.</p></div><div class="muna-score"><strong>${pct}%</strong><span>جاهزية</span></div></div>
+  <div class="muna-progress"><span style="width:${pct}%"></span></div>
+  <div class="muna-grid"><div class="muna-tasks"><h3>الخطوات التالية</h3>${tasks.map(t=>`<label class="muna-task ${t.done?'done':''}"><input type="checkbox" data-hala-task="${esc(t.key)}" ${t.done?'checked':''}><span><b>${t.done?'✓':'○'}</b>${esc(t.label)}</span></label>`).join('')}</div>
+  <div class="muna-services"><h3>خدمات مناسبة لك</h3><div>${services.map(s=>`<span>${esc(s)}</span>`).join('')}</div><p>هذه الاقتراحات تتغير حسب نوع المناسبة حتى لا تظهر خدمات غير منطقية للنشاط أو العزاء أو غيرها.</p></div></div>
+ </section>`;
+}
 function render({event,guests}){
  const isActivity=event.occasion==='تجمع ونشاط';
  const viewed=guests.filter(g=>g.viewed_at).length;
@@ -103,6 +166,7 @@ function render({event,guests}){
   </section>`:'';
  root.innerHTML=`<div class="dash-title-row"><div><span class="eyebrow dark">${isActivity?'لوحة منظم النشاط':'لوحة صاحب المناسبة'}</span><h1>${esc(event.title)}</h1><p>${esc(event.location||'')}</p></div><div class="dash-title-actions"><button id="scanBtn" class="gold-btn scan-open-btn">▣ مسح QR</button><button id="refreshBtn" class="outline-btn dark-outline">↻ تحديث</button><button id="exportBtn" class="outline-btn dark-outline">↓ تصدير CSV</button></div></div>
  <div class="dash-stat-grid dash-stat-grid-8"><div><small>إجمالي الضيوف</small><strong>${guests.length}</strong></div><div><small>شاهدوا</small><strong>${viewed}</strong></div><div class="checked-stat"><small>وصلوا</small><strong>${checkedIn}</strong></div><div><small>أكدوا</small><strong>${accepted}</strong></div><div><small>ربما</small><strong>${maybe}</strong></div><div><small>بانتظار الرد</small><strong>${pending}</strong></div><div><small>اعتذروا</small><strong>${declined}</strong></div><div class="accent-stat"><small>${isActivity?'المشاركون الفعليون':'الحضور المتوقع'}</small><strong>${expected}</strong><em>مع المرافقين</em></div></div>
+ ${munasabatiPanel(event,guests)}
  ${activityPanel}
  <section class="dash-panel"><div class="panel-head"><div><h2>إدارة الضيوف</h2><p>أضف يدويًا أو استورد قائمة كاملة من Excel / CSV.</p></div><div class="panel-actions"><button id="importBtn" class="outline-btn dark-outline small-gold">⇧ استيراد Excel / CSV</button><button id="remindBtn" class="gold-btn small-gold">تذكير غير المستجيبين</button></div></div>
  <form id="guestForm" class="guest-form"><input name="name" placeholder="اسم الضيف" required><input name="phone" inputmode="tel" placeholder="رقم الجوال (اختياري)"><button class="gold-btn">+ إضافة ضيف</button></form>
@@ -127,7 +191,7 @@ function bind(event,guests){
  document.getElementById('arrivalFilter').onchange=e=>{filters.arrival=e.target.value;render(dashboardData)};
  document.querySelectorAll('.copy-link').forEach(b=>b.onclick=()=>copyInvite(b.dataset.code)); document.querySelectorAll('.wa-link').forEach(b=>b.onclick=()=>sendWhatsApp(b.dataset.phone,b.dataset.name,b.dataset.code,event,false,b.dataset.id));
  document.querySelectorAll('.delete-guest').forEach(b=>b.onclick=()=>deleteGuest(b.dataset.id,b.dataset.name));
- document.querySelectorAll('.payment-pill').forEach(b=>b.onclick=()=>setPaymentStatus(b.dataset.paymentId,b.dataset.paymentStatus));
+ document.querySelectorAll('.payment-pill').forEach(b=>b.onclick=()=>setPaymentStatus(b.dataset.paymentId,b.dataset.paymentStatus)); document.querySelectorAll('[data-hala-task]').forEach(x=>x.onchange=()=>{setTask(x.dataset.halaTask,x.checked);render(dashboardData)});
 }
 function stopScanner(){
  try{scannerControls?.stop()}catch{}

@@ -5,10 +5,12 @@
   const make=(group,row,names)=>names.map((name,col)=>({name,atlas:atlases[group],position:`${cols[col]} ${rows[row]}`,accent:col===3?'#9a7434':'#e3bd64'}));
   const catalog={
     wedding:make('social',2,['ليلة كحلية','حديقة اللؤلؤ','أقواس ذهبية','مخمل ملكي']),
-    engagement:make('social',3,['وعد من ذهب','لؤلؤة الملكة','زمردة','نقاء']),
+    milkah:make('social',3,['ليلة الملكة','خاتم الوعد','لؤلؤة','مخمل ملكي']),
+    engagement:make('social',3,['وعد من ذهب','ورد الخطوبة','زمردة','نقاء']),
     graduation:make('events',0,['قبعة النجاح','ثمرة السنين','منصة المجد','بداية']),
     newborn:make('events',1,['قمر صغير','دفء البداية','ليلة زرقاء','زهرة وردية']),
     birthday:make('social',4,['شموع ذهبية','هدية الليل','ورد وفرح','ليلة احتفال']),
+    meeting:make('formal',4,['اجتماع تنفيذي','طاولة القرار','مجلس العمل','موعد رسمي']),
     conference:make('events',2,['مسرح الرؤية','مجلس الأعمال','منصة المؤتمر','قاعة النور']),
     opening:make('events',3,['الشريط الذهبي','بوابة الإطلاق','المعرض الأبيض','لحظة الكشف']),
     honoring:make('events',4,['كأس التميز','وسام','منصة التكريم','إطار الإنجاز']),
@@ -25,8 +27,8 @@
     activityCustom:make('activities',4,['لياقة','رحلة بحرية','أمسية ألعاب','سينما البر'])
   };
   const occasions=[
-    {key:'wedding',label:'زواج',icon:'♢'},{key:'engagement',label:'ملكة / خطوبة',icon:'♧'},{key:'graduation',label:'تخرج',icon:'⌑'},
-    {key:'newborn',label:'مولود',icon:'◌'},{key:'birthday',label:'عيد ميلاد',icon:'♨'},{key:'conference',label:'اجتماع / مؤتمر',icon:'▣'},
+    {key:'wedding',label:'زواج',icon:'♢'},{key:'milkah',label:'ملكة',icon:'♧'},{key:'engagement',label:'خطوبة',icon:'◇'},{key:'graduation',label:'تخرج',icon:'⌑'},
+    {key:'newborn',label:'مولود',icon:'◌'},{key:'birthday',label:'عيد ميلاد',icon:'♨'},{key:'meeting',label:'اجتماع',icon:'▦'},{key:'conference',label:'مؤتمر',icon:'▣'},
     {key:'opening',label:'افتتاح',icon:'✂'},{key:'honoring',label:'تكريم',icon:'♛'},{key:'formal',label:'مناسبة رسمية',icon:'▤'},
     {key:'national',label:'مناسبة وطنية',icon:'♜'},{key:'condolence',label:'عزاء',icon:'❧'},{key:'activity',label:'تجمع ونشاط',icon:'♟'},
     {key:'custom',label:'مناسبة مخصصة',icon:'•••'}
@@ -44,8 +46,13 @@
     const t=templateByName(data.template),design=data.design||{},activity=data.occasionKey==='activity'||data.occasion==='تجمع ونشاط';
     const fallbackLabel=typeLabel(data.occasionKey||data.occasion_key,data.activityKey||data.activity_key||data.activityType);
     const label=activity?(data.customActivity||data.activityType||data.activity_type||fallbackLabel):(data.customOccasion||data.occasion||fallbackLabel);
-    const title=activity?(data.name1||label):[data.name1,data.name2].filter(Boolean).join(' و ');
+    const key=data.occasionKey||data.occasion_key||'custom';
+    const pairTypes=['wedding','milkah','engagement'];
+    const title=activity?(data.name1||label):(pairTypes.includes(key)?[data.name1,data.name2].filter(Boolean).join(' و '):(data.name1||label));
+    const hostName=data.hostName||design.hostName||'';
+    const hostLine=!activity&&hostName?`<p class="invite-host">${esc(hostName)}</p>`:'';
     const accent=design.accent||t.accent;
+    const showRsvp=design.showRsvp!==false;
     const fonts={ruqaa:'Aref Ruqaa',tajawal:'Tajawal',serif:'Georgia'};
     const custom=design.image?`background-image:url('${String(design.image).replaceAll("'",'%27')}');background-size:cover;background-position:center;`:'';
     return `<article class="invite-canvas" data-layout="${esc(design.layout||'classic')}" style="${styleFor(t)};--invite-accent:${esc(accent)};--invite-font:${fonts[design.font]||'Aref Ruqaa'}">
@@ -55,12 +62,12 @@
         <span class="invite-type">${esc(label)}</span>
         ${opts.guestName?`<p class="invite-personal">دعوة خاصة إلى <strong>${esc(opts.guestName)}</strong></p>`:''}
         <p class="invite-headline">${esc(design.headline||'يسعدنا حضوركم')}</p>
-        <h1>${esc(title||'عنوان المناسبة')}</h1>
+        <h1>${esc(title||'عنوان المناسبة')}</h1>${hostLine}
         <p class="invite-message">${esc(data.message||'وجودكم يكمل فرحتنا')}</p>
         <i class="invite-rule"></i>
         <div class="invite-meta"><span>▣ <b>${esc(data.date||data.event_date||'أضف التاريخ')}</b></span><span>◷ <b>${esc(String(data.time||data.event_time||'00:00').slice(0,5))}</b></span><span>⌖ <b>${esc(data.location||'أضف الموقع')}</b></span></div>
       </div>
-      <div class="invite-actions-demo"><button type="button">سأحضر</button><button type="button">أعتذر</button></div>
+      ${showRsvp?'<div class="invite-actions-demo"><button type="button">سأحضر</button><button type="button">أعتذر</button></div>':''}
     </article>`;
   }
   window.NOORTOONA={catalog,occasions,activities,templateByName,typeLabel,styleFor,canvas,esc};

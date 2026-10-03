@@ -4,10 +4,18 @@ import { boundedInteger, calculateShareTotal, decideAttendance, partySize } from
 
 global.window = {};
 await import('../invitation-renderer.js');
+await import('../invitation-schemas.js');
 const N = window.NOORTOONA;
+const S = window.HALA_V6_SCHEMA;
 
 assert.equal(N.occasions.length, 13, 'occasion coverage');
 assert.equal(N.activities.length, 7, 'activity coverage');
+assert.equal(S.schemaFor('wedding').fields.filter(f=>f.key==='name2')[0].label,'اسم العروس','wedding asks for bride name');
+assert.equal(S.schemaFor('activity').fields.some(f=>f.key==='name2'),false,'activity never asks for a second person');
+assert.equal(S.schemaFor('graduation').fields.some(f=>f.key==='name2'),false,'graduation is single-person');
+assert.equal(S.experienceFor('condolence').showRsvp,false,'condolence is informational by default');
+assert.equal(S.experienceFor('conference').allowCompanions,false,'conference does not assume companions');
+assert.equal(S.experienceFor('activity').acceptLabel,'نعم، سأشارك','activity uses participation language');
 for (const [group, templates] of Object.entries(N.catalog)) {
   assert.ok(templates.length >= 4, `${group} needs four visual templates`);
   assert.equal(new Set(templates.map(t => t.name)).size, templates.length, `${group} template names must be unique`);
@@ -52,8 +60,12 @@ assert.match(app, /محفوظ تلقائيًا/, 'draft progress is visible');
 assert.match(app, /hasSavedDraft/, 'unfinished journey can be resumed');
 assert.ok(app.indexOf("localStorage.setItem('noortoonaOwner'") < app.indexOf("fetch('/api/guests'"), 'owner access must be preserved before guest import');
 assert.match(guestJs, /window\.NOORTOONA\.canvas/, 'guest must use shared invitation renderer');
+assert.match(guestJs, /HALA_V6_SCHEMA.*experienceFor/, 'guest RSVP behavior comes from invitation type');
+assert.match(app, /applyTypeExperience/, 'builder applies per-type invitation defaults');
+assert.match(app, /cleanTypeFields/, 'builder clears fields that do not belong to the selected type');
 assert.match(guestJs, /safeExternalUrl/, 'guest links must be restricted to safe web URLs');
 assert.ok(guestHtml.indexOf('invitation-renderer.js') < guestHtml.indexOf('guest.js'), 'shared renderer must load before guest app');
+assert.ok(guestHtml.indexOf('invitation-schemas.js') < guestHtml.indexOf('guest.js'), 'type schema must load before guest app');
 assert.match(indexHtml, /https:\/\/noortoona\.com\//, 'official domain metadata');
 assert.match(indexHtml, /هلا \| كل مناسبة تبدأ بهلا/, 'HALA public brand metadata');
 assert.match(indexHtml, /assets\/brand\/hala-icon\.svg/, 'HALA logo asset');

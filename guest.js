@@ -79,6 +79,15 @@ async function loadInvite(){
     card.dataset.tone=tone; card.dataset.layout=design.layout||'classic'; card.dataset.effect=design.effect||'sweep'; card.dataset.frame=design.frame||'fine';
     const occasionKey=design.occasionKey||(isActivity?'activity':activityArtKey(i)==='wedding'?'wedding':activityArtKey(i)==='graduation'?'graduation':activityArtKey(i)==='baby'?'newborn':activityArtKey(i)==='birthday'?'birthday':activityArtKey(i)==='condolence'?'condolence':'custom');
     const activityKey=design.activityKey||(/بادل/i.test(i.activity_type||'')?'padel':/كشت/i.test(i.activity_type||'')?'camp':/استراحة|شاليه/i.test(i.activity_type||'')?'chalet':/رحلة/i.test(i.activity_type||'')?'trip':/عشاء/i.test(i.activity_type||'')?'dinner':'football');
+    const experience=window.HALA_V6_SCHEMA?.experienceFor(occasionKey)||{};
+    const allowCompanions=experience.allowCompanions!==false;
+    const allowChildren=experience.allowChildren!==false&&design.allowChildren!==false;
+    const companionSelect=allowCompanions?'<label>عدد المرافقين<select id="companionCount">'+[0,1,2,3,4,5].map(n=>'<option value="'+n+'">'+n+'</option>').join('')+'</select></label>':'';
+    const childrenSelect=allowChildren?'<label>عدد الأطفال<select id="childrenCount">'+[0,1,2,3,4,5].map(n=>'<option value="'+n+'">'+n+'</option>').join('')+'</select></label>':'';
+    const activitySummary=isActivity?'<div class="activity-summary"><strong>'+esc(i.activity_type||'تجمع ونشاط')+'</strong><span>'+(i.capacity?'العدد الأقصى: '+esc(i.capacity)+' شخص':'')+'</span>'+(shareAmount?'<b>'+esc(i.share_label||'قيمة القطّة')+': '+shareAmount.toLocaleString('ar-SA')+' ر.س لكل شخص</b>':'')+(i.attendance_state==='waitlist'?'<em class="waitlist-note">أنت حاليًا في قائمة الانتظار</em>':'')+'</div>':'';
+    const rsvpBlock=experience.showRsvp===false
+      ? '<div class="guest-rsvp guest-rsvp-informational"><h2>لا يلزم تأكيد الحضور</h2><p>هذه الدعوة معلوماتية، ويمكنك الرجوع للموقع والوقت من التفاصيل أعلاه.</p></div>'
+      : '<div class="guest-rsvp"><h2>'+esc(experience.rsvpPrompt||(isActivity?'هل ستشارك معنا؟':'هل ستتمكن من الحضور؟'))+'</h2>'+activitySummary+'<div class="guest-rsvp-actions"><button data-status="accepted" class="gold-btn">'+esc(experience.acceptLabel||'نعم، سأحضر')+'</button>'+(experience.showMaybe!==false&&design.showMaybe!==false?'<button data-status="maybe" class="outline-btn maybe-btn">'+esc(experience.maybeLabel||'ربما')+'</button>':'')+(design.showDecline!==false?'<button data-status="declined" class="outline-btn">'+esc(experience.declineLabel||'أعتذر عن الحضور')+'</button>':'')+'</div><div id="companions" class="companions hidden"><div class="rsvp-extra-grid">'+companionSelect+childrenSelect+'</div>'+(isActivity&&i.allow_named_companions?'<div id="companionNames" class="companion-names"></div>':'')+(isActivity&&shareAmount?'<div id="shareCalc" class="share-calc">إجمالي القطّة: <strong>'+shareAmount.toLocaleString('ar-SA')+' ر.س</strong></div>':'')+(isActivity&&i.require_share_consent?'<label class="share-consent"><input id="shareConsent" type="checkbox"> أوافق على تحمل قطتي وقطّة المرافقين المسجلين معي.</label>':'')+(design.allowNotes!==false?'<label class="rsvp-note-label">ملاحظة للمضيف<textarea id="guestNote" rows="2" maxlength="500" placeholder="ملاحظة خاصة..."></textarea></label>':'')+'<button id="confirmRsvp" class="gold-btn">'+esc(isActivity?'تأكيد المشاركة':'تأكيد الحضور')+'</button></div><p id="rsvpResult" class="rsvp-result"></p></div>';
     card.innerHTML=window.NOORTOONA.canvas({...i,date:i.event_date,time:i.event_time,occasionKey,activityKey,activityType:i.activity_type,design},{guestName:i.guest_name})+`
       <div class="guest-light-sweep"></div>
       <div class="occasion-art art-${activityArtKey(i)}" aria-hidden="true"></div>
@@ -87,7 +96,7 @@ async function loadInvite(){
       <p class="guest-for">دعوة خاصة إلى <strong>${esc(i.guest_name)}</strong></p>
       <div class="guest-frame">
         <span class="guest-frame-star">✦</span>
-        <p class="guest-headline">${esc(design.headline || 'بكل الحب ندعوكم')}</p><p class="guest-kicker">${esc(i.message || 'يسعدنا ويشرفنا حضوركم ومشاركتنا فرحتنا')}</p>
+        <p class="guest-headline">${esc(design.headline || experience.headline || 'بكل الحب ندعوكم')}</p><p class="guest-kicker">${esc(i.message || experience.message || 'يسعدنا ويشرفنا حضوركم')}</p>
         <h1>${esc(i.name1)} ${i.name2?'<span>&</span> '+esc(i.name2):''}</h1>
         <div class="guest-rule"></div>
       </div>
@@ -96,17 +105,13 @@ async function loadInvite(){
         ${i.event_time?`<div><small>الوقت</small><strong>${esc(String(i.event_time).slice(0,5))}</strong></div>`:''}
         ${i.location?`<div><small>المكان</small><strong>${esc(i.location)}</strong></div>`:''}
       </div>
-      ${design.showCountdown!==false&&i.event_date?`<div class="guest-countdown" data-event-date="${esc(i.event_date)}" data-event-time="${esc(String(i.event_time||'00:00').slice(0,5))}"><small>متبقي على المناسبة</small><div><span><b data-days>0</b><i>يوم</i></span><span><b data-hours>0</b><i>ساعة</i></span><span><b data-minutes>0</b><i>دقيقة</i></span></div></div>`:''}
+      ${design.showCountdown!==false&&experience.showCountdown!==false&&i.event_date?`<div class="guest-countdown" data-event-date="${esc(i.event_date)}" data-event-time="${esc(String(i.event_time||'00:00').slice(0,5))}"><small>متبقي على المناسبة</small><div><span><b data-days>0</b><i>يوم</i></span><span><b data-hours>0</b><i>ساعة</i></span><span><b data-minutes>0</b><i>دقيقة</i></span></div></div>`:''}
       ${i.description?`<p class="guest-description">${esc(i.description)}</p>`:''}
       ${design.showMap!==false&&mapsUrl?`<a class="outline-btn guest-map" target="_blank" rel="noopener" href="${esc(mapsUrl)}">⌖ فتح الموقع على الخريطة</a>`:''}
       ${(videoUrl||pdfUrl)?`<div class="guest-media-links">${videoUrl?`<a class="outline-btn" target="_blank" rel="noopener" href="${esc(videoUrl)}">▶ مشاهدة الفيديو</a>`:''}${pdfUrl?`<a class="outline-btn" target="_blank" rel="noopener" href="${esc(pdfUrl)}">PDF تفاصيل المناسبة</a>`:''}</div>`:''}
-      ${design.showQr!==false?`<div class="guest-qr"><div><img alt="QR الدخول" src="https://api.qrserver.com/v1/create-qr-code/?size=180x180&data=${encodeURIComponent(location.href)}"><span>⌁</span></div><small>QR الخاص بالدعوة للدخول</small></div>`:''}
-      <div class="guest-rsvp">
-        <h2>${isActivity?'هل ستشاركنا النشاط؟':'هل ستشاركنا المناسبة؟'}</h2>${isActivity?`<div class="activity-summary"><strong>${esc(i.activity_type||'تجمع ونشاط')}</strong><span>${i.capacity?`العدد الأقصى: ${esc(i.capacity)} شخص`:''}</span>${shareAmount?`<b>${esc(i.share_label||'قيمة القطّة')}: ${shareAmount.toLocaleString('ar-SA')} ر.س لكل شخص</b>`:''}${i.attendance_state==='waitlist'?'<em class="waitlist-note">أنت حاليًا في قائمة الانتظار</em>':''}</div>`:''}
-        <div class="guest-rsvp-actions"><button data-status="accepted" class="gold-btn">نعم، سأحضر</button>${design.showMaybe!==false?'<button data-status="maybe" class="outline-btn maybe-btn">ربما</button>':''}${design.showDecline!==false?'<button data-status="declined" class="outline-btn">أعتذر عن الحضور</button>':''}</div>
-        <div id="companions" class="companions hidden"><div class="rsvp-extra-grid"><label>عدد المرافقين<select id="companionCount">${[0,1,2,3,4,5].map(n=>`<option value="${n}">${n}</option>`).join('')}</select></label>${!isActivity&&design.allowChildren!==false?`<label>عدد الأطفال<select id="childrenCount">${[0,1,2,3,4,5].map(n=>`<option value="${n}">${n}</option>`).join('')}</select></label>`:''}</div>${isActivity&&i.allow_named_companions?'<div id="companionNames" class="companion-names"></div>':''}${isActivity&&shareAmount?`<div id="shareCalc" class="share-calc">إجمالي القطّة: <strong>${shareAmount.toLocaleString('ar-SA')} ر.س</strong></div>`:''}${isActivity&&i.require_share_consent?'<label class="share-consent"><input id="shareConsent" type="checkbox"> أوافق على تحمل قطتي وقطّة المرافقين المسجلين معي.</label>':''}${design.allowNotes!==false?'<label class="rsvp-note-label">ملاحظة للمضيف<textarea id="guestNote" rows="2" maxlength="500" placeholder="حساسية غذائية، ملاحظة خاصة..."></textarea></label>':''}<button id="confirmRsvp" class="gold-btn">تأكيد الحضور</button></div>
-        <p id="rsvpResult" class="rsvp-result"></p>
-      </div>${design.photographyPermission?'<div class="guest-photo-permission">📷 حضورك يعني موافقتك على سياسة التصوير الخاصة بالمناسبة.</div>':''}`;
+      ${design.showQr!==false&&experience.showQr!==false?`<div class="guest-qr"><div><img alt="QR الدخول" src="https://api.qrserver.com/v1/create-qr-code/?size=180x180&data=${encodeURIComponent(location.href)}"><span>⌁</span></div><small>QR الخاص بالدعوة للدخول</small></div>`:''}
+      ${rsvpBlock}
+      ${design.photographyPermission?'<div class="guest-photo-permission">📷 حضورك يعني موافقتك على سياسة التصوير الخاصة بالمناسبة.</div>':''}`;
     if(i.rsvp_status !== 'pending') showResult(i.rsvp_status, i.companion_count, i.children_count);
     card.querySelectorAll('[data-status]').forEach(b=>b.onclick=()=>choose(b.dataset.status));
     const canvasActions=card.querySelectorAll('.invite-actions-demo button');
