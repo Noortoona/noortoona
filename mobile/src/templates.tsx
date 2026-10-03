@@ -79,7 +79,7 @@ const styles = StyleSheet.create({
   },
   selected: { borderWidth: 3, borderColor: theme.colors.gold },
   atlas: { position: "absolute", width: "400%", height: "500%" },
-  shade: { ...StyleSheet.absoluteFillObject, backgroundColor: "rgba(9,5,9,.18)" },
+  shade: { position: "absolute", top: 0, right: 0, bottom: 0, left: 0, backgroundColor: "rgba(9,5,9,.18)" },
   inner: { position: "absolute", inset: 9 as any, borderWidth: 1, borderColor: "rgba(227,189,100,.55)", borderRadius: 12 },
   copy: { position: "absolute", left: 12, right: 12, bottom: 12, alignItems: "flex-end" },
   label: { color: "#F0D58F", fontSize: 11, fontWeight: "700", writingDirection: "rtl" },
