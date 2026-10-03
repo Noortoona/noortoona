@@ -7,11 +7,6 @@
     "orientation": "portrait",
     "userInterfaceStyle": "light",
     "icon": "./assets/hala-icon.png",
-    "splash": {
-      "image": "./assets/hala-icon.png",
-      "resizeMode": "contain",
-      "backgroundColor": "#4A0E1E"
-    },
     "ios": {
       "supportsTablet": true,
       "bundleIdentifier": "com.noortoona.hala"
@@ -36,6 +31,15 @@
         "expo-camera",
         {
           "cameraPermission": "نحتاج الكاميرا لمسح رمز QR والتحقق من دخول الضيوف."
+        }
+      ],
+      [
+        "expo-splash-screen",
+        {
+          "image": "./assets/hala-icon.png",
+          "imageWidth": 200,
+          "resizeMode": "contain",
+          "backgroundColor": "#4A0E1E"
         }
       ]
     ],
