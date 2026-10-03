@@ -110,3 +110,6 @@ footer{background:#22030b}.modal-backdrop{background:rgba(33,3,11,.78)}
 
 @media(max-width:900px){.service-grid{grid-template-columns:repeat(2,1fr)}.planner-grid,.partner-grid{grid-template-columns:1fr}}
 @media(max-width:640px){.service-grid{grid-template-columns:1fr}.planner-form{grid-template-columns:1fr}.planner-form .gold-btn{grid-column:auto}.planner-copy h2{font-size:40px}.partner-card{grid-template-columns:auto 1fr}.partner-card>b{grid-column:1/-1;width:max-content}}
+
+.brand-full-logo{width:138px;height:auto;display:block;filter:drop-shadow(0 6px 18px rgba(0,0,0,.12))}
+@media(max-width:640px){.brand-full-logo{width:112px}}
