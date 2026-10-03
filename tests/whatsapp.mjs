@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { readFile } from 'node:fs/promises';
+import { readFile, stat } from 'node:fs/promises';
 import ts from 'typescript';
 import { providerConfig, nextStatus, extractStatuses } from '../netlify/functions/_shared/whatsapp.mjs';
 
@@ -12,7 +12,7 @@ async function handler(file) {
   for (const part of ['domain','whatsapp']) source=source.replace(`"./_shared/${part}.mjs"`, JSON.stringify(new URL(`../netlify/functions/_shared/${part}.mjs`,import.meta.url).href));
   return (await import('data:text/javascript;base64,'+Buffer.from(ts.transpileModule(source,{compilerOptions:{module:ts.ModuleKind.ESNext,target:ts.ScriptTarget.ES2022}}).outputText).toString('base64'))).default;
 }
-const send=await handler('whatsapp-send.mts'), webhook=await handler('whatsapp-webhook.mts'), setup=await handler('whatsapp-otp-template-setup.mts');
+const send=await handler('whatsapp-send.mts'), webhook=await handler('whatsapp-webhook.mts');
 let calls, fetches, env, previous, providerReply, providerThrows, storedStatus, missingMessage, dbFails;
 function reset() {
   calls=[];fetches=[];previous=[];providerThrows=false;storedStatus='queued';missingMessage=false;dbFails=false;
@@ -96,7 +96,6 @@ test('early callback and database failure request retry instead of losing delive
 test('nested Meta statuses are parsed',()=>{
  assert.deepEqual(extractStatuses({entry:[{changes:[{value:{statuses:[{id:'wamid.x',status:'read'}]}}]}]}),[{id:'wamid.x',status:'read'}]);
 });
-test('temporary OTP provisioning is disabled and cannot mutate provider',async()=>{
- reset();env.D360_MODE='sandbox';
- assert.equal((await setup(new Request('https://preview.example/api/internal/setup-otp-template'))).status,410);assert.equal(fetches.length,0);
+test('temporary OTP provisioning function is absent from deployment sources',async()=>{
+ await assert.rejects(stat(new URL('../netlify/functions/whatsapp-otp-template-setup.mts',import.meta.url)),{code:'ENOENT'});
 });
