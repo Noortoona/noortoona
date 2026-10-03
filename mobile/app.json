@@ -49,7 +49,11 @@
     "extra": {
       "router": {
         "origin": false
+      },
+      "eas": {
+        "projectId": "5aeba34d-6f95-424b-92b1-5519b5d20197"
       }
-    }
+    },
+    "owner": "hala.app"
   }
 }
