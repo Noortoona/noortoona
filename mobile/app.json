@@ -9,7 +9,10 @@
     "icon": "./assets/hala-icon.png",
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "com.noortoona.hala"
+      "bundleIdentifier": "com.noortoona.hala",
+      "config": {
+        "usesNonExemptEncryption": false
+      }
     },
     "android": {
       "package": "com.noortoona.hala",

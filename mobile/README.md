@@ -12,7 +12,7 @@ Native iOS/Android app for Hala. The app lives under `mobile/` and uses the exis
 
 ```bash
 cd mobile
-npm install
+npm ci
 npx expo start
 ```
 
@@ -66,3 +66,35 @@ eas build --profile preview --platform android
 ```
 
 Moyasar contains native modules, so payment testing should use a native development/preview build rather than relying on Expo Go. Apple Pay additionally requires the signed Apple Merchant entitlement and a supported physical device.
+
+## iOS TestFlight CI
+
+The workflow `.github/workflows/hala-ios-testflight.yml` runs only for `hala-mobile`.
+Save an Expo access token in the repository Actions secret `EXPO_TOKEN`; never
+commit it. Change `.github/testflight-trigger` on this branch to start a build, or
+dispatch the workflow with the branch set to `hala-mobile`.
+
+CI uses Node 24.19.0, EAS CLI 24.10.0, the committed npm lockfile, TypeScript and
+Expo Doctor. It searches accessible Expo accounts for the existing `hala`
+project before creating anything, then verifies and saves the linked owner and
+project ID in the `hala-eas-project` artifact. Commit those public config values
+back into `mobile/app.json` after the first link.
+
+The `testflight` profile creates a Release build for App Store distribution with
+remote signing credentials and a remote incrementing build number. CI waits for
+the signed archive, then submits that exact build ID and waits for the upload.
+If submission needs Apple setup, dispatch again with `build_id` set to the
+successful EAS build ID to submit it without paying for another build.
+
+First-time Apple credentials must be configured for the same EAS project and
+`com.noortoona.hala`. If interactive setup is needed:
+
+```bash
+cd mobile
+npx eas-cli@24.10.0 login
+npx eas-cli@24.10.0 credentials --platform ios
+```
+
+Select `testflight`, set up the distribution certificate and provisioning
+profile, and configure the App Store Connect API key for EAS Submit. Apple
+login/2FA stays in Apple's authentication flow. No signing keys belong in Git.
