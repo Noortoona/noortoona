@@ -2,6 +2,7 @@ import { getDatabase } from "@netlify/database";
 import type { Config } from "@netlify/functions";
 import { boundedInteger, boundedMoney, isSameOriginRequest, secureJson } from "./_shared/domain.mjs";
 import { getAuth, linkEventMember, recordAudit } from "./_shared/auth.mjs";
+import { supervisorAddonHalalas } from "./_shared/settings.mjs";
 
 export default async (req: Request) => {
   if (req.method !== "POST") return new Response("Method Not Allowed", { status: 405 });
@@ -29,8 +30,7 @@ export default async (req: Request) => {
       await linkEventMember(event.id, auth.user.id, "owner");
       await recordAudit(auth.user.id, "event.created", "event", event.id, { occasion: event.occasion, package: event.package_name });
       if (data.requestSupervisor) {
-        const priceSar = Math.max(0, Number(Netlify.env.get("HALA_SUPERVISOR_ADDON_SAR") || 199));
-        const amount = Math.round(priceSar * 100);
+        const amount = await supervisorAddonHalalas(db);
         await db.sql`
           INSERT INTO supervisor_requests (id,event_id,user_id,amount,status)
           VALUES (${crypto.randomUUID()},${event.id},${auth.user.id},${amount},'requested')
