@@ -9,10 +9,10 @@ import { theme } from "@/theme";
 const OCCASIONS = [
   { key: "wedding", label: "زواج", emoji: "✦", twoNames: true },
   { key: "engagement", label: "ملكة / خطوبة", emoji: "♢", twoNames: true },
-  { key: "graduation", label: "تخرج", emoji: "⌁" },
-  { key: "birthday", label: "عيد ميلاد", emoji: "◌" },
-  { key: "activity", label: "نشاط / تجمع", emoji: "⚡" },
-  { key: "custom", label: "أخرى", emoji: "+" }
+  { key: "graduation", label: "تخرج", emoji: "⌁", twoNames: false },
+  { key: "birthday", label: "عيد ميلاد", emoji: "◌", twoNames: false },
+  { key: "activity", label: "نشاط / تجمع", emoji: "⚡", twoNames: false },
+  { key: "custom", label: "أخرى", emoji: "+", twoNames: false }
 ] as const;
 
 export default function CreateEvent() {
