@@ -33,6 +33,12 @@ export default function AdminHome() {
             <Text style={styles.arrow}>‹</Text>
           </Pressable>
         </Card>
+        <Card>
+          <Pressable style={styles.management} onPress={() => router.push("/admin/assignments" as never)}>
+            <View><Text style={styles.manageTitle}>تعيين المشرفين</Text><Text style={styles.manageHelp}>اربط كل مشرف بالمناسبات التي يديرها فقط.</Text></View>
+            <Text style={styles.arrow}>‹</Text>
+          </Pressable>
+        </Card>
         <Text style={styles.sectionTitle}>أحدث المناسبات</Text>
         {data?.events?.map(e => <Card key={e.id}><Text style={styles.eventTitle}>{e.title}</Text><Text style={styles.eventMeta}>{[e.occasion, e.event_date, e.location].filter(Boolean).join(" • ")}</Text></Card>)}
       </ScrollView>
