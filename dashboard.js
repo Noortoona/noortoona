@@ -91,10 +91,12 @@ function setTask(key,value){const x=taskStore();x[key]=value;localStorage.setIte
 function planFor(event,guests){
  const type=dashboardType(event),sent=guests.some(g=>g.whatsapp_status&&g.whatsapp_status!=='failed'),responded=guests.some(g=>g.rsvp_status&&g.rsvp_status!=='pending'),base={
   wedding:[['venue','تأكيد القاعة والموقع',Boolean(event.location)],['design','مراجعة أسماء العريس والعروس والتصميم',Boolean(event.name1&&event.name2&&event.template)],['guests','إكمال قائمة الضيوف',guests.length>0],['test','إرسال دعوة تجريبية وفحصها',sent],['rsvp','متابعة تأكيدات الحضور',responded],['entry','تجهيز QR والاستقبال',false]],
-  engagement:[['venue','تأكيد موقع الملكة / الخطوبة',Boolean(event.location)],['design','مراجعة الاسمين وتصميم الدعوة',Boolean(event.name1&&event.name2&&event.template)],['guests','إكمال قائمة الضيوف',guests.length>0],['test','اختبار الدعوة قبل الإرسال',sent],['rsvp','متابعة ردود الحضور',responded]],
+  milkah:[['venue','تأكيد موقع الملكة',Boolean(event.location)],['design','مراجعة اسم العريس واسم العروس وتصميم الدعوة',Boolean(event.name1&&event.name2&&event.template)],['guests','إكمال قائمة الضيوف',guests.length>0],['test','اختبار دعوة الملكة قبل الإرسال',sent],['rsvp','متابعة ردود الحضور',responded]],
+  engagement:[['venue','تأكيد موقع الخطوبة',Boolean(event.location)],['design','مراجعة اسم الخطيب واسم الخطيبة وتصميم الدعوة',Boolean(event.name1&&event.name2&&event.template)],['guests','إكمال قائمة الضيوف',guests.length>0],['test','اختبار دعوة الخطوبة قبل الإرسال',sent],['rsvp','متابعة ردود الحضور',responded]],
   graduation:[['details','مراجعة اسم الخريج والموقع',Boolean(event.name1&&event.location)],['design','اعتماد قالب التخرج',Boolean(event.template)],['guests','إضافة المدعوين',guests.length>0],['test','إرسال تجربة',sent],['rsvp','متابعة الردود',responded]],
   newborn:[['details','مراجعة اسم المولود وبيانات المناسبة',Boolean(event.name1&&event.event_date)],['design','اعتماد قالب المولود',Boolean(event.template)],['guests','إضافة المدعوين',guests.length>0],['test','إرسال تجربة',sent]],
   birthday:[['details','مراجعة اسم صاحب المناسبة والموعد',Boolean(event.name1&&event.event_date)],['design','اعتماد الطابع والتصميم',Boolean(event.template)],['guests','إضافة الضيوف',guests.length>0],['rsvp','متابعة التأكيدات',responded]],
+  meeting:[['details','تأكيد عنوان الاجتماع والجهة أو صاحب الدعوة',Boolean(event.name1)],['venue','تأكيد المكان والموعد',Boolean(event.location&&event.event_date)],['guests','إضافة المدعوين',guests.length>0],['test','اختبار دعوة الاجتماع',sent],['rsvp','متابعة تأكيد الحضور',responded]],
   conference:[['details','تأكيد عنوان المؤتمر والجهة المنظمة',Boolean(event.name1)],['venue','تأكيد الموقع والموعد',Boolean(event.location&&event.event_date)],['guests','إضافة المدعوين حسب الفئات',guests.length>0],['test','اختبار الدعوة الرسمية',sent],['entry','تجهيز QR للتسجيل',false]],
   opening:[['details','تأكيد اسم الافتتاح والجهة الداعية',Boolean(event.name1)],['venue','تأكيد الموقع',Boolean(event.location)],['guests','إضافة المدعوين',guests.length>0],['test','اختبار الدعوة',sent]],
   honoring:[['details','مراجعة اسم المكرّم أو عنوان التكريم',Boolean(event.name1)],['venue','تأكيد المكان والموعد',Boolean(event.location&&event.event_date)],['guests','إضافة المدعوين',guests.length>0],['entry','تجهيز الدخول',false]],
@@ -108,10 +110,12 @@ function servicesFor(event){
  const type=dashboardType(event);
  const maps={
   wedding:['القاعات والمواقع','التصوير والفيديو','الورد والتنسيق','الضيافة والحلويات','الهدايا والتوزيعات'],
+  milkah:['القاعات والمواقع','التصوير','الورد والتنسيق','الضيافة والحلويات'],
   engagement:['القاعات والمواقع','التصوير','الورد والتنسيق','الضيافة والحلويات'],
   graduation:['التصوير','تنسيق الحفل','الضيافة','هدايا التخرج'],
   newborn:['التصوير','الضيافة والحلويات','التوزيعات'],
   birthday:['المكان','الكيك والحلويات','التنسيق','التصوير والترفيه'],
+  meeting:['غرف الاجتماعات','الشاشات والعرض','الضيافة الخفيفة'],
   conference:['القاعات','الصوت والشاشات','الضيافة','التسجيل والاستقبال'],
   opening:['الموقع','التصوير','التنسيق','الضيافة'],
   honoring:['القاعات','التصوير','الدروع والهدايا','الضيافة'],
