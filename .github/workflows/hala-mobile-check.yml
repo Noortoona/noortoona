@@ -7,6 +7,7 @@ on:
     paths:
       - "mobile/**"
       - "netlify/functions/**"
+      - "tests/**"
       - ".github/workflows/hala-mobile-check.yml"
   workflow_dispatch:
 
