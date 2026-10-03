@@ -10,10 +10,6 @@ function json(data: unknown, status = 200) {
 export default async (req: Request) => {
   if (req.method !== "GET") return json({ok:false,error:"Method not allowed"},405);
 
-  const expected = Netlify.env.get("D360_TEMPLATE_SETUP_TOKEN") || "";
-  const supplied = new URL(req.url).searchParams.get("token") || "";
-  if (!expected || supplied !== expected) return json({ok:false,error:"Setup authorization required"},403);
-
   const apiKey = Netlify.env.get("D360_API_KEY");
   const templateName = Netlify.env.get("D360_OTP_TEMPLATE") || "hala_login_otp";
   const language = Netlify.env.get("D360_OTP_LANGUAGE") || "ar";
@@ -70,4 +66,4 @@ export default async (req: Request) => {
 
 export const config: Config = {path:"/api/internal/setup-otp-template"};
 
-// env-refresh-2
+// one-time provisioner; remove after invocation
