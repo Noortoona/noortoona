@@ -1,5 +1,6 @@
 import { getDatabase } from "@netlify/database";
 import type { Config } from "@netlify/functions";
+import { canAccessEvent, getAuth } from "./_shared/auth.mjs";
 import { isSameOriginRequest, ownerTokenFrom, secureJson } from "./_shared/domain.mjs";
 
 function makeCode() {
@@ -15,27 +16,35 @@ function cleanGuest(input: any) {
   };
 }
 
+async function authorized(req: Request, db: any, eventId: string, ownerToken: string) {
+  const auth = await getAuth(req);
+  if (auth && await canAccessEvent(auth.user, eventId)) return true;
+  if (!ownerToken) return false;
+  const [event] = await db.sql`SELECT id FROM events WHERE id=${eventId} AND owner_token=${ownerToken}`;
+  return Boolean(event);
+}
+
 export default async (req: Request) => {
   if (!["POST", "DELETE", "PATCH"].includes(req.method)) return new Response("Method Not Allowed", { status: 405 });
   if (!isSameOriginRequest(req)) return secureJson({ error: "طلب غير مسموح" }, 403);
   if (Number(req.headers.get("content-length") || 0) > 1_000_000) return secureJson({ error: "حجم الطلب أكبر من المسموح" }, 413);
   try {
     const data = await req.json();
+    const eventId = String(data.eventId || "").slice(0, 80);
     const ownerToken = ownerTokenFrom(req, data).slice(0, 120);
+    if (!eventId) return secureJson({ error: "بيانات المناسبة ناقصة" }, 400);
     const db = getDatabase();
-
+    if (!await authorized(req, db, eventId, ownerToken)) return secureJson({ error: "غير مصرح" }, 403);
 
     if (req.method === "PATCH") {
-      if (!data.eventId || !ownerToken || !data.guestId) return secureJson({ error: "بيانات التحديث ناقصة" }, 400);
-      const [event] = await db.sql`SELECT id FROM events WHERE id=${String(data.eventId)} AND owner_token=${ownerToken}`;
-      if (!event) return secureJson({ error: "غير مصرح" }, 403);
+      if (!data.guestId) return secureJson({ error: "بيانات التحديث ناقصة" }, 400);
       const paymentStatus = data.paymentStatus === "paid" ? "paid" : "unpaid";
       const [guest] = await db.sql`
         UPDATE guests
         SET payment_status=${paymentStatus},
             payment_amount=CASE WHEN ${paymentStatus}='paid' THEN share_total ELSE 0 END,
             paid_at=CASE WHEN ${paymentStatus}='paid' THEN NOW() ELSE NULL END
-        WHERE id=${String(data.guestId)} AND event_id=${String(data.eventId)}
+        WHERE id=${String(data.guestId)} AND event_id=${eventId}
         RETURNING id, payment_status, payment_amount, paid_at
       `;
       if (!guest) return secureJson({ error: "الضيف غير موجود" }, 404);
@@ -43,17 +52,11 @@ export default async (req: Request) => {
     }
 
     if (req.method === "DELETE") {
-      if (!data.eventId || !ownerToken || !data.guestId) return secureJson({ error: "بيانات الحذف ناقصة" }, 400);
-      const [event] = await db.sql`SELECT id FROM events WHERE id=${String(data.eventId)} AND owner_token=${ownerToken}`;
-      if (!event) return secureJson({ error: "غير مصرح" }, 403);
-      const [guest] = await db.sql`DELETE FROM guests WHERE id=${String(data.guestId)} AND event_id=${String(data.eventId)} RETURNING id`;
+      if (!data.guestId) return secureJson({ error: "بيانات الحذف ناقصة" }, 400);
+      const [guest] = await db.sql`DELETE FROM guests WHERE id=${String(data.guestId)} AND event_id=${eventId} RETURNING id`;
       if (!guest) return secureJson({ error: "الضيف غير موجود" }, 404);
       return secureJson({ ok: true });
     }
-
-    if (!data.eventId || !ownerToken) return secureJson({ error: "بيانات المناسبة ناقصة" }, 400);
-    const [event] = await db.sql`SELECT id FROM events WHERE id=${String(data.eventId)} AND owner_token=${ownerToken}`;
-    if (!event) return secureJson({ error: "غير مصرح" }, 403);
 
     if (Array.isArray(data.guests)) {
       const guests = data.guests.map(cleanGuest).filter((g: { name: string }) => g.name).slice(0, 1000);
@@ -67,7 +70,7 @@ export default async (req: Request) => {
           const code = makeCode();
           const result = await client.query(
             `INSERT INTO guests (id, event_id, name, phone, code) VALUES ($1,$2,$3,$4,$5) RETURNING id,name,phone,code,rsvp_status,created_at`,
-            [id, String(data.eventId), g.name, g.phone, code]
+            [id, eventId, g.name, g.phone, code]
           );
           created.push(result.rows[0]);
         }
@@ -87,7 +90,7 @@ export default async (req: Request) => {
     const code = makeCode();
     const [guest] = await db.sql`
       INSERT INTO guests (id, event_id, name, phone, code)
-      VALUES (${id}, ${String(data.eventId)}, ${single.name}, ${single.phone}, ${code})
+      VALUES (${id}, ${eventId}, ${single.name}, ${single.phone}, ${code})
       RETURNING id, name, phone, code, rsvp_status, created_at
     `;
     return secureJson({ guest, invitePath: `/i/${code}` });
