@@ -44,7 +44,7 @@ export default function CustomerHome() {
         <Text style={styles.sectionTitle}>آخر المناسبات</Text>
         {data?.events?.length ? data.events.map(e => (
           <Card key={e.id}>
-            <Pressable style={styles.eventRow}>
+            <Pressable style={styles.eventRow} onPress={() => router.push({ pathname: "/customer/event/[id]" as never, params: { id: e.id } })}>
               <View style={styles.eventCopy}>
                 <Text style={styles.eventTitle}>{e.title}</Text>
                 <Text style={styles.eventMeta}>{[e.occasion, e.event_date, e.location].filter(Boolean).join(" • ")}</Text>
