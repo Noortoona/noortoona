@@ -17,15 +17,19 @@ export default async(req:Request)=>{
     const hash=await hashOtp(phone,code);
     if(hash!==otp.code_hash){await db.sql`UPDATE otp_codes SET attempts=attempts+1 WHERE id=${otp.id}`;return secureJson({error:"رمز التحقق غير صحيح"},401);}
     await db.sql`UPDATE otp_codes SET consumed_at=NOW() WHERE id=${otp.id}`;
-    const adminPhone=normalizePhone(Netlify.env.get("HALA_ADMIN_PHONE")||"");
+    const adminPhones=new Set(
+      String(Netlify.env.get("HALA_ADMIN_PHONES")||Netlify.env.get("HALA_ADMIN_PHONE")||"")
+        .split(",").map(v=>normalizePhone(v)).filter(Boolean)
+    );
+    const isAdminPhone=adminPhones.has(phone);
     let users=await db.sql`SELECT id,name,email,phone,role,status FROM users WHERE phone=${phone} LIMIT 1`;
     let user:any=users[0];
     if(!user){
-      const role=adminPhone&&phone===adminPhone?"admin":"customer";
+      const role=isAdminPhone?"admin":"customer";
       const name=String(body.name||"").trim().slice(0,120)||(role==="admin"?"مدير هلا":"عميل هلا");
       const created=await db.sql`INSERT INTO users(id,name,phone,role) VALUES(${crypto.randomUUID()},${name},${phone},${role}) RETURNING id,name,email,phone,role,status`;
       user=created[0];
-    }else if(adminPhone&&phone===adminPhone&&user.role!=="admin"){
+    }else if(isAdminPhone&&user.role!=="admin"){
       const upgraded=await db.sql`UPDATE users SET role='admin',updated_at=NOW() WHERE id=${user.id} RETURNING id,name,email,phone,role,status`;user=upgraded[0];
     }
     if(user.status!=="active")return secureJson({error:"الحساب موقوف"},403);
