@@ -2,12 +2,11 @@ import type { Config } from "@netlify/functions";
 import { getDatabase } from "@netlify/database";
 import { canAccessEvent, recordAudit, requireRole } from "./_shared/auth.mjs";
 import { isSameOriginRequest, secureJson } from "./_shared/domain.mjs";
-function priceHalalas(){const n=Number(Netlify.env.get("HALA_SUPERVISOR_ADDON_SAR")||199);return Math.max(0,Math.round(n*100))}
+import { supervisorAddonHalalas } from "./_shared/settings.mjs";
 export default async(req:Request)=>{
- const amount=priceHalalas();
+ const db=getDatabase(); const amount=await supervisorAddonHalalas(db);
  if(req.method==="GET"&&!new URL(req.url).searchParams.get("eventId"))return secureJson({amount,amountSar:amount/100,currency:"SAR"});
  const auth=await requireRole(req,["customer"]);if(!auth.ok)return secureJson({error:auth.error},auth.status);
- const db=getDatabase();
  if(req.method==="GET"){const id=String(new URL(req.url).searchParams.get("eventId")||"");if(!id||!await canAccessEvent(auth.user,id))return secureJson({error:"غير مصرح"},403);const rows=await db.sql`SELECT * FROM supervisor_requests WHERE event_id=${id} LIMIT 1`;return secureJson({request:rows[0]||null,amount,amountSar:amount/100,currency:"SAR"})}
  if(req.method!=="POST")return new Response("Method Not Allowed",{status:405});
  if(!isSameOriginRequest(req))return secureJson({error:"طلب غير مسموح"},403);
