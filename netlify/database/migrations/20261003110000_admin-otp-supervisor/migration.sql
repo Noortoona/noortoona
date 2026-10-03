@@ -107,5 +107,5 @@ CREATE TABLE IF NOT EXISTS platform_settings (
   value text NOT NULL,
   updated_at timestamptz NOT NULL DEFAULT now()
 );
-INSERT INTO platform_settings(key,value) VALUES('supervisor_addon_sar','199')
+INSERT INTO platform_settings(key,value) VALUES('supervisor_addon_sar','299')
 ON CONFLICT(key) DO NOTHING;
