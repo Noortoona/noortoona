@@ -2,6 +2,7 @@ import { getDatabase } from "@netlify/database";
 import type { Config } from "@netlify/functions";
 import { isSameOriginRequest, ownerTokenFrom, secureJson } from "./_shared/domain.mjs";
 import { providerConfig, providerError } from "./_shared/whatsapp.mjs";
+import { canAccessEvent, getAuth } from "./_shared/auth.mjs";
 
 function normalizePhone(phone: string) {
   let p = String(phone || "").replace(/\D/g, "");
@@ -54,14 +55,15 @@ export default async (req: Request) => {
   const templateLanguage = Netlify.env.get("D360_TEMPLATE_LANGUAGE");
   if (mode === "production" && (!selectedTemplate || !templateLanguage)) return json({ error: "اسم القالب المعتمد أو لغته غير مضبوطين", code: "D360_TEMPLATE_REQUIRED" }, 409);
   const ownerToken = ownerTokenFrom(req, body).slice(0, 120);
-  if (!eventId || !ownerToken || !guestId) return json({ error: "Missing fields" }, 400);
-
-  const db = getDatabase();
+  if (!eventId || !guestId) return json({ error: "Missing fields" }, 400);
+  const db = getDatabase(); const auth=await getAuth(req); let allowed=false;
+  if(ownerToken){const a=await db.sql`SELECT 1 FROM events WHERE id=${eventId} AND owner_token=${ownerToken} LIMIT 1`;allowed=Boolean(a[0]);}
+  if(!allowed&&auth)allowed=await canAccessEvent(auth.user,String(eventId));
+  if(!allowed)return json({ error: "غير مصرح" }, 403);
   const [row]: any[] = await db.sql`
     SELECT g.*, e.title, e.event_date, e.event_time, e.location, e.owner_token
-    FROM guests g
-    JOIN events e ON e.id = g.event_id
-    WHERE g.id = ${guestId} AND g.event_id = ${eventId} AND e.owner_token = ${ownerToken}
+    FROM guests g JOIN events e ON e.id=g.event_id
+    WHERE g.id=${guestId} AND g.event_id=${eventId}
   `;
   if (!row) return json({ error: "Guest not found" }, 404);
 
