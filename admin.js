@@ -16,13 +16,13 @@ async function api(url,opt={}){
 function card(label,value,sub=""){return `<article class="metric-card"><span>${label}</span><strong>${value}</strong><small>${sub}</small></article>`}
 async function load(){
   try{
-    const [overview,usersData,supData]=await Promise.all([api("/api/admin/overview"),api("/api/admin/users"),api("/api/admin/supervisors")]);
-    render(overview,usersData.users||[],supData);
+    const [overview,usersData,supData,settings]=await Promise.all([api("/api/admin/overview"),api("/api/admin/users"),api("/api/admin/supervisors"),api("/api/admin/settings")]);
+    render(overview,usersData.users||[],supData,settings);
   }catch(e){
     root.innerHTML=`<div class="portal-empty"><h2>تعذر فتح لوحة الإدارة</h2><p>${esc(e.message)}</p></div>`;
   }
 }
-function render(d,users,supData){
+function render(d,users,supData,settings){
   const x=d.stats,w=x.whatsapp||{},sr=x.supervisorRequests||{};
   const supervisors=supData.supervisors||[],requests=supData.requests||[];
   root.className="";
@@ -55,6 +55,11 @@ function render(d,users,supData){
       </article>
     </section>
 
+    <section class="portal-panel">
+      <div class="panel-head"><div><span class="eyebrow dark">الإعدادات</span><h2>تسعير مشرف المناسبة</h2><p>يتغير هذا السعر مباشرة في خطوة الدفع وطلب المشرف.</p></div>
+      <form id="supervisorPriceForm" class="inline-admin-form"><input name="price" type="number" min="0" step="1" value="${Number(settings.supervisorAddonSar||0)}" required><button class="gold-btn" type="submit">حفظ السعر</button></form></div>
+    </section>
+
     <section class="portal-panel admin-supervisor-panel">
       <div class="panel-head"><div><span class="eyebrow dark">المشرفون</span><h2>طلبات مشرف المناسبة</h2></div>
       <form id="createSupervisorForm" class="inline-admin-form"><input name="name" placeholder="اسم المشرف" required><input name="phone" inputmode="tel" placeholder="05XXXXXXXX" required><button class="gold-btn" type="submit">إضافة مشرف</button></form></div>
@@ -79,6 +84,7 @@ function render(d,users,supData){
       <div class="ops-table">${d.recentOps.map(o=>`<div><b>${esc(o.action)}</b><span>${esc(o.actor_name||"النظام")}</span><span>${esc(o.entity_type||"")} ${esc(o.entity_id||"")}</span><small>${new Date(o.created_at).toLocaleString("ar-SA")}</small></div>`).join("")||"<p>لا توجد عمليات بعد</p>"}</div>
     </section>`;
 
+  document.getElementById("supervisorPriceForm")?.addEventListener("submit",saveSupervisorPrice);
   document.getElementById("createSupervisorForm")?.addEventListener("submit",createSupervisor);
   document.querySelectorAll("[data-assign-request]").forEach(b=>b.addEventListener("click",()=>assignSupervisor(b.dataset.assignRequest)));
 }
@@ -92,4 +98,10 @@ async function assignSupervisor(requestId){
   if(!supervisorId)return alert("اختر المشرف أولًا");
   try{await api("/api/admin/supervisors",{method:"POST",body:JSON.stringify({requestId,supervisorId})});await load()}
   catch(err){alert(err.message)}
+}
+
+async function saveSupervisorPrice(e){
+  e.preventDefault();const fd=new FormData(e.currentTarget),button=e.currentTarget.querySelector("button");button.disabled=true;
+  try{await api("/api/admin/settings",{method:"POST",body:JSON.stringify({supervisorAddonSar:Number(fd.get("price"))})});await load()}
+  catch(err){alert(err.message);button.disabled=false}
 }
