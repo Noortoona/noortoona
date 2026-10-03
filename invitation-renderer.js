@@ -47,7 +47,8 @@
     const key=data.occasionKey||data.occasion_key||'custom';
     const pairTypes=['wedding','engagement'];
     const title=activity?(data.name1||label):(pairTypes.includes(key)?[data.name1,data.name2].filter(Boolean).join(' و '):(data.name1||label));
-    const hostLine=!activity&&data.hostName?`<p class="invite-host">${esc(data.hostName)}</p>`:'';
+    const hostName=data.hostName||design.hostName||'';
+    const hostLine=!activity&&hostName?`<p class="invite-host">${esc(hostName)}</p>`:'';
     const accent=design.accent||t.accent;
     const fonts={ruqaa:'Aref Ruqaa',tajawal:'Tajawal',serif:'Georgia'};
     const custom=design.image?`background-image:url('${String(design.image).replaceAll("'",'%27')}');background-size:cover;background-position:center;`:'';
