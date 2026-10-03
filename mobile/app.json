@@ -6,9 +6,9 @@
     "version": "0.1.0",
     "orientation": "portrait",
     "userInterfaceStyle": "light",
-    "icon": "../assets/brand/hala-icon.png",
+    "icon": "./assets/hala-icon.png",
     "splash": {
-      "image": "../assets/brand/hala-icon.png",
+      "image": "./assets/hala-icon.png",
       "resizeMode": "contain",
       "backgroundColor": "#4A0E1E"
     },
@@ -19,7 +19,7 @@
     "android": {
       "package": "com.noortoona.hala",
       "adaptiveIcon": {
-        "foregroundImage": "../assets/brand/hala-icon.png",
+        "foregroundImage": "./assets/hala-icon.png",
         "backgroundColor": "#4A0E1E"
       }
     },
@@ -35,8 +35,7 @@
       [
         "expo-camera",
         {
-          "cameraPermission": "نحتاج الكاميرا لمسح رمز QR والتحقق من دخول الضيوف.",
-          "microphonePermission": false
+          "cameraPermission": "نحتاج الكاميرا لمسح رمز QR والتحقق من دخول الضيوف."
         }
       ]
     ],
