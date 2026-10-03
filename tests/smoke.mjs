@@ -109,6 +109,6 @@ assert.match(adminOverview, /page_views/, 'admin overview includes visitor analy
 assert.match(adminJs, /supervisor\/requests|admin\/supervisors/, 'admin can manage supervisor requests');
 assert.match(customerHtml, /مناسباتي/, 'customer has a dedicated account portal');
 assert.match(supervisorHtml, /مساحة المشرف/, 'supervisor has a dedicated workspace');
-assert.match(supervisorAddon, /HALA_SUPERVISOR_ADDON_SAR/, 'supervisor service increases event price from central configuration');
+assert.match(supervisorAddon, /supervisorAddonHalalas/, 'supervisor service increases event price from central configuration');
 
 console.log(`HALA smoke passed: ${N.occasions.length} occasions, ${N.activities.length} activities, ${Object.values(N.catalog).flat().length} visual templates.`);
