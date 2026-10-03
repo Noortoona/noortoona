@@ -84,7 +84,7 @@ async function createEvent(){
   cleanTypeFields();
   nextBtn.disabled=true;nextBtn.textContent='جاري إنشاء المناسبة…';
   try{
-    const payload={...state,occasion:eventLabel(),activityType:activityLabel(),title:eventTitle(),design:{...state.design,occasionKey:state.occasionKey,activityKey:state.activityKey}};
+    const payload={...state,occasion:eventLabel(),activityType:activityLabel(),title:eventTitle(),design:{...state.design,hostName:state.hostName||'',occasionKey:state.occasionKey,activityKey:state.activityKey}};
     const res=await fetch('/api/events',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify(payload)}),data=await res.json();
     if(!res.ok)throw new Error(data.error||'تعذر إنشاء المناسبة');
     const dashboardUrl=`/dashboard?event=${encodeURIComponent(data.event.id)}`;
