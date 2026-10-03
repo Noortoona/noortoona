@@ -36,7 +36,13 @@ export async function sendOtp(phone,code){
   const lang=String(Netlify.env.get("D360_OTP_LANGUAGE")||"ar");
   const template=String(Netlify.env.get("D360_OTP_TEMPLATE")||"");
   const payload=cfg.mode==="production"
-    ? (template?{messaging_product:"whatsapp",recipient_type:"individual",to:phone,type:"template",template:{name:template,language:{code:lang},components:[{type:"body",parameters:[{type:"text",text:code}]}]}}:null)
+    ? (template?{
+        messaging_product:"whatsapp",recipient_type:"individual",to:phone,type:"template",
+        template:{name:template,language:{code:lang},components:[
+          {type:"body",parameters:[{type:"text",text:code}]},
+          {type:"button",sub_type:"url",index:0,parameters:[{type:"text",text:code}]}
+        ]}
+      }:null)
     : {messaging_product:"whatsapp",recipient_type:"individual",to:phone,type:"text",text:{body:`رمز التحقق في هلا: ${code}\nصالح لمدة 5 دقائق. لا تشارك الرمز مع أحد.`}};
   if(!payload)throw new Error("OTP_TEMPLATE_REQUIRED");
   const res=await fetch(`${cfg.apiBase}/messages`,{method:"POST",headers:{"content-type":"application/json","D360-API-KEY":String(apiKey||"")},body:JSON.stringify(payload),signal:AbortSignal.timeout(15000)});
