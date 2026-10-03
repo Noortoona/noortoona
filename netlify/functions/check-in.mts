@@ -1,7 +1,7 @@
 import { getDatabase } from "@netlify/database";
 import type { Config } from "@netlify/functions";
 import { isSameOriginRequest, ownerTokenFrom, secureJson } from "./_shared/domain.mjs";
-import { canAccessEvent, getAuth } from "./_shared/auth.mjs";
+import { canAccessEvent, getAuth, recordAudit } from "./_shared/auth.mjs";
 
 function inviteCode(value: unknown) {
   const raw = String(value || "").trim();
@@ -54,6 +54,7 @@ export default async (req: Request) => {
       : guest.rsvp_status !== "accepted"
         ? "الضيف لم يؤكد حضوره"
         : null;
+    await recordAudit(auth?.user?.id||null,"guest.checked_in","guest",guest.id,{eventId,alreadyCheckedIn:Boolean(guest.already_checked_in)});
     return secureJson({ ok: true, guest, alreadyCheckedIn: guest.already_checked_in, warning });
   } catch (error) {
     console.error(error);
