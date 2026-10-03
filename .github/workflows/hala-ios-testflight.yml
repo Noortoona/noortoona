@@ -2,6 +2,11 @@ name: Hala iOS TestFlight
 
 on:
   workflow_dispatch:
+  push:
+    branches:
+      - hala-mobile
+    paths:
+      - ".github/testflight-trigger"
 
 permissions:
   contents: read
