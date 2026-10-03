@@ -76,7 +76,7 @@ assert.match(guestJs, /safeExternalUrl/, 'guest links must be restricted to safe
 assert.ok(guestHtml.indexOf('invitation-renderer.js') < guestHtml.indexOf('guest.js'), 'shared renderer must load before guest app');
 assert.ok(guestHtml.indexOf('invitation-schemas.js') < guestHtml.indexOf('guest.js'), 'type schema must load before guest app');
 assert.match(indexHtml, /https:\/\/noortoona\.com\//, 'official domain metadata');
-assert.match(indexHtml, /هلا \| كل مناسبة تبدأ بهلا/, 'HALA public brand metadata');
+assert.match(indexHtml, /هلا \| لحظتك تبدأ بهلا/, 'HALA public brand metadata');
 assert.match(indexHtml, /assets\/brand\/hala-icon\.svg/, 'HALA logo asset');
 assert.match(guestJs, /✦ هلا/, 'guest invitation uses HALA branding');
 assert.doesNotMatch(indexHtml, /قيد التجهيز|التحديث القادم|قالب جاهز أو محرر مرن أو AI/, 'no visible unfinished feature copy');
