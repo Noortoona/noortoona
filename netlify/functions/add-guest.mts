@@ -1,6 +1,7 @@
 import { getDatabase } from "@netlify/database";
 import type { Config } from "@netlify/functions";
 import { canAccessEvent, getAuth } from "./_shared/auth.mjs";
+import { packageFor } from "./_shared/payments.mjs";
 import { isSameOriginRequest, ownerTokenFrom, secureJson } from "./_shared/domain.mjs";
 
 function makeCode() {
@@ -34,7 +35,14 @@ export default async (req: Request) => {
     const ownerToken = ownerTokenFrom(req, data).slice(0, 120);
     if (!eventId) return secureJson({ error: "بيانات المناسبة ناقصة" }, 400);
     const db = getDatabase();
-    if (!await authorized(req, db, eventId, ownerToken)) return secureJson({ error: "غير مصرح" }, 403);
+    const auth = await getAuth(req);
+    const accountAccess = auth ? await canAccessEvent(auth.user, eventId) : false;
+    let ownerAccess = false;
+    if (!accountAccess && ownerToken) {
+      const rows = await db.sql`SELECT id FROM events WHERE id=${eventId} AND owner_token=${ownerToken} LIMIT 1`;
+      ownerAccess = Boolean(rows[0]);
+    }
+    if (!accountAccess && !ownerAccess) return secureJson({ error: "غير مصرح" }, 403);
 
     if (req.method === "PATCH") {
       if (!data.guestId) return secureJson({ error: "بيانات التحديث ناقصة" }, 400);
@@ -61,6 +69,16 @@ export default async (req: Request) => {
     if (Array.isArray(data.guests)) {
       const guests = data.guests.map(cleanGuest).filter((g: { name: string }) => g.name).slice(0, 1000);
       if (!guests.length) return secureJson({ error: "لا توجد أسماء صالحة للاستيراد" }, 400);
+      if (accountAccess && auth?.user?.role === "customer") {
+        const paid = await db.sql`SELECT package_code FROM payment_orders WHERE event_id=${eventId} AND user_id=${auth.user.id} AND status='paid' LIMIT 1`;
+        const pkg = packageFor(paid[0]?.package_code);
+        if (pkg) {
+          const [existing] = await db.sql`SELECT COUNT(*)::int AS count FROM guests WHERE event_id=${eventId}`;
+          if (Number(existing?.count || 0) + guests.length > pkg.guestLimit) {
+            return secureJson({ error: `باقة ${pkg.name} تسمح حتى ${pkg.guestLimit} مدعو`, code: "PACKAGE_GUEST_LIMIT" }, 409);
+          }
+        }
+      }
       const client = await db.pool.connect();
       const created = [];
       try {
@@ -86,6 +104,16 @@ export default async (req: Request) => {
 
     const single = cleanGuest(data);
     if (!single.name) return secureJson({ error: "بيانات الضيف ناقصة" }, 400);
+    if (accountAccess && auth?.user?.role === "customer") {
+      const paid = await db.sql`SELECT package_code FROM payment_orders WHERE event_id=${eventId} AND user_id=${auth.user.id} AND status='paid' LIMIT 1`;
+      const pkg = packageFor(paid[0]?.package_code);
+      if (pkg) {
+        const [existing] = await db.sql`SELECT COUNT(*)::int AS count FROM guests WHERE event_id=${eventId}`;
+        if (Number(existing?.count || 0) + 1 > pkg.guestLimit) {
+          return secureJson({ error: `باقة ${pkg.name} تسمح حتى ${pkg.guestLimit} مدعو`, code: "PACKAGE_GUEST_LIMIT" }, 409);
+        }
+      }
+    }
     const id = crypto.randomUUID();
     const code = makeCode();
     const [guest] = await db.sql`

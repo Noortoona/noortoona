@@ -95,7 +95,26 @@ export default async (req: Request) => {
   let log: any;
   try {
     await client.query("BEGIN");
+    await client.query("SELECT id FROM events WHERE id=$1 FOR UPDATE", [eventId]);
     await client.query("SELECT id FROM guests WHERE id=$1 FOR UPDATE", [guestId]);
+
+    if (accountAccess && auth?.user?.role === "customer") {
+      const paid = await client.query(
+        "SELECT package_code FROM payment_orders WHERE event_id=$1 AND user_id=$2 AND status='paid' LIMIT 1",
+        [eventId, auth.user.id]
+      );
+      if (!paid.rows.length) {
+        const trial = await client.query(
+          "SELECT COUNT(*)::int AS count FROM whatsapp_messages WHERE event_id=$1 AND status IN ('queued','sent','delivered','read')",
+          [eventId]
+        );
+        if (reminder || Number(trial.rows[0]?.count || 0) >= 1) {
+          await client.query("ROLLBACK");
+          return json({ error: "استخدمت الدعوة التجريبية المجانية. اختر باقة لإرسال بقية الدعوات.", code: "PAYMENT_REQUIRED" }, 402);
+        }
+      }
+    }
+
     const previous = await client.query(`SELECT id, message_id, status FROM whatsapp_messages
       WHERE guest_id=$1 AND (status='queued' OR (kind=$2 AND status IN ('sent','delivered','read')))
       ORDER BY created_at DESC LIMIT 1`, [guestId, kind]);
