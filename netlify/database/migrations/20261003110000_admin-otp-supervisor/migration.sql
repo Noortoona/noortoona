@@ -99,3 +99,5 @@ CREATE TABLE IF NOT EXISTS payment_orders (
 );
 CREATE INDEX IF NOT EXISTS payment_orders_event_idx ON payment_orders(event_id,created_at DESC);
 CREATE INDEX IF NOT EXISTS payment_orders_user_idx ON payment_orders(user_id,created_at DESC);
+
+ALTER TABLE payment_orders ADD COLUMN IF NOT EXISTS supervisor_addon_amount integer NOT NULL DEFAULT 0;
