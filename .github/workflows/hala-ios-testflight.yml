@@ -1,0 +1,60 @@
+name: Hala iOS TestFlight
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  ios-testflight:
+    name: Build and submit Hala iOS
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+
+    defaults:
+      run:
+        working-directory: mobile
+
+    steps:
+      - name: Checkout hala-mobile
+        uses: actions/checkout@v5
+        with:
+          ref: hala-mobile
+
+      - name: Setup Node
+        uses: actions/setup-node@v6
+        with:
+          node-version: "24"
+
+      - name: Validate Expo token
+        shell: bash
+        env:
+          EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
+        run: |
+          if [ -z "$EXPO_TOKEN" ]; then
+            echo "::error::Missing GitHub Actions secret EXPO_TOKEN."
+            echo "Create an Expo access token and save it in this repository as EXPO_TOKEN, then run this workflow again."
+            exit 1
+          fi
+
+      - name: Setup Expo and EAS
+        uses: expo/expo-github-action@v8
+        with:
+          eas-version: latest
+          token: ${{ secrets.EXPO_TOKEN }}
+
+      - name: Install mobile dependencies
+        run: npm install
+
+      - name: Verify Expo app
+        run: npx expo-doctor@latest
+
+      - name: Create or link EAS project
+        run: eas init --force --non-interactive
+
+      - name: Show EAS project info
+        run: eas project:info
+
+      - name: Build iOS and submit to TestFlight
+        run: eas build --platform ios --profile testflight --non-interactive --auto-submit --no-wait --message "Hala first TestFlight build"
