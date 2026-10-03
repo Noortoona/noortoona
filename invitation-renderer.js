@@ -50,6 +50,7 @@
     const hostName=data.hostName||design.hostName||'';
     const hostLine=!activity&&hostName?`<p class="invite-host">${esc(hostName)}</p>`:'';
     const accent=design.accent||t.accent;
+    const showRsvp=design.showRsvp!==false;
     const fonts={ruqaa:'Aref Ruqaa',tajawal:'Tajawal',serif:'Georgia'};
     const custom=design.image?`background-image:url('${String(design.image).replaceAll("'",'%27')}');background-size:cover;background-position:center;`:'';
     return `<article class="invite-canvas" data-layout="${esc(design.layout||'classic')}" style="${styleFor(t)};--invite-accent:${esc(accent)};--invite-font:${fonts[design.font]||'Aref Ruqaa'}">
@@ -64,7 +65,7 @@
         <i class="invite-rule"></i>
         <div class="invite-meta"><span>▣ <b>${esc(data.date||data.event_date||'أضف التاريخ')}</b></span><span>◷ <b>${esc(String(data.time||data.event_time||'00:00').slice(0,5))}</b></span><span>⌖ <b>${esc(data.location||'أضف الموقع')}</b></span></div>
       </div>
-      <div class="invite-actions-demo"><button type="button">سأحضر</button><button type="button">أعتذر</button></div>
+      ${showRsvp?'<div class="invite-actions-demo"><button type="button">سأحضر</button><button type="button">أعتذر</button></div>':''}
     </article>`;
   }
   window.NOORTOONA={catalog,occasions,activities,templateByName,typeLabel,styleFor,canvas,esc};
