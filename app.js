@@ -2,7 +2,7 @@ const N=window.NOORTOONA;
 const $=(s,root=document)=>root.querySelector(s);
 const $$=(s,root=document)=>[...root.querySelectorAll(s)];
 const stages=['المناسبة','التفاصيل','القالب','التصميم','الضيوف','المعاينة','الإرسال'];
-const defaults={step:1,occasionKey:'wedding',activityKey:'padel',customOccasion:'',customActivity:'',template:'ليلة كحلية',name1:'أحمد',name2:'سارة',date:'2026-12-14',time:'20:00',duration:'3',country:'السعودية',city:'الرياض',location:'الرياض',mapsUrl:'',description:'',videoUrl:'',pdfUrl:'',message:'يسعدنا حضوركم ومشاركتنا هذه المناسبة',package:'الأساسية',capacity:'20',shareAmount:'35',shareLabel:'قيمة القطّة',requireShareConsent:true,allowNamedCompanions:true,waitlistEnabled:true,guestText:'',activityPicking:false,design:{font:'ruqaa',layout:'classic',accent:'#e3bd64',headline:'يسعدنا حضوركم',image:'',showCountdown:true,showMap:true,showQr:true,showMaybe:true,showDecline:true,allowChildren:true,allowNotes:true,photographyPermission:false}};
+const defaults={step:1,occasionKey:'wedding',activityKey:'padel',customOccasion:'',customActivity:'',template:'ليلة كحلية',name1:'أحمد',name2:'سارة',hostName:'',date:'2026-12-14',time:'20:00',duration:'3',country:'السعودية',city:'الرياض',location:'الرياض',mapsUrl:'',description:'',videoUrl:'',pdfUrl:'',message:'يسعدنا حضوركم ومشاركتنا هذه المناسبة',package:'الأساسية',capacity:'20',shareAmount:'35',shareLabel:'قيمة القطّة',requireShareConsent:true,allowNamedCompanions:true,waitlistEnabled:true,guestText:'',activityPicking:false,design:{font:'ruqaa',layout:'classic',accent:'#e3bd64',headline:'يسعدنا حضوركم',image:'',showCountdown:true,showMap:true,showQr:true,showMaybe:true,showDecline:true,allowChildren:true,allowNotes:true,photographyPermission:false}};
 let restored={};try{restored=JSON.parse(localStorage.getItem('noortoonaDraftV55')||'{}')||{}}catch{}
 const state={...defaults,...restored,design:{...defaults.design,...(restored.design||{})}};
 const hasSavedDraft=()=>Boolean(localStorage.getItem('noortoonaDraftV55'));
@@ -14,13 +14,28 @@ const groupKey=()=>state.occasionKey==='activity'?state.activityKey:state.occasi
 const templates=()=>N.catalog[groupKey()]||N.catalog.custom;
 const eventLabel=()=>state.customOccasion||(state.occasionKey==='activity'?'تجمع ونشاط':occasion().label);
 const activityLabel=()=>state.occasionKey==='activity'?(state.activityKey==='activityCustom'&&state.customActivity.trim()?state.customActivity.trim():activity().label):'';
+const schemaKeys=()=>new Set((window.HALA_V6_SCHEMA?.schemaFor(state.occasionKey)?.fields||[]).map(f=>f.key));
+function cleanTypeFields(){
+  const keys=schemaKeys();
+  if(!keys.has('name2'))state.name2='';
+  if(!keys.has('hostName'))state.hostName='';
+  if(state.occasionKey!=='activity'){
+    state.requireShareConsent=false;state.allowNamedCompanions=false;state.waitlistEnabled=false;
+  }
+}
+function eventTitle(){
+  const base=eventLabel();
+  if(state.occasionKey==='activity')return state.name1||activityLabel()||base;
+  if(state.occasionKey==='wedding'||state.occasionKey==='engagement')return `${base} ${state.name1}${state.name2?' و '+state.name2:''}`.trim();
+  return `${base} ${state.name1||''}`.trim();
+}
 const progress=()=>`<div class="journey-progress" role="list" aria-label="مراحل إنشاء الدعوة">${stages.map((label,i)=>`<div class="journey-step ${i+1===state.step?'active':''} ${i+1<state.step?'done':''}" role="listitem"><span>${i+1<state.step?'✓':i+1}</span><small>${label}</small></div>`).join('')}</div>`;
 const heading=(title,sub)=>`<div class="builder-heading"><h2>${title}</h2>${sub?`<p>${sub}</p>`:''}</div>`;
 const field=(id,label,value,type='text',attrs='')=>`<label class="journey-field"><span>${label}</span><input id="${id}" type="${type}" value="${N.esc(value)}" ${attrs}></label>`;
 const setTemplate=(name)=>{state.template=name;state.design.accent=N.templateByName(name).accent;saveDraft();render()};
 
 function openBuilder(key='wedding',resume=false){
-  if(!resume){state.occasionKey=key;state.step=1;state.activityPicking=false}
+  if(!resume){state.occasionKey=key;state.step=1;state.activityPicking=false;cleanTypeFields()}
   else{state.step=Math.min(7,Math.max(1,Number(state.step)||1));state.activityPicking=false}
   if(!templates().some(t=>t.name===state.template))state.template=templates()[0].name;
   modal.classList.add('open');modal.setAttribute('aria-hidden','false');document.body.classList.add('journey-open');render();
@@ -54,7 +69,7 @@ function render(){
   body.innerHTML=`${progress()}<div class="journey-save-state"><span>✓ محفوظ تلقائيًا</span><b>الخطوة ${state.step} من ${stages.length}</b></div><div class="journey-content">${content}</div>`;body.scrollTop=0;prevBtn.style.visibility=state.step===1&&!state.activityPicking?'hidden':'visible';nextBtn.textContent=state.step===7?'إنشاء وفتح لوحة المضيف':'التالي ←';nextBtn.disabled=false;bind();requestAnimationFrame(()=>$('.journey-step.active',body)?.scrollIntoView({block:'nearest',inline:'center'}));
 }
 function bind(){
-  $$('[data-occasion]',body).forEach(b=>b.onclick=()=>{state.occasionKey=b.dataset.occasion;state.customOccasion='';if(state.occasionKey==='activity')state.activityPicking=true;else{state.activityPicking=false;state.template=templates()[0].name}saveDraft();render()});
+  $$('[data-occasion]',body).forEach(b=>b.onclick=()=>{state.occasionKey=b.dataset.occasion;state.customOccasion='';cleanTypeFields();if(state.occasionKey==='activity')state.activityPicking=true;else{state.activityPicking=false;state.template=templates()[0].name}saveDraft();render()});
   $$('[data-activity]',body).forEach(b=>b.onclick=()=>{state.activityKey=b.dataset.activity;state.template=templates()[0].name;saveDraft();render()});
   $$('[data-template]',body).forEach(b=>b.onclick=()=>setTemplate(b.dataset.template));$$('[data-package]',body).forEach(b=>b.onclick=()=>{state.package=b.dataset.package;render()});$$('[data-full-preview]',body).forEach(b=>b.onclick=openFullPreview);
   const font=$('#font',body);if(font){font.value=state.design.font;font.onchange=e=>{state.design.font=e.target.value;render()}}const headline=$('#headline',body);if(headline)headline.oninput=e=>{state.design.headline=e.target.value;$('.invite-headline',body).textContent=e.target.value;saveDraft()};const accent=$('#accent',body);if(accent)accent.oninput=e=>{state.design.accent=e.target.value;$('.invite-canvas',body).style.setProperty('--invite-accent',e.target.value);saveDraft()};const upload=$('#designImage',body);if(upload)upload.onchange=handleImage;
@@ -66,9 +81,10 @@ function validate(){if(state.step===1&&state.occasionKey==='custom'&&!state.cust
 function handleImage(e){const file=e.target.files?.[0];if(!file)return;if(!file.type.startsWith('image/')||file.size>10*1024*1024)return toast('اختر صورة صالحة أقل من 10MB');const reader=new FileReader();reader.onload=()=>{const img=new Image();img.onload=()=>{const max=1400,scale=Math.min(1,max/Math.max(img.width,img.height)),canvas=document.createElement('canvas');canvas.width=Math.max(1,Math.round(img.width*scale));canvas.height=Math.max(1,Math.round(img.height*scale));canvas.getContext('2d').drawImage(img,0,0,canvas.width,canvas.height);state.design.image=canvas.toDataURL('image/jpeg',.82);saveDraft();render()};img.onerror=()=>toast('تعذر قراءة الصورة');img.src=reader.result};reader.readAsDataURL(file)}
 function openFullPreview(){let overlay=$('#journeyFullPreview');if(!overlay){overlay=document.createElement('div');overlay.id='journeyFullPreview';overlay.className='journey-full-preview';document.body.appendChild(overlay)}overlay.innerHTML=`<button type="button" aria-label="إغلاق">×</button><div class="full-preview-phone">${N.canvas({...state,occasion:eventLabel()},{guestName:'ضيف هلا'})}</div>`;overlay.classList.add('open');$('button',overlay).onclick=()=>overlay.classList.remove('open')}
 async function createEvent(){
+  cleanTypeFields();
   nextBtn.disabled=true;nextBtn.textContent='جاري إنشاء المناسبة…';
   try{
-    const payload={...state,occasion:eventLabel(),activityType:activityLabel(),title:state.occasionKey==='activity'?state.name1:`${eventLabel()} ${state.name1}${state.name2?' و '+state.name2:''}`,design:{...state.design,occasionKey:state.occasionKey,activityKey:state.activityKey}};
+    const payload={...state,occasion:eventLabel(),activityType:activityLabel(),title:eventTitle(),design:{...state.design,occasionKey:state.occasionKey,activityKey:state.activityKey}};
     const res=await fetch('/api/events',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify(payload)}),data=await res.json();
     if(!res.ok)throw new Error(data.error||'تعذر إنشاء المناسبة');
     const dashboardUrl=`/dashboard?event=${encodeURIComponent(data.event.id)}`;
@@ -100,4 +116,16 @@ function renderLanding(){
   if(pg)pg.innerHTML=prices.map(p=>`<article class="price-card ${p.featured?'featured':''}">${p.featured?'<span class="price-tag">الأكثر اختيارًا</span>':''}<h3>${p.name}</h3><p>${p.guests}</p><div class="price-number">${p.price}<small> ريال</small></div><ul>${p.items.map(i=>`<li>${i}</li>`).join('')}</ul><button type="button" class="gold-btn" data-land-package="${p.name}" style="width:100%">اختر الباقة</button></article>`).join('');
   $$('[data-land-package]').forEach(b=>b.onclick=()=>{state.package=b.dataset.landPackage;openBuilder(state.occasionKey)});
 }
-renderLanding();const resumeDraft=$('#resumeDraft');if(resumeDraft&&hasSavedDraft()){resumeDraft.classList.remove('hidden');resumeDraft.onclick=()=>openBuilder(state.occasionKey,true)}const dashboardDemo=$('#dashboardDemoBtn');if(dashboardDemo)dashboardDemo.onclick=()=>{const o=JSON.parse(localStorage.getItem('noortoonaOwner')||'null');o?location.href=`/dashboard?event=${encodeURIComponent(o.eventId)}`:toast('أنشئ مناسبة أولًا لفتح لوحة المضيف')};const login=$('#loginBtn');if(login)login.onclick=()=>dashboardDemo?.click();const mobileBtn=$('#mobileMenuBtn'),mobile=$('#mobileMenu');if(mobileBtn&&mobile)mobileBtn.onclick=()=>{const open=mobile.classList.toggle('open');mobileBtn.setAttribute('aria-expanded',String(open));mobile.setAttribute('aria-hidden',String(!open))};function toast(message){const t=$('#toast');if(!t)return;t.textContent=message;t.classList.add('show');clearTimeout(window.__toast);window.__toast=setTimeout(()=>t.classList.remove('show'),3200)}
+function initHalaPlanner(){
+  const form=$('#halaPlannerForm'),result=$('#plannerResult');if(!form||!result)return;
+  const plans={
+    wedding:['ثبّت القاعة والموقع أولًا','جهّز قائمة الضيوف حسب العائلات والفئات','اختر قالب الزواج وأدخل اسم العريس والعروس','اختبر الدعوة على واتساب قبل الإرسال','فعّل RSVP وQR قبل موعد المناسبة'],
+    engagement:['حدّد مكان الملكة / الخطوبة','أدخل الاسمين فقط لأن هذا النوع يحتاج طرفين','اختر الهوية والتنسيق المناسب','رتّب قائمة الضيوف والتأكيدات','راجع الموقع والوقت قبل الإرسال'],
+    graduation:['أدخل اسم الخريج أو الخريجة فقط','حدّد مكان الحفل والوقت','اختر قالب تخرج واضح','أضف المدعوين وأرسل تجربة','فعّل متابعة الحضور'],
+    birthday:['أدخل اسم صاحب عيد الميلاد فقط','حدّد المكان والوقت','اختر طابع المناسبة','أضف الضيوف','تابع التأكيدات قبل الموعد'],
+    activity:['سمّ النشاط أو التجمع — بدون اسم شخص ثانٍ','حدّد العدد الأقصى والموقع','فعّل القطّة والمرافقين إذا احتجتها','استخدم قائمة الانتظار عند اكتمال العدد','شارك الرابط وتابع المشاركين'],
+    conference:['اكتب اسم الاجتماع أو المؤتمر والجهة المنظمة','حدّد الموقع والموعد','قسّم المدعوين حسب الفئة','أرسل الدعوات الرسمية','استخدم QR لتسجيل الدخول']
+  };
+  form.onsubmit=e=>{e.preventDefault();const type=$('#plannerType').value,city=$('#plannerCity').value.trim()||'مدينتك',guests=Math.max(1,Number($('#plannerGuests').value)||1),budget=Math.max(0,Number($('#plannerBudget').value)||0),steps=plans[type]||plans.wedding;result.innerHTML=`<span class="planner-star">✦</span><h3>خطة مبدئية من هلا</h3><p><strong>${guests.toLocaleString('ar-SA')}</strong> ضيف في <strong>${N.esc(city)}</strong>${budget?` بميزانية ${budget.toLocaleString('ar-SA')} ر.س`:''}.</p><ul>${steps.map(s=>`<li>${s}</li>`).join('')}</ul>`;};
+}
+renderLanding();initHalaPlanner();const resumeDraft=$('#resumeDraft');if(resumeDraft&&hasSavedDraft()){resumeDraft.classList.remove('hidden');resumeDraft.onclick=()=>openBuilder(state.occasionKey,true)}const dashboardDemo=$('#dashboardDemoBtn');if(dashboardDemo)dashboardDemo.onclick=()=>{const o=JSON.parse(localStorage.getItem('noortoonaOwner')||'null');o?location.href=`/dashboard?event=${encodeURIComponent(o.eventId)}`:toast('أنشئ مناسبة أولًا لفتح لوحة المضيف')};const login=$('#loginBtn');if(login)login.onclick=()=>dashboardDemo?.click();const mobileBtn=$('#mobileMenuBtn'),mobile=$('#mobileMenu');if(mobileBtn&&mobile)mobileBtn.onclick=()=>{const open=mobile.classList.toggle('open');mobileBtn.setAttribute('aria-expanded',String(open));mobile.setAttribute('aria-hidden',String(!open))};function toast(message){const t=$('#toast');if(!t)return;t.textContent=message;t.classList.add('show');clearTimeout(window.__toast);window.__toast=setTimeout(()=>t.classList.remove('show'),3200)}
