@@ -42,3 +42,21 @@
 /* V3.3 rich invitation controls */
 .background-upload-row{display:flex;gap:8px;align-items:center;margin-top:12px}.upload-background-btn,.remove-background-btn{border-radius:12px;padding:10px 12px;font-weight:800;font-size:12px;cursor:pointer}.upload-background-btn{display:inline-flex;background:#181621;color:#efd28f;border:1px solid #2f2937}.remove-background-btn{background:#fff5f3;color:#9b443f;border:1px solid #edcfca}.editor-help{display:block;color:#8a8178;margin-top:8px;font-size:10px;line-height:1.6}.feature-toggle-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}.feature-toggle{border:1px solid #e1d7ca;background:#fffaf3;border-radius:15px;padding:12px 8px;display:grid;gap:4px;place-items:center;color:#756c64}.feature-toggle span{font-size:20px}.feature-toggle b{font-size:12px}.feature-toggle small{font-size:9px;color:#9b9187}.feature-toggle.active{background:#191720;color:#efd28f;border-color:#191720}.feature-toggle.active small{color:#cdbb94}.premium-preview.has-custom-image{background-image:linear-gradient(rgba(8,8,12,.44),rgba(8,8,12,.58)),var(--preview-image)!important;background-size:cover!important;background-position:center!important}.preview-smart-tools{position:relative;z-index:2;display:flex;justify-content:center;gap:6px;flex-wrap:wrap;margin:0 0 14px}.preview-smart-tools span{background:rgba(255,255,255,.1);border:1px solid color-mix(in srgb,currentColor 32%,transparent);border-radius:999px;padding:5px 8px;font-size:9px;backdrop-filter:blur(8px)}.preview-smart-tools b{font-weight:800}.editor-preview[data-frame="double"] .preview-frame{box-shadow:inset 0 0 0 5px rgba(255,255,255,.035),inset 0 0 0 7px color-mix(in srgb,currentColor 20%,transparent)}.editor-preview[data-frame="soft"] .preview-frame{border-radius:40px}.editor-preview[data-frame="none"] .preview-frame{border-color:transparent;box-shadow:none}.editor-preview[data-frame="fine"] .preview-frame{border-width:1px}
 @media(max-width:640px){.feature-toggle-grid{grid-template-columns:1fr 1fr 1fr}.background-upload-row{align-items:stretch;flex-direction:column}.upload-background-btn,.remove-background-btn{justify-content:center;text-align:center}}
+
+
+/* Hala V6 — Royal Maroon identity */
+:root{--ink:#3a0718;--ink2:#51091f;--ink3:#23040e;--gold:#c49a48;--gold-soft:#e5c985;--paper:#fbf6ec;--shadow:0 28px 80px rgba(58,7,24,.22)}
+body{background:var(--ink)}
+.topbar{background:rgba(48,5,18,.9);border-bottom-color:rgba(229,201,133,.16)}
+.hero{background:radial-gradient(circle at 74% 24%,rgba(196,154,72,.18),transparent 22%),radial-gradient(circle at 12% 72%,rgba(133,18,55,.28),transparent 28%),linear-gradient(120deg,#27030f 0%,#570a22 50%,#310512 100%)}
+.orb-b{background:#8c1740}.silk{background:linear-gradient(135deg,#2a0410,#6b0e2d 45%,#26030d)}
+.invite-card-visual{background:linear-gradient(145deg,#6b0e2d,#350513)}
+.phone-screen{background:radial-gradient(circle at 50% 28%,rgba(196,154,72,.17),transparent 22%),linear-gradient(#5a0b25,#2c0410)}
+.feature-ribbon{background:#27030f}.night-section{background:radial-gradient(circle at 80% 0,rgba(196,154,72,.08),transparent 22%),linear-gradient(180deg,#4a081d,#2b0410)}
+.process-section{background:linear-gradient(145deg,#28030f,#52091f)}
+.pricing-luxe{background:linear-gradient(150deg,#2a0310,#590a23)}
+.final-cta{background:#fbf6ec}
+.cta-card{background:linear-gradient(125deg,#4a081d,#741133);border:1px solid rgba(229,201,133,.25)}
+.journey-progress{scrollbar-color:#c49a48 transparent}
+.occasion-choice.selected,.activity-choice.selected,.visual-template-card.selected{border-color:#c49a48;box-shadow:0 0 0 2px rgba(196,154,72,.16)}
+@media(max-width:700px){.hero{background:radial-gradient(circle at 60% 18%,rgba(196,154,72,.14),transparent 22%),linear-gradient(165deg,#2a0310,#5a0a23 58%,#300411)}}
