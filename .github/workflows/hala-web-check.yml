@@ -1,0 +1,21 @@
+name: Hala Web Check
+on:
+  push:
+    branches: [hala-admin-otp, main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npm test
+      - name: Type-check Netlify functions
+        run: npx tsc --noEmit --allowJs false --module nodenext --moduleResolution nodenext --target ES2022 --types node netlify/functions/*.mts
