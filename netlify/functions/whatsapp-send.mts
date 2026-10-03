@@ -62,19 +62,19 @@ export default async (req: Request) => {
   const accountAccess = auth ? await canAccessEvent(auth.user, String(eventId)) : false;
   let rows: any[];
   if (accountAccess) {
-    rows = await db.sql\`
+    rows = await db.sql`
       SELECT g.*, e.title, e.event_date, e.event_time, e.location, e.owner_token
       FROM guests g
       JOIN events e ON e.id = g.event_id
       WHERE g.id = ${guestId} AND g.event_id = ${eventId}
-    \`;
+    `;
   } else if (ownerToken) {
-    rows = await db.sql\`
+    rows = await db.sql`
       SELECT g.*, e.title, e.event_date, e.event_time, e.location, e.owner_token
       FROM guests g
       JOIN events e ON e.id = g.event_id
       WHERE g.id = ${guestId} AND g.event_id = ${eventId} AND e.owner_token = ${ownerToken}
-    \`;
+    `;
   } else {
     return json({ error: "غير مصرح" }, 403);
   }
