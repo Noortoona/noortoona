@@ -10,8 +10,8 @@ export function packageFor(codeOrName){
   return Object.values(PAYMENT_PACKAGES).find(x=>x.name===raw)||null;
 }
 export function supervisorAddonHalalas(){
-  const raw=Number(Netlify.env.get("HALA_SUPERVISOR_ADDON_SAR")||199);
-  return Math.max(0,Math.round((Number.isFinite(raw)?raw:199)*100));
+  const raw=Number(Netlify.env.get("HALA_SUPERVISOR_ADDON_SAR")||299);
+  return Math.max(0,Math.round((Number.isFinite(raw)?raw:299)*100));
 }
 export function quote(packageCode,requestSupervisor=false){
   const p=packageFor(packageCode);if(!p)return null;
