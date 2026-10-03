@@ -59,7 +59,7 @@ const styles = StyleSheet.create({
   permissionTitle: { color: theme.colors.ink, fontSize: 24, fontWeight: "900", textAlign: "right", writingDirection: "rtl" },
   permissionText: { color: theme.colors.muted, textAlign: "right", writingDirection: "rtl", lineHeight: 22 },
   cameraWrap: { flex: 1, marginHorizontal: 16, overflow: "hidden", borderRadius: 28, backgroundColor: "#000" },
-  overlay: { ...StyleSheet.absoluteFillObject, alignItems: "center", justifyContent: "center", backgroundColor: "rgba(0,0,0,.22)" },
+  overlay: { ...StyleSheet.absoluteFill, alignItems: "center", justifyContent: "center", backgroundColor: "rgba(0,0,0,.22)" },
   finder: { width: 230, height: 230, borderWidth: 3, borderColor: theme.colors.gold, borderRadius: 26, backgroundColor: "transparent" },
   footer: { padding: 20, gap: 9, backgroundColor: theme.colors.burgundyDeep },
   hint: { color: theme.colors.white, fontSize: 16, fontWeight: "800", textAlign: "center", writingDirection: "rtl" },
