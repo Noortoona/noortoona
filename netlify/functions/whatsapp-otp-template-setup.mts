@@ -69,3 +69,5 @@ export default async (req: Request) => {
 };
 
 export const config: Config = {path:"/api/internal/setup-otp-template"};
+
+// env-refresh
