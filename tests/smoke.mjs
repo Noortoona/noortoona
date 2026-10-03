@@ -8,7 +8,7 @@ await import('../invitation-schemas.js');
 const N = window.NOORTOONA;
 const S = window.HALA_V6_SCHEMA;
 
-assert.equal(N.occasions.length, 13, 'occasion coverage');
+assert.equal(N.occasions.length, 15, 'occasion coverage');
 assert.equal(N.activities.length, 7, 'activity coverage');
 assert.equal(S.schemaFor('wedding').fields.filter(f=>f.key==='name2')[0].label,'اسم العروس','wedding asks for bride name');
 assert.equal(S.schemaFor('activity').fields.some(f=>f.key==='name2'),false,'activity never asks for a second person');
@@ -38,7 +38,7 @@ for (const asset of ['atlas-activities-a.webp','atlas-social.webp','atlas-events
   await access(new URL(`../assets/templates/${asset}`, import.meta.url));
 }
 
-const [app, guestJs, guestHtml, indexHtml, dashboardJs, dashboardHtml, css, rsvp, dashboard, checkIn, whatsapp, netlifyConfig, migration] = await Promise.all([
+const [app, guestJs, guestHtml, indexHtml, dashboardJs, dashboardHtml, css, rsvp, dashboard, checkIn, whatsapp, netlifyConfig, migration, accountJs, adminHtml, adminJs, customerHtml, supervisorHtml, otpRequest, otpVerify, adminOverview, supervisorAddon] = await Promise.all([
   readFile(new URL('../app.js', import.meta.url), 'utf8'),
   readFile(new URL('../guest.js', import.meta.url), 'utf8'),
   readFile(new URL('../guest.html', import.meta.url), 'utf8'),
@@ -52,6 +52,15 @@ const [app, guestJs, guestHtml, indexHtml, dashboardJs, dashboardHtml, css, rsvp
   readFile(new URL('../netlify/functions/whatsapp-send.mts', import.meta.url), 'utf8'),
   readFile(new URL('../netlify.toml', import.meta.url), 'utf8'),
   readFile(new URL('../netlify/database/migrations/009_guest-checkin/migration.sql', import.meta.url), 'utf8'),
+  readFile(new URL('../account.js', import.meta.url), 'utf8'),
+  readFile(new URL('../admin.html', import.meta.url), 'utf8'),
+  readFile(new URL('../admin.js', import.meta.url), 'utf8'),
+  readFile(new URL('../customer.html', import.meta.url), 'utf8'),
+  readFile(new URL('../supervisor.html', import.meta.url), 'utf8'),
+  readFile(new URL('../netlify/functions/auth-otp-request.mts', import.meta.url), 'utf8'),
+  readFile(new URL('../netlify/functions/auth-otp-verify.mts', import.meta.url), 'utf8'),
+  readFile(new URL('../netlify/functions/admin-overview.mts', import.meta.url), 'utf8'),
+  readFile(new URL('../netlify/functions/supervisor-addon.mts', import.meta.url), 'utf8'),
 ]);
 
 assert.match(app, /line\.split\(\/\[,،\]\//, 'Arabic and English guest separators');
@@ -89,5 +98,17 @@ assert.match(migration, /checked_in_at/, 'check-in database field exists');
 assert.match(whatsapp, /message_status|whatsapp|template/i, 'WhatsApp sending remains connected');
 assert.match(netlifyConfig, /from = "\/i\/\*"[\s\S]*to = "\/guest\.html\?code=:splat"/, 'unique invitation route');
 assert.match(netlifyConfig, /from = "\/dashboard"[\s\S]*to = "\/dashboard\.html"/, 'dashboard route');
+assert.match(app, /requestSupervisor/, 'builder supports optional event supervisor');
+assert.match(app, /HALA_AUTH.*ensureLogin/, 'event creation requires a verified phone account');
+assert.match(indexHtml, /account\.js/, 'public site loads phone account experience');
+assert.match(accountJs, /auth\/otp\/request/, 'phone login requests OTP');
+assert.match(accountJs, /auth\/otp\/verify/, 'phone login verifies OTP');
+assert.match(otpRequest, /issueOtp/, 'OTP endpoint applies issuance controls');
+assert.match(otpVerify, /createSession/, 'verified phone opens an authenticated session');
+assert.match(adminOverview, /page_views/, 'admin overview includes visitor analytics');
+assert.match(adminJs, /supervisor\/requests|admin\/supervisors/, 'admin can manage supervisor requests');
+assert.match(customerHtml, /مناسباتي/, 'customer has a dedicated account portal');
+assert.match(supervisorHtml, /مساحة المشرف/, 'supervisor has a dedicated workspace');
+assert.match(supervisorAddon, /HALA_SUPERVISOR_ADDON_SAR/, 'supervisor service increases event price from central configuration');
 
 console.log(`HALA smoke passed: ${N.occasions.length} occasions, ${N.activities.length} activities, ${Object.values(N.catalog).flat().length} visual templates.`);
