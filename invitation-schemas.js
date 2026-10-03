@@ -10,6 +10,21 @@
     {key:'message',label:'نص الدعوة',type:'textarea'}
   ];
   const single=(label='اسم صاحب المناسبة')=>[{key:'name1',label,type:'text',required:true},...shared];
+  const experiences={
+    wedding:{headline:'بكل الحب ندعوكم',message:'وجودكم يكمل فرحتنا',rsvpPrompt:'هل ستشاركوننا فرحتنا؟',acceptLabel:'نعم، سأحضر',declineLabel:'أعتذر عن الحضور',maybeLabel:'ربما',showMaybe:false,allowCompanions:true,allowChildren:true,showRsvp:true,showQr:true,showCountdown:true},
+    engagement:{headline:'يسعدنا أن نشارككم فرحتنا',message:'تشريفكم يسعدنا ويكمل فرحتنا',rsvpPrompt:'هل ستشاركوننا هذه المناسبة؟',acceptLabel:'نعم، سأحضر',declineLabel:'أعتذر عن الحضور',maybeLabel:'ربما',showMaybe:false,allowCompanions:true,allowChildren:true,showRsvp:true,showQr:true,showCountdown:true},
+    graduation:{headline:'بكل فخر نشارككم فرحة التخرج',message:'يسعدنا حضوركم ومشاركتنا هذه اللحظة',rsvpPrompt:'هل ستشاركوننا حفل التخرج؟',acceptLabel:'سأحضر الحفل',declineLabel:'أعتذر عن الحضور',maybeLabel:'ربما',showMaybe:false,allowCompanions:true,allowChildren:false,showRsvp:true,showQr:true,showCountdown:true},
+    newborn:{headline:'أهلًا بفرحتنا الصغيرة',message:'نسعد بمشاركتكم فرحتنا بالمولود',rsvpPrompt:'هل ستشاركوننا فرحتنا؟',acceptLabel:'نعم، سأحضر',declineLabel:'أعتذر عن الحضور',maybeLabel:'ربما',showMaybe:false,allowCompanions:true,allowChildren:true,showRsvp:true,showQr:false,showCountdown:true},
+    birthday:{headline:'نحتفل مع من نحب',message:'وجودكم يجعل الاحتفال أجمل',rsvpPrompt:'هل ستشاركوننا الاحتفال؟',acceptLabel:'أكيد، سأحضر',declineLabel:'أعتذر عن الحضور',maybeLabel:'ربما',showMaybe:true,allowCompanions:true,allowChildren:true,showRsvp:true,showQr:true,showCountdown:true},
+    conference:{headline:'دعوة رسمية',message:'يسرّنا حضوركم ومشاركتكم',rsvpPrompt:'هل ستتمكنون من الحضور؟',acceptLabel:'تأكيد الحضور',declineLabel:'لن أتمكن من الحضور',maybeLabel:'سأؤكد لاحقًا',showMaybe:true,allowCompanions:false,allowChildren:false,showRsvp:true,showQr:true,showCountdown:true},
+    opening:{headline:'يسرّنا دعوتكم للافتتاح',message:'يشرفنا حضوركم ومشاركتنا هذه المناسبة',rsvpPrompt:'هل ستتمكنون من الحضور؟',acceptLabel:'تأكيد الحضور',declineLabel:'أعتذر عن الحضور',maybeLabel:'سأؤكد لاحقًا',showMaybe:true,allowCompanions:false,allowChildren:false,showRsvp:true,showQr:true,showCountdown:true},
+    honoring:{headline:'دعوة لحفل التكريم',message:'يسعدنا حضوركم ومشاركتنا لحظة التقدير',rsvpPrompt:'هل ستتمكنون من الحضور؟',acceptLabel:'سأحضر',declineLabel:'أعتذر عن الحضور',maybeLabel:'ربما',showMaybe:false,allowCompanions:false,allowChildren:false,showRsvp:true,showQr:true,showCountdown:true},
+    formal:{headline:'دعوة رسمية',message:'يسرّنا تشريفكم بالحضور',rsvpPrompt:'هل ستتمكنون من الحضور؟',acceptLabel:'تأكيد الحضور',declineLabel:'أعتذر عن الحضور',maybeLabel:'سأؤكد لاحقًا',showMaybe:true,allowCompanions:false,allowChildren:false,showRsvp:true,showQr:true,showCountdown:true},
+    national:{headline:'نفخر بمشاركتكم',message:'يسرّنا حضوركم ومشاركتنا هذه المناسبة الوطنية',rsvpPrompt:'هل ستتمكنون من الحضور؟',acceptLabel:'سأحضر',declineLabel:'أعتذر عن الحضور',maybeLabel:'ربما',showMaybe:false,allowCompanions:false,allowChildren:false,showRsvp:true,showQr:true,showCountdown:true},
+    condolence:{headline:'إنا لله وإنا إليه راجعون',message:'نسأل الله أن يتغمد الفقيد بواسع رحمته',rsvpPrompt:'',acceptLabel:'',declineLabel:'',maybeLabel:'',showMaybe:false,allowCompanions:false,allowChildren:false,showRsvp:false,showQr:false,showCountdown:false},
+    activity:{headline:'حياكم في النشاط',message:'نلتقي على الموعد، ومشاركتكم تكمل التجمع',rsvpPrompt:'هل ستشارك معنا؟',acceptLabel:'نعم، سأشارك',declineLabel:'لن أتمكن من المشاركة',maybeLabel:'ربما',showMaybe:true,allowCompanions:true,allowChildren:false,showRsvp:true,showQr:true,showCountdown:true},
+    custom:{headline:'يسعدنا حضوركم',message:'وجودكم يسعدنا',rsvpPrompt:'هل ستتمكنون من الحضور؟',acceptLabel:'نعم، سأحضر',declineLabel:'أعتذر عن الحضور',maybeLabel:'ربما',showMaybe:true,allowCompanions:true,allowChildren:true,showRsvp:true,showQr:true,showCountdown:true}
+  };
   const schemas={
     wedding:{title:'تفاصيل الزواج',fields:[{key:'name1',label:'اسم العريس',type:'text',required:true},{key:'name2',label:'اسم العروس',type:'text',required:true},...shared]},
     engagement:{title:'تفاصيل الملكة / الخطوبة',fields:[{key:'name1',label:'الاسم الأول',type:'text',required:true},{key:'name2',label:'الاسم الثاني',type:'text',required:true},...shared]},
@@ -31,5 +46,6 @@
     custom:{title:'تفاصيل الدعوة',fields:[{key:'name1',label:'عنوان الدعوة',type:'text',required:true},...shared]}
   };
   const schemaFor=key=>schemas[key]||schemas.custom;
-  window.HALA_V6_SCHEMA={schemas,schemaFor};
+  const experienceFor=key=>experiences[key]||experiences.custom;
+  window.HALA_V6_SCHEMA={schemas,experiences,schemaFor,experienceFor};
 })();
