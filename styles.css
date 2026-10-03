@@ -60,3 +60,53 @@ body{background:var(--ink)}
 .journey-progress{scrollbar-color:#c49a48 transparent}
 .occasion-choice.selected,.activity-choice.selected,.visual-template-card.selected{border-color:#c49a48;box-shadow:0 0 0 2px rgba(196,154,72,.16)}
 @media(max-width:700px){.hero{background:radial-gradient(circle at 60% 18%,rgba(196,154,72,.14),transparent 22%),linear-gradient(165deg,#2a0310,#5a0a23 58%,#300411)}}
+
+
+/* Hala V6 — Royal Maroon visual system */
+:root{--ink:#430719;--ink2:#5a0b24;--ink3:#26040d;--gold:#c59a48;--gold-soft:#e7cb88;--paper:#fbf5eb;--rose:#9c3150;--royal:#6e1730;--shadow:0 28px 80px rgba(67,7,25,.23)}
+body{background:var(--ink)}
+.topbar{background:rgba(55,6,20,.9);border-bottom-color:rgba(231,203,136,.14)}
+.hero{background:radial-gradient(circle at 74% 24%,rgba(197,154,72,.19),transparent 22%),radial-gradient(circle at 15% 70%,rgba(142,29,66,.2),transparent 26%),linear-gradient(120deg,#2b0410 0%,#570b23 50%,#350514 100%)}
+.orb-b{background:#8a2144}.silk{background:linear-gradient(135deg,#2d0713,#6b1230 42%,#26030d)}
+.invite-card-visual{background:linear-gradient(145deg,#6b102d,#330512)}
+.phone-screen{background:radial-gradient(circle at 50% 28%,rgba(197,154,72,.18),transparent 22%),linear-gradient(#5d0c26,#300410)}
+.scene-badge{background:rgba(63,8,25,.9)}
+.feature-ribbon{background:#2c0612}
+.night-section{background:radial-gradient(circle at 80% 0,rgba(197,154,72,.09),transparent 22%),linear-gradient(180deg,#50091f,#350614)}
+.process-section{background:linear-gradient(145deg,#310511,#5a0b24)}
+.dashboard-card{background:#4d0a1e;border-color:rgba(231,203,136,.22)}
+.stats div,.guest-list>div{background:#5d0d25}.avatar{background:#731632}
+.pricing-luxe{background:radial-gradient(circle at 20% 20%,rgba(197,154,72,.1),transparent 22%),#300511}
+.price-card{background:#4b091d}.price-card.featured{background:linear-gradient(180deg,#68112d,#48091c)}
+.final-cta{background:#2c0612}.cta-card{background:linear-gradient(110deg,#65102b,#350512)}
+footer{background:#22030b}.modal-backdrop{background:rgba(33,3,11,.78)}
+.gold-btn{background:linear-gradient(135deg,#f0d995,#bd8d35);box-shadow:0 12px 35px rgba(197,154,72,.24)}
+.eyebrow.dark{color:#9a6b22}
+
+.hala-services{background:#fbf5eb;color:#291a1f}
+.service-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:16px}
+.service-grid article{background:#fff;border:1px solid #eadcc7;border-radius:24px;padding:26px;min-height:205px;box-shadow:0 14px 38px rgba(67,7,25,.07);transition:.25s}
+.service-grid article:hover{transform:translateY(-5px);box-shadow:0 22px 55px rgba(67,7,25,.12)}
+.service-grid article>span{width:46px;height:46px;display:grid;place-items:center;border-radius:50%;background:#f7eddd;color:#6a102d;font-size:21px;border:1px solid #e3cca1}
+.service-grid h3{font-family:"Aref Ruqaa";font-size:28px;margin:18px 0 8px;color:#4e0a1f}.service-grid p{color:#776b65;line-height:1.9;font-size:13px}
+
+.planner-section{position:relative;overflow:hidden;background:radial-gradient(circle at 15% 15%,rgba(231,203,136,.15),transparent 25%),linear-gradient(130deg,#360513,#64102b);color:#fff}
+.planner-grid{display:grid;grid-template-columns:1.05fr .95fr;gap:28px;align-items:stretch}
+.planner-copy h2{font-family:"Aref Ruqaa";font-size:50px;margin:12px 0}.planner-copy>p{color:#decfd1;line-height:1.9}
+.planner-form{display:grid;grid-template-columns:repeat(2,1fr);gap:10px;margin-top:26px}
+.planner-form input,.planner-form select{background:rgba(255,255,255,.08);color:#fff;border:1px solid rgba(231,203,136,.24);border-radius:14px;padding:13px;outline:none}
+.planner-form select option{color:#2c1d21}.planner-form .gold-btn{grid-column:1/-1}
+.planner-result{position:relative;border:1px solid rgba(231,203,136,.25);background:rgba(255,255,255,.06);backdrop-filter:blur(12px);border-radius:28px;padding:34px;min-height:310px;overflow:hidden}
+.planner-result:after{content:"";position:absolute;width:220px;height:220px;border-radius:50%;left:-80px;bottom:-100px;background:rgba(231,203,136,.08)}
+.planner-star{font-size:30px;color:var(--gold-soft)}.planner-result h3{font-family:"Aref Ruqaa";font-size:32px;margin:14px 0}.planner-result p{color:#d5c8ca;line-height:1.9}
+.planner-result ul{padding:0;list-style:none;display:grid;gap:10px}.planner-result li{padding:10px 12px;border-radius:12px;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.06)}
+.planner-result strong{color:var(--gold-soft)}
+
+.partner-section{background:#f4eadc}.partner-grid{display:grid;grid-template-columns:1fr 1fr;gap:34px;align-items:center}
+.partner-grid h2{font-family:"Aref Ruqaa";font-size:48px;margin:8px 0;color:#4b091d}.partner-grid p{color:#76685f;line-height:1.9}
+.partner-card{background:#fff;border:1px solid #e5d5be;border-radius:24px;padding:22px;display:grid;grid-template-columns:auto 1fr auto;align-items:center;gap:16px;box-shadow:0 16px 42px rgba(67,7,25,.08)}
+.partner-card>span{width:52px;height:52px;border-radius:16px;display:grid;place-items:center;background:#510b22;color:#edcf8c;font-family:"Aref Ruqaa";font-size:28px}
+.partner-card strong,.partner-card small{display:block}.partner-card strong{color:#4b091d}.partner-card small{color:#86766e;margin-top:5px}.partner-card>b{font-size:11px;color:#8a6929;border:1px solid #dcc28b;border-radius:999px;padding:6px 9px}
+
+@media(max-width:900px){.service-grid{grid-template-columns:repeat(2,1fr)}.planner-grid,.partner-grid{grid-template-columns:1fr}}
+@media(max-width:640px){.service-grid{grid-template-columns:1fr}.planner-form{grid-template-columns:1fr}.planner-form .gold-btn{grid-column:auto}.planner-copy h2{font-size:40px}.partner-card{grid-template-columns:auto 1fr}.partner-card>b{grid-column:1/-1;width:max-content}}
