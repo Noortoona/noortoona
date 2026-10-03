@@ -15,6 +15,23 @@ const templates=()=>N.catalog[groupKey()]||N.catalog.custom;
 const eventLabel=()=>state.customOccasion||(state.occasionKey==='activity'?'تجمع ونشاط':occasion().label);
 const activityLabel=()=>state.occasionKey==='activity'?(state.activityKey==='activityCustom'&&state.customActivity.trim()?state.customActivity.trim():activity().label):'';
 const schemaKeys=()=>new Set((window.HALA_V6_SCHEMA?.schemaFor(state.occasionKey)?.fields||[]).map(f=>f.key));
+const experience=()=>window.HALA_V6_SCHEMA?.experienceFor(state.occasionKey)||{};
+function applyTypeExperience(){
+  const x=experience();
+  state.design.headline=x.headline||state.design.headline;
+  state.message=x.message||state.message;
+  state.design.showMaybe=x.showMaybe!==false;
+  state.design.allowChildren=x.allowChildren!==false;
+  state.design.allowCompanions=x.allowCompanions!==false;
+  state.design.showQr=x.showQr!==false;
+  state.design.showCountdown=x.showCountdown!==false;
+  state.design.showRsvp=x.showRsvp!==false;
+  if(state.occasionKey==='activity'){
+    state.waitlistEnabled=true;
+    state.allowNamedCompanions=true;
+    state.requireShareConsent=Number(state.shareAmount||0)>0;
+  }
+}
 function cleanTypeFields(){
   const keys=schemaKeys();
   if(!keys.has('name2'))state.name2='';
@@ -35,7 +52,7 @@ const field=(id,label,value,type='text',attrs='')=>`<label class="journey-field"
 const setTemplate=(name)=>{state.template=name;state.design.accent=N.templateByName(name).accent;saveDraft();render()};
 
 function openBuilder(key='wedding',resume=false){
-  if(!resume){state.occasionKey=key;state.step=1;state.activityPicking=false;cleanTypeFields()}
+  if(!resume){state.occasionKey=key;state.step=1;state.activityPicking=false;cleanTypeFields();applyTypeExperience()}
   else{state.step=Math.min(7,Math.max(1,Number(state.step)||1));state.activityPicking=false}
   if(!templates().some(t=>t.name===state.template))state.template=templates()[0].name;
   modal.classList.add('open');modal.setAttribute('aria-hidden','false');document.body.classList.add('journey-open');render();
@@ -57,10 +74,10 @@ function renderDetails(){
 function thumb(t){return `<span class="template-art" style="${N.styleFor(t)}"><i></i><span><small>${N.esc(state.occasionKey==='activity'?activityLabel():occasion().label)}</small><b>${N.esc(t.name)}</b></span></span>`}
 function renderTemplates(){return `${heading(`اختر قالب ${state.occasionKey==='activity'?activityLabel():occasion().label}`,'اخترنا لك الأنسب أولًا، ويمكنك مقارنة أربعة تصاميم واضحة')}<div class="visual-template-grid">${templates().map((t,i)=>`<button type="button" class="visual-template-card ${state.template===t.name?'selected':''}" data-template="${N.esc(t.name)}">${thumb(t)}${i===0?'<em class="recommended-tag">اختيار هلا</em>':''}<span class="template-caption"><b>${N.esc(t.name)}</b>${state.template===t.name?'<i>✓</i>':''}</span></button>`).join('')}</div>`}
 function invitePreview(){return `<div class="host-phone"><div class="host-phone-notch"></div>${N.canvas({...state,occasion:eventLabel()})}</div>`}
-function renderDesign(){return `${heading('صمّم دعوتك','التخصيص بسيط؛ القالب هو الهوية واللون مجرد لمسة')}<div class="design-workspace"><div class="host-preview-wrap">${invitePreview()}<button type="button" class="guest-preview-link" data-full-preview>معاينة كضيف بالحجم الكامل</button></div><div class="design-controls"><label><span>النص الرئيسي</span><input id="headline" maxlength="70" value="${N.esc(state.design.headline)}"></label><label><span>الخط</span><select id="font"><option value="ruqaa">رقعة أنيق</option><option value="tajawal">تجوال</option><option value="serif">كلاسيكي</option></select></label><label><span>اللون الرئيسي</span><input id="accent" type="color" value="${state.design.accent}"></label><div class="mini-template-switch"><span>تغيير القالب</span>${templates().map(t=>`<button type="button" class="mini-template ${state.template===t.name?'selected':''}" data-template="${N.esc(t.name)}">${thumb(t)}</button>`).join('')}</div><label class="image-upload"><span>استخدام صورتك كخلفية</span><input id="designImage" type="file" accept="image/*"></label></div></div>`}
+function renderDesign(){const x=experience();return `${heading('صمّم دعوتك','التخصيص بسيط؛ القالب هو الهوية واللون مجرد لمسة')}<div class="type-behavior-note"><b>${x.showRsvp===false?'دعوة معلوماتية بدون تأكيد حضور':x.rsvpPrompt||'تأكيد حضور مخصص'}</b><span>${x.allowCompanions===false?'بدون طلب مرافقين':'يمكن إدارة المرافقين حسب هذا النوع'}${x.showQr===false?' • بدون QR افتراضيًا':' • QR متاح'}</span></div><div class="design-workspace"><div class="host-preview-wrap">${invitePreview()}<button type="button" class="guest-preview-link" data-full-preview>معاينة كضيف بالحجم الكامل</button></div><div class="design-controls"><label><span>النص الرئيسي</span><input id="headline" maxlength="70" value="${N.esc(state.design.headline)}"></label><label><span>الخط</span><select id="font"><option value="ruqaa">رقعة أنيق</option><option value="tajawal">تجوال</option><option value="serif">كلاسيكي</option></select></label><label><span>اللون الرئيسي</span><input id="accent" type="color" value="${state.design.accent}"></label><div class="mini-template-switch"><span>تغيير القالب</span>${templates().map(t=>`<button type="button" class="mini-template ${state.template===t.name?'selected':''}" data-template="${N.esc(t.name)}">${thumb(t)}</button>`).join('')}</div><label class="image-upload"><span>استخدام صورتك كخلفية</span><input id="designImage" type="file" accept="image/*"></label></div></div>`}
 function parseGuests(){return state.guestText.split(/\r?\n/).map(line=>{const [name,...rest]=line.split(/[,،]/);return{name:name?.trim(),phone:rest.join(',').trim()}}).filter(x=>x.name)}
 function renderGuests(){const count=parseGuests().length;return `${heading('أضف الضيوف','كل سطر: اسم الضيف، رقم الجوال')}<div class="guest-entry"><textarea id="guestText" rows="10" placeholder="محمد العتيبي، 0500000000\nخالد الحربي، 0500000001">${N.esc(state.guestText)}</textarea><div class="guest-entry-note"><span>${count} ضيف</span><small>يمكنك أيضًا الإضافة والاستيراد من لوحة المضيف بعد الإنشاء.</small></div></div>`}
-function renderReview(){const count=parseGuests().length;return `${heading('راجع دعوتك','هذه المعاينة تستخدم نفس الرسم الذي سيصل للضيف')}<div class="review-grid"><div>${invitePreview()}<button type="button" class="guest-preview-link" data-full-preview>معاينة كضيف</button></div><div class="review-summary"><h3>${N.esc(state.name1)}${state.name2?' و '+N.esc(state.name2):''}</h3><dl><div><dt>النوع</dt><dd>${N.esc(state.occasionKey==='activity'?activityLabel():occasion().label)}</dd></div><div><dt>التاريخ</dt><dd>${N.esc(state.date)}</dd></div><div><dt>الموقع</dt><dd>${N.esc(state.location)}</dd></div><div><dt>القالب</dt><dd>${N.esc(state.template)}</dd></div><div><dt>الضيوف</dt><dd>${count}</dd></div>${state.occasionKey==='activity'?`<div><dt>القطّة</dt><dd>${Number(state.shareAmount||0).toLocaleString('ar-SA')} ر.س للفرد</dd></div>`:''}</dl></div></div>`}
+function renderReview(){const count=parseGuests().length;return `${heading('راجع دعوتك','هذه المعاينة تستخدم نفس الرسم الذي سيصل للضيف')}<div class="review-grid"><div>${invitePreview()}<button type="button" class="guest-preview-link" data-full-preview>معاينة كضيف</button></div><div class="review-summary"><h3>${N.esc(state.name1)}${state.name2?' و '+N.esc(state.name2):''}</h3>${state.hostName?`<p>${N.esc(state.hostName)}</p>`:''}<dl><div><dt>النوع</dt><dd>${N.esc(state.occasionKey==='activity'?activityLabel():occasion().label)}</dd></div><div><dt>التاريخ</dt><dd>${N.esc(state.date)}</dd></div><div><dt>الموقع</dt><dd>${N.esc(state.location)}</dd></div><div><dt>القالب</dt><dd>${N.esc(state.template)}</dd></div><div><dt>الضيوف</dt><dd>${count}</dd></div>${state.occasionKey==='activity'?`<div><dt>القطّة</dt><dd>${Number(state.shareAmount||0).toLocaleString('ar-SA')} ر.س للفرد</dd></div>`:''}</dl></div></div>`}
 function renderSend(){return `${heading('جاهزة للإرسال','أنشئ المناسبة ثم افتح لوحة المضيف لإرسال الروابط عبر واتساب')}<div class="send-card"><span>✦</span><h3>كل شيء جاهز</h3><p>سيتم إنشاء روابط فريدة للضيوف وحفظ إعدادات الدعوة والقطّة وقائمة الانتظار.</p><div class="package-row">${['البداية','الأساسية','الملكية'].map(p=>`<button type="button" data-package="${p}" class="${state.package===p?'selected':''}">${p}</button>`).join('')}</div></div>`}
 function render(){
   $('.builder-progress').style.display='none';let content='';
@@ -69,7 +86,7 @@ function render(){
   body.innerHTML=`${progress()}<div class="journey-save-state"><span>✓ محفوظ تلقائيًا</span><b>الخطوة ${state.step} من ${stages.length}</b></div><div class="journey-content">${content}</div>`;body.scrollTop=0;prevBtn.style.visibility=state.step===1&&!state.activityPicking?'hidden':'visible';nextBtn.textContent=state.step===7?'إنشاء وفتح لوحة المضيف':'التالي ←';nextBtn.disabled=false;bind();requestAnimationFrame(()=>$('.journey-step.active',body)?.scrollIntoView({block:'nearest',inline:'center'}));
 }
 function bind(){
-  $$('[data-occasion]',body).forEach(b=>b.onclick=()=>{state.occasionKey=b.dataset.occasion;state.customOccasion='';cleanTypeFields();if(state.occasionKey==='activity')state.activityPicking=true;else{state.activityPicking=false;state.template=templates()[0].name}saveDraft();render()});
+  $$('[data-occasion]',body).forEach(b=>b.onclick=()=>{state.occasionKey=b.dataset.occasion;state.customOccasion='';cleanTypeFields();applyTypeExperience();if(state.occasionKey==='activity')state.activityPicking=true;else{state.activityPicking=false;state.template=templates()[0].name}saveDraft();render()});
   $$('[data-activity]',body).forEach(b=>b.onclick=()=>{state.activityKey=b.dataset.activity;state.template=templates()[0].name;saveDraft();render()});
   $$('[data-template]',body).forEach(b=>b.onclick=()=>setTemplate(b.dataset.template));$$('[data-package]',body).forEach(b=>b.onclick=()=>{state.package=b.dataset.package;render()});$$('[data-full-preview]',body).forEach(b=>b.onclick=openFullPreview);
   const font=$('#font',body);if(font){font.value=state.design.font;font.onchange=e=>{state.design.font=e.target.value;render()}}const headline=$('#headline',body);if(headline)headline.oninput=e=>{state.design.headline=e.target.value;$('.invite-headline',body).textContent=e.target.value;saveDraft()};const accent=$('#accent',body);if(accent)accent.oninput=e=>{state.design.accent=e.target.value;$('.invite-canvas',body).style.setProperty('--invite-accent',e.target.value);saveDraft()};const upload=$('#designImage',body);if(upload)upload.onchange=handleImage;
@@ -106,7 +123,7 @@ function renderLanding(){
   $$('[data-land-occasion]').forEach(b=>b.onclick=()=>openBuilder(b.dataset.landOccasion));
   const tg=$('#templateGrid');
   if(tg)tg.innerHTML=N.catalog.wedding.map(t=>`<button class="template-card" data-land-template="${N.esc(t.name)}">${thumb(t)}<span class="template-name">${N.esc(t.name)}</span></button>`).join('');
-  $$('[data-land-template]').forEach(b=>b.onclick=()=>{state.occasionKey='wedding';state.template=b.dataset.landTemplate;state.step=3;modal.classList.add('open');modal.setAttribute('aria-hidden','false');document.body.classList.add('journey-open');render()});
+  $('[data-land-template]').forEach(b=>b.onclick=()=>{state.occasionKey='wedding';cleanTypeFields();applyTypeExperience();state.template=b.dataset.landTemplate;state.step=3;modal.classList.add('open');modal.setAttribute('aria-hidden','false');document.body.classList.add('journey-open');render()});
   const prices=[
     {name:'البداية',guests:'حتى 50 مدعو',price:'29',items:['دعوة رقمية','رابط فريد لكل ضيف','متابعة الردود']},
     {name:'الأساسية',guests:'حتى 200 مدعو',price:'99',featured:true,items:['كل مزايا البداية','تذكير غير المستجيبين','تصدير قائمة الضيوف']},
