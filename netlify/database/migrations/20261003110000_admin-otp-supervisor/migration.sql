@@ -101,3 +101,11 @@ CREATE INDEX IF NOT EXISTS payment_orders_event_idx ON payment_orders(event_id,c
 CREATE INDEX IF NOT EXISTS payment_orders_user_idx ON payment_orders(user_id,created_at DESC);
 
 ALTER TABLE payment_orders ADD COLUMN IF NOT EXISTS supervisor_addon_amount integer NOT NULL DEFAULT 0;
+
+CREATE TABLE IF NOT EXISTS platform_settings (
+  key text PRIMARY KEY,
+  value text NOT NULL,
+  updated_at timestamptz NOT NULL DEFAULT now()
+);
+INSERT INTO platform_settings(key,value) VALUES('supervisor_addon_sar','199')
+ON CONFLICT(key) DO NOTHING;
