@@ -88,6 +88,7 @@ test('admin overview guards metrics and reports payment revenue once',async()=>{
   authorized=true;
   const res=await overview(req),body=await res.json();
   assert.equal(res.status,200);assert.equal(body.stats.revenueHalalas,39800);
+  assert.equal(body.stats.declined,2);assert.equal(body.stats.pendingRsvp,2);
   assert.equal(body.stats.whatsapp.failed,1);assert.equal(body.stats.supervisorRequests.requested,1);
 });
 

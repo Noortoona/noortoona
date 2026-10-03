@@ -9,7 +9,7 @@ export default async(req:Request)=>{
   try{
     const db=getDatabase();
     const [
-      visits,visitsToday,unique7,users,supervisors,events,eventsToday,guests,accepted,checkedIn,
+      visits,visitsToday,unique7,users,supervisors,events,eventsToday,guests,accepted,declined,pendingRsvp,checkedIn,
       wa,revenue,supervisorStats,inviteViews,recentOps,recentEvents,recentPayments
     ]=await Promise.all([
       db.sql`SELECT COUNT(*)::int count FROM page_views WHERE event_name='page_view'`,
@@ -21,6 +21,8 @@ export default async(req:Request)=>{
       db.sql`SELECT COUNT(*)::int count FROM events WHERE created_at>=date_trunc('day',NOW())`,
       db.sql`SELECT COUNT(*)::int count FROM guests`,
       db.sql`SELECT COUNT(*)::int count FROM guests WHERE rsvp_status='accepted'`,
+      db.sql`SELECT COUNT(*)::int count FROM guests WHERE rsvp_status='declined'`,
+      db.sql`SELECT COUNT(*)::int count FROM guests WHERE rsvp_status IS NULL OR rsvp_status IN ('pending','maybe')`,
       db.sql`SELECT COUNT(*)::int count FROM guests WHERE checked_in_at IS NOT NULL`,
       db.sql`SELECT COUNT(*)::int total,COUNT(*) FILTER(WHERE status='sent')::int sent,COUNT(*) FILTER(WHERE status='delivered')::int delivered,COUNT(*) FILTER(WHERE status='read')::int read,COUNT(*) FILTER(WHERE status='failed')::int failed FROM whatsapp_messages`,
       db.sql`SELECT COALESCE(SUM(amount) FILTER(WHERE status='paid'),0)::bigint revenue,COUNT(*) FILTER(WHERE status='paid')::int paid FROM payment_orders`,
@@ -34,7 +36,7 @@ export default async(req:Request)=>{
       stats:{
         visits:Number(visits[0]?.count||0),visitsToday:Number(visitsToday[0]?.count||0),uniqueVisitors7d:Number(unique7[0]?.count||0),
         customers:Number(users[0]?.count||0),supervisors:Number(supervisors[0]?.count||0),events:Number(events[0]?.count||0),eventsToday:Number(eventsToday[0]?.count||0),
-        guests:Number(guests[0]?.count||0),accepted:Number(accepted[0]?.count||0),checkedIn:Number(checkedIn[0]?.count||0),inviteViews:Number(inviteViews[0]?.count||0),
+        guests:Number(guests[0]?.count||0),accepted:Number(accepted[0]?.count||0),declined:Number(declined[0]?.count||0),pendingRsvp:Number(pendingRsvp[0]?.count||0),checkedIn:Number(checkedIn[0]?.count||0),inviteViews:Number(inviteViews[0]?.count||0),
         whatsapp:wa[0]||{},revenueHalalas:Number(revenue[0]?.revenue||0),paidOrders:Number(revenue[0]?.paid||0),supervisorRequests:supervisorStats[0]||{}
       },
       recentOps,recentEvents,recentPayments

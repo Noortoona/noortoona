@@ -33,6 +33,8 @@ function render(d,users,supData,settings){
       ${card("العملاء",n(x.customers),"حسابات موثقة")}
       ${card("المناسبات",n(x.events),n(x.eventsToday)+" اليوم")}
       ${card("الضيوف",n(x.guests),n(x.accepted)+" مؤكد")}
+      ${card("RSVP",n(x.accepted)+" مؤكد",n(x.declined)+" اعتذر • "+n(x.pendingRsvp)+" بانتظار الرد")}
+      ${card("المشرفون",n(x.supervisors),"حسابات مشرف")}
       ${card("مشاهدات الدعوات",n(x.inviteViews),"ضيوف فتحوا الدعوة")}
       ${card("تم الدخول",n(x.checkedIn),"QR")}
       ${card("إيرادات مدفوعة",money(x.revenueHalalas),n(x.paidOrders)+" عملية")}
@@ -44,6 +46,7 @@ function render(d,users,supData,settings){
         <h2>واتساب</h2>
         <div class="mini-metrics">
           ${card("الكل",n(w.total))}
+          ${card("أُرسلت",n(w.sent))}
           ${card("وصلت",n(w.delivered))}
           ${card("قُرئت",n(w.read))}
           ${card("فشلت",n(w.failed))}
