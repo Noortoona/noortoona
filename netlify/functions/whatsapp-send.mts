@@ -2,7 +2,7 @@ import { getDatabase } from "@netlify/database";
 import type { Config } from "@netlify/functions";
 import { isSameOriginRequest, ownerTokenFrom, secureJson } from "./_shared/domain.mjs";
 import { providerConfig, providerError } from "./_shared/whatsapp.mjs";
-import { canAccessEvent, getAuth } from "./_shared/auth.mjs";
+import { canAccessEvent, getAuth, recordAudit } from "./_shared/auth.mjs";
 
 function normalizePhone(phone: string) {
   let p = String(phone || "").replace(/\D/g, "");
