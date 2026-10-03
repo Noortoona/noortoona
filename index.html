@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <meta name="theme-color" content="#071827" />
+  <meta name="theme-color" content="#4b0a20" />
   <title>هلا | كل مناسبة تبدأ بهلا</title>
   <meta name="description" content="هلا — منصة دعوات رقمية راقية لإنشاء الدعوات وإرسالها وإدارة الضيوف والحضور بكل أناقة." />
   <link rel="canonical" href="https://noortoona.com/" />
@@ -32,6 +32,7 @@
         <a href="#occasions">المناسبات</a>
         <a href="#templates">القوالب</a>
         <a href="#how">كيف تعمل؟</a>
+        <a href="#services">الخدمات</a>
         <a href="#pricing">الباقات</a>
       </nav>
       <button class="mobile-menu-btn" id="mobileMenuBtn" aria-label="فتح القائمة" aria-expanded="false">☰</button>
@@ -41,7 +42,7 @@
       </div>
     </div>
   </header>
-  <div class="mobile-menu" id="mobileMenu" aria-hidden="true"><a href="#occasions">المناسبات</a><a href="#templates">القوالب</a><a href="#how">كيف تعمل؟</a><a href="#pricing">الباقات</a><button class="gold-btn" data-start>أنشئ مناسبتك</button></div>
+  <div class="mobile-menu" id="mobileMenu" aria-hidden="true"><a href="#occasions">المناسبات</a><a href="#templates">القوالب</a><a href="#how">كيف تعمل؟</a><a href="#services">الخدمات</a><a href="#pricing">الباقات</a><button class="gold-btn" data-start>أنشئ مناسبتك</button></div>
 
   <main>
     <section id="home" class="hero">
@@ -154,6 +155,55 @@
           <div class="stats"><div><strong>250</strong><span>مدعو</span></div><div><strong>207</strong><span>شاهد</span></div><div><strong>174</strong><span>مؤكد</span></div><div><strong>18</strong><span>معتذر</span></div></div>
           <div class="guest-list"><div><span><i class="avatar">م</i>محمد العتيبي</span><b class="ok">مؤكد</b></div><div><span><i class="avatar">خ</i>خالد الحربي</span><b class="pending">بانتظار الرد</b></div><div><span><i class="avatar">س</i>سلمان القحطاني</span><b class="no">معتذر</b></div></div>
         </div>
+      </div>
+    </section>
+
+    <section id="services" class="section hala-services">
+      <div class="container">
+        <div class="section-head center-head">
+          <span class="eyebrow dark">كمّل فرحتك مع هلا</span>
+          <h2>من أول دعوة… إلى آخر ضيف</h2>
+          <p>بعد إنشاء الدعوة، تعرض هلا الخدمات المناسبة لنوع مناسبتك ومدينتك وميزانيتك — بدون خلط بين احتياجات الزواج والأنشطة وبقية الدعوات.</p>
+        </div>
+        <div class="service-grid">
+          <article><span>⌂</span><h3>القاعات والمواقع</h3><p>للزواج والملكات والفعاليات التي تحتاج موقعًا مناسبًا لعدد الضيوف.</p></article>
+          <article><span>◉</span><h3>التصوير</h3><p>مصورون وفيديو وتغطية مناسبة حسب نوع الحدث.</p></article>
+          <article><span>❀</span><h3>الورد والتنسيق</h3><p>تنسيق طاولات ومداخل وهوية بصرية متوافقة مع الدعوة.</p></article>
+          <article><span>♨</span><h3>الضيافة والحلويات</h3><p>خيارات ضيافة مناسبة لعدد المدعوين وطبيعة المناسبة.</p></article>
+          <article><span>♫</span><h3>الصوت والترفيه</h3><p>خيارات مخصصة للفعاليات والاحتفالات فقط عند الحاجة.</p></article>
+          <article><span>✦</span><h3>الهدايا والتوزيعات</h3><p>توزيعات وشكر للضيوف مرتبطة بهوية المناسبة.</p></article>
+        </div>
+      </div>
+    </section>
+
+    <section class="section planner-section">
+      <div class="container planner-grid">
+        <div class="planner-copy">
+          <span class="eyebrow">مساعد هلا الذكي</span>
+          <h2>قل له وش عندك… وهو يرتّب البداية.</h2>
+          <p>اكتب نوع المناسبة، المدينة، عدد الضيوف والميزانية. هلا يقترح لك خطوات التحضير والخدمات المناسبة دون أن يفترض معلومات لا تخص دعوتك.</p>
+          <form id="halaPlannerForm" class="planner-form">
+            <select id="plannerType" aria-label="نوع المناسبة">
+              <option value="wedding">زواج</option><option value="engagement">ملكة / خطوبة</option><option value="graduation">تخرج</option><option value="birthday">عيد ميلاد</option><option value="activity">نشاط / تجمع</option><option value="conference">اجتماع / مؤتمر</option>
+            </select>
+            <input id="plannerCity" value="الرياض" placeholder="المدينة" />
+            <input id="plannerGuests" type="number" min="1" value="120" placeholder="عدد الضيوف" />
+            <input id="plannerBudget" type="number" min="0" value="25000" placeholder="الميزانية" />
+            <button class="gold-btn" type="submit">رتّبها مع هلا</button>
+          </form>
+        </div>
+        <div class="planner-result" id="plannerResult">
+          <span class="planner-star">✦</span>
+          <h3>خطة هلا تظهر هنا</h3>
+          <p>نختار لك أولويات مناسبة لنوع دعوتك، وليس قالبًا عامًا للجميع.</p>
+        </div>
+      </div>
+    </section>
+
+    <section class="section partner-section">
+      <div class="container partner-grid">
+        <div><span class="eyebrow dark">Hala Partners</span><h2>شركاء هلا</h2><p>بوابة مستقبلية للقاعات والمصورين والمنسقين ومقدمي الخدمات لإدارة الطلبات والباقات والمواعيد من مكان واحد.</p></div>
+        <div class="partner-card"><span>H</span><div><strong>ملف مقدم الخدمة</strong><small>صور • باقات • مناطق الخدمة • التوفر • طلبات العملاء</small></div><b>قريبًا</b></div>
       </div>
     </section>
 
