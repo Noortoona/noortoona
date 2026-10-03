@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { readFile } from 'node:fs/promises';
+import { readFile, stat } from 'node:fs/promises';
 import ts from 'typescript';
 import { packageFor, publicPackages } from '../netlify/functions/_shared/payments.mjs';
 
@@ -69,4 +69,46 @@ test('payment order uses server price plus 299 SAR supervisor addon and owner au
   assert.equal(res.status,201);assert.equal((await res.json()).order.amount,39800);
   assert.equal(inserted[5],29900);
   owner=false;res=await order(request('/api/payments/order',{eventId:'event',packageCode:'basic'}));assert.equal(res.status,403);
+});
+
+test('admin overview guards metrics and reports payment revenue once',async()=>{
+  let authorized=false;
+  const overview=await handler('admin-overview',{
+    getDatabase:()=>({sql:async parts=>{
+      const sql=parts.join('');
+      if(sql.includes('SUM(amount)'))return [{revenue:39800,paid:1}];
+      if(sql.includes('FROM whatsapp_messages'))return [{total:4,sent:1,delivered:1,read:1,failed:1}];
+      if(sql.includes('FROM supervisor_requests'))return [{total:1,requested:1,assigned:0,completed:0}];
+      if(sql.includes('FROM audit_log')||sql.includes('LIMIT 12'))return [];
+      return [{count:2}];
+    }}),requireRole:async()=>authorized?{ok:true,user:{role:'admin'}}:{ok:false,status:403,error:'forbidden'},secureJson
+  });
+  const req=new Request('https://preview.example/api/admin/overview');
+  assert.equal((await overview(req)).status,403);
+  authorized=true;
+  const res=await overview(req),body=await res.json();
+  assert.equal(res.status,200);assert.equal(body.stats.revenueHalalas,39800);
+  assert.equal(body.stats.whatsapp.failed,1);assert.equal(body.stats.supervisorRequests.requested,1);
+});
+
+test('supervisor assignment requires a paid request and active supervisor',async()=>{
+  let paid=false,active=true,linked=[];
+  const assign=await handler('admin-supervisors',{
+    getDatabase:()=>({sql:async(parts,...args)=>{
+      const sql=parts.join('?');
+      if(sql.includes("role='supervisor' AND status='active'"))return active?[{id:args[0]}]:[];
+      if(sql.includes('UPDATE supervisor_requests'))return paid?[{id:'request',event_id:'event'}]:[];
+      throw Error(`Unexpected SQL: ${sql}`);
+    }}),requireRole:async()=>({ok:true,user:{id:'admin',role:'admin'}}),isSameOriginRequest,secureJson,
+    linkEventMember:async(...args)=>linked.push(args),recordAudit:async()=>{}
+  });
+  const req=()=>request('/api/admin/supervisors',{requestId:'request',supervisorId:'supervisor'});
+  assert.equal((await assign(req())).status,409);assert.equal(linked.length,0);
+  paid=true;active=false;assert.equal((await assign(req())).status,404);
+  active=true;assert.equal((await assign(req())).status,200);
+  assert.deepEqual(linked,[['event','supervisor','supervisor']]);
+});
+
+test('temporary admin bootstrap endpoint is absent from deployment sources',async()=>{
+  await assert.rejects(stat(new URL('../netlify/functions/auth-bootstrap-admin.mts',import.meta.url)),{code:'ENOENT'});
 });
