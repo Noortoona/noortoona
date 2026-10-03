@@ -5,10 +5,12 @@
   const make=(group,row,names)=>names.map((name,col)=>({name,atlas:atlases[group],position:`${cols[col]} ${rows[row]}`,accent:col===3?'#9a7434':'#e3bd64'}));
   const catalog={
     wedding:make('social',2,['ليلة كحلية','حديقة اللؤلؤ','أقواس ذهبية','مخمل ملكي']),
-    engagement:make('social',3,['وعد من ذهب','لؤلؤة الملكة','زمردة','نقاء']),
+    milkah:make('social',3,['ليلة الملكة','خاتم الوعد','لؤلؤة','مخمل ملكي']),
+    engagement:make('social',3,['وعد من ذهب','ورد الخطوبة','زمردة','نقاء']),
     graduation:make('events',0,['قبعة النجاح','ثمرة السنين','منصة المجد','بداية']),
     newborn:make('events',1,['قمر صغير','دفء البداية','ليلة زرقاء','زهرة وردية']),
     birthday:make('social',4,['شموع ذهبية','هدية الليل','ورد وفرح','ليلة احتفال']),
+    meeting:make('formal',4,['اجتماع تنفيذي','طاولة القرار','مجلس العمل','موعد رسمي']),
     conference:make('events',2,['مسرح الرؤية','مجلس الأعمال','منصة المؤتمر','قاعة النور']),
     opening:make('events',3,['الشريط الذهبي','بوابة الإطلاق','المعرض الأبيض','لحظة الكشف']),
     honoring:make('events',4,['كأس التميز','وسام','منصة التكريم','إطار الإنجاز']),
@@ -25,8 +27,8 @@
     activityCustom:make('activities',4,['لياقة','رحلة بحرية','أمسية ألعاب','سينما البر'])
   };
   const occasions=[
-    {key:'wedding',label:'زواج',icon:'♢'},{key:'engagement',label:'ملكة / خطوبة',icon:'♧'},{key:'graduation',label:'تخرج',icon:'⌑'},
-    {key:'newborn',label:'مولود',icon:'◌'},{key:'birthday',label:'عيد ميلاد',icon:'♨'},{key:'conference',label:'اجتماع / مؤتمر',icon:'▣'},
+    {key:'wedding',label:'زواج',icon:'♢'},{key:'milkah',label:'ملكة',icon:'♧'},{key:'engagement',label:'خطوبة',icon:'◇'},{key:'graduation',label:'تخرج',icon:'⌑'},
+    {key:'newborn',label:'مولود',icon:'◌'},{key:'birthday',label:'عيد ميلاد',icon:'♨'},{key:'meeting',label:'اجتماع',icon:'▦'},{key:'conference',label:'مؤتمر',icon:'▣'},
     {key:'opening',label:'افتتاح',icon:'✂'},{key:'honoring',label:'تكريم',icon:'♛'},{key:'formal',label:'مناسبة رسمية',icon:'▤'},
     {key:'national',label:'مناسبة وطنية',icon:'♜'},{key:'condolence',label:'عزاء',icon:'❧'},{key:'activity',label:'تجمع ونشاط',icon:'♟'},
     {key:'custom',label:'مناسبة مخصصة',icon:'•••'}
@@ -45,7 +47,7 @@
     const fallbackLabel=typeLabel(data.occasionKey||data.occasion_key,data.activityKey||data.activity_key||data.activityType);
     const label=activity?(data.customActivity||data.activityType||data.activity_type||fallbackLabel):(data.customOccasion||data.occasion||fallbackLabel);
     const key=data.occasionKey||data.occasion_key||'custom';
-    const pairTypes=['wedding','engagement'];
+    const pairTypes=['wedding','milkah','engagement'];
     const title=activity?(data.name1||label):(pairTypes.includes(key)?[data.name1,data.name2].filter(Boolean).join(' و '):(data.name1||label));
     const hostName=data.hostName||design.hostName||'';
     const hostLine=!activity&&hostName?`<p class="invite-host">${esc(hostName)}</p>`:'';
