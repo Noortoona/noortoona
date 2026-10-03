@@ -1,8 +1,12 @@
 import assert from 'node:assert/strict';
 import { access, readFile } from 'node:fs/promises';
+import vm from 'node:vm';
 import { boundedInteger, calculateShareTotal, decideAttendance, partySize } from '../netlify/functions/_shared/domain.mjs';
 
 global.window = {};
+for (const name of ['account.js','admin.js','app.js','customer.js','dashboard.js','guest.js','invitation-renderer.js','invitation-schemas.js','supervisor.js']) {
+  new vm.Script(await readFile(new URL(`../${name}`, import.meta.url), 'utf8'), { filename: name });
+}
 await import('../invitation-renderer.js');
 await import('../invitation-schemas.js');
 const N = window.NOORTOONA;
