@@ -33,6 +33,7 @@ function render(d,users,supData){
       ${card("العملاء",n(x.customers),"حسابات موثقة")}
       ${card("المناسبات",n(x.events),n(x.eventsToday)+" اليوم")}
       ${card("الضيوف",n(x.guests),n(x.accepted)+" مؤكد")}
+      ${card("مشاهدات الدعوات",n(x.inviteViews),"ضيوف فتحوا الدعوة")}
       ${card("تم الدخول",n(x.checkedIn),"QR")}
       ${card("إيرادات مدفوعة",money(x.revenueHalalas),n(x.paidOrders)+" عملية")}
       ${card("طلبات مشرف",n(sr.requested||0),n(sr.assigned||0)+" معيّن")}
