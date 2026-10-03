@@ -8,6 +8,7 @@ import { providerConfig, nextStatus, extractStatuses } from '../netlify/function
 async function handler(file) {
   let source = await readFile(new URL('../netlify/functions/'+file, import.meta.url), 'utf8');
   source=source.replace('import { getDatabase } from "@netlify/database";','const getDatabase = () => globalThis.__waDb;');
+  source=source.replace('import { canAccessEvent, getAuth, recordAudit } from "./_shared/auth.mjs";','const getAuth=async()=>null; const canAccessEvent=async()=>false; const recordAudit=async()=>{};');
   for (const part of ['domain','whatsapp']) source=source.replace(`"./_shared/${part}.mjs"`, JSON.stringify(new URL(`../netlify/functions/_shared/${part}.mjs`,import.meta.url).href));
   return (await import('data:text/javascript;base64,'+Buffer.from(ts.transpileModule(source,{compilerOptions:{module:ts.ModuleKind.ESNext,target:ts.ScriptTarget.ES2022}}).outputText).toString('base64'))).default;
 }
@@ -22,6 +23,7 @@ function reset() {
   globalThis.__waDb={
     sql:async(parts,...args)=>{
       const sql=parts.join('?');calls.push({sql,args});
+      if(sql.includes('SELECT 1 FROM events'))return [{ok:1}];
       if(sql.includes('SELECT g.*'))return [{id:'guest',phone:'0500000000',name:'ضيف الاختبار',code:'INVITE',title:'اختبار هلا',location:'الرياض'}];
       return [];
     },

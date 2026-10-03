@@ -1,0 +1,3 @@
+import type { Config } from "@netlify/functions";import { getAuth } from "./_shared/auth.mjs";import { secureJson } from "./_shared/domain.mjs";
+export default async(req:Request)=>{if(req.method!=="GET")return new Response("Method Not Allowed",{status:405});const a=await getAuth(req);return a?secureJson({user:a.user}):secureJson({error:"غير مسجل"},401)};
+export const config:Config={path:"/api/auth/me"};

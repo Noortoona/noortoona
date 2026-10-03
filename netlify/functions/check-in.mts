@@ -1,6 +1,7 @@
 import { getDatabase } from "@netlify/database";
 import type { Config } from "@netlify/functions";
 import { isSameOriginRequest, ownerTokenFrom, secureJson } from "./_shared/domain.mjs";
+import { canAccessEvent, getAuth, recordAudit } from "./_shared/auth.mjs";
 
 function inviteCode(value: unknown) {
   const raw = String(value || "").trim();
@@ -25,11 +26,11 @@ export default async (req: Request) => {
     const eventId = String(body.eventId || "").slice(0, 80);
     const ownerToken = ownerTokenFrom(req, body).slice(0, 120);
     const code = inviteCode(body.code || body.value);
-    if (!eventId || !ownerToken || !code) return secureJson({ error: "بيانات المسح ناقصة" }, 400);
-
-    const db = getDatabase();
-    const [event] = await db.sql`SELECT id FROM events WHERE id=${eventId} AND owner_token=${ownerToken}`;
-    if (!event) return secureJson({ error: "غير مصرح" }, 403);
+    if (!eventId || !code) return secureJson({ error: "بيانات المسح ناقصة" }, 400);
+    const db = getDatabase(); const auth=await getAuth(req); let allowed=false;
+    if(ownerToken){const r=await db.sql`SELECT 1 FROM events WHERE id=${eventId} AND owner_token=${ownerToken} LIMIT 1`;allowed=Boolean(r[0]);}
+    if(!allowed&&auth)allowed=await canAccessEvent(auth.user,eventId);
+    if(!allowed)return secureJson({ error: "غير مصرح" }, 403);
 
     const [guest] = await db.sql`
       WITH matched AS (
@@ -53,6 +54,7 @@ export default async (req: Request) => {
       : guest.rsvp_status !== "accepted"
         ? "الضيف لم يؤكد حضوره"
         : null;
+    await recordAudit(auth?.user?.id||null,"guest.checked_in","guest",guest.id,{eventId,alreadyCheckedIn:Boolean(guest.already_checked_in)});
     return secureJson({ ok: true, guest, alreadyCheckedIn: guest.already_checked_in, warning });
   } catch (error) {
     console.error(error);

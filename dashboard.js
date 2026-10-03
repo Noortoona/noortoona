@@ -1,11 +1,11 @@
 const root=document.getElementById('dashRoot');
 const saved=JSON.parse(localStorage.getItem('noortoonaOwner')||'null');
-const qs=new URLSearchParams(location.search); const eventId=qs.get('event')||saved?.eventId; const token=qs.get('token')||saved?.ownerToken;
+const qs=new URLSearchParams(location.search); const eventId=qs.get('event')||saved?.eventId; const token=qs.get('token')||saved?.ownerToken; const account=JSON.parse(localStorage.getItem('halaSession')||'null'); const authToken=account?.token||'';
 if(eventId&&token){
  localStorage.setItem('noortoonaOwner',JSON.stringify({eventId,ownerToken:token}));
  if(qs.has('token')){qs.delete('token');const cleanQuery=qs.toString();history.replaceState(null,'',`${location.pathname}${cleanQuery?`?${cleanQuery}`:''}${location.hash}`)}
 }
-const ownerHeaders={'content-type':'application/json','x-noortoona-owner-token':token||''};
+const ownerHeaders={'content-type':'application/json',...(token?{'x-noortoona-owner-token':token}:{}),...(authToken?{authorization:`Bearer ${authToken}`}:{})};
 const esc=s=>String(s??'').replace(/[&<>'"]/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'}[m]));
 let dashboardData=null;
 let filters={q:'',status:'all',view:'all',arrival:'all'};
@@ -17,12 +17,12 @@ let whatsappPollTimer=null;
 let whatsappPolls=0;
 
 async function load(){
- if(!eventId||!token){root.innerHTML='<div class="dash-empty"><h1>لا توجد مناسبة مرتبطة بهذا الجهاز</h1><p>أنشئ دعوتك أولًا من الصفحة الرئيسية.</p><a href="/" class="gold-btn">إنشاء دعوة</a></div>';return;}
+ if(!eventId||(!token&&!authToken)){root.innerHTML='<div class="dash-empty"><h1>سجّل دخولك لفتح المناسبة</h1><p>يمكنك الدخول برقم جوالك من الصفحة الرئيسية.</p><a href="/" class="gold-btn">تسجيل الدخول</a></div>';return;}
  root.classList.add('is-loading');
  try{
-  const res=await fetch(`/api/dashboard?event=${encodeURIComponent(eventId)}`,{headers:{'x-noortoona-owner-token':token}}); const data=await res.json();
+  const res=await fetch(`/api/dashboard?event=${encodeURIComponent(eventId)}`,{headers:ownerHeaders}); const data=await res.json();
   if(!res.ok){root.innerHTML=`<div class="dash-empty"><h1>تعذر فتح اللوحة</h1><p>${esc(data.error)}</p></div>`;return;}
-  localStorage.setItem('noortoonaOwner',JSON.stringify({eventId,ownerToken:token})); dashboardData=data; render(data);
+  if(token)localStorage.setItem('noortoonaOwner',JSON.stringify({eventId,ownerToken:token})); dashboardData=data; render(data);
  }catch{root.innerHTML='<div class="dash-empty"><h1>تعذر الاتصال</h1><p>تحقق من الاتصال وحاول مرة أخرى.</p><button class="gold-btn" onclick="load()">إعادة المحاولة</button></div>'}
  finally{root.classList.remove('is-loading')}
 }
@@ -51,7 +51,7 @@ function scheduleWhatsAppPoll(){
   if(!document.hidden){
    whatsappPolls++;
    try{
-    const res=await fetch(`/api/dashboard?event=${encodeURIComponent(eventId)}`,{headers:{'x-noortoona-owner-token':token},cache:'no-store'});
+    const res=await fetch(`/api/dashboard?event=${encodeURIComponent(eventId)}`,{headers:ownerHeaders,cache:'no-store'});
     if(res.ok){
      const data=await res.json();dashboardData=data;
      document.querySelectorAll('[data-wa-guest]').forEach(cell=>{
