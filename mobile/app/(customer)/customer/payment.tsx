@@ -50,6 +50,7 @@ export default function PaymentScreen() {
     try {
       const data = await api<Billing>(`/api/payments/order?eventId=${encodeURIComponent(eventId)}`, {}, auth.token);
       setBilling(data);
+      if (data.payment?.package_code && data.payment.status !== "paid") setSelected(data.payment.package_code);
       if (data.payment?.status === "paid") setCheckout(null);
     } catch (e: any) {
       Alert.alert("تعذر تحميل الدفع", e?.message || "حاول مرة أخرى");
@@ -165,8 +166,16 @@ export default function PaymentScreen() {
               </Card>
             ) : null}
 
+            {!checkout && billing?.payment?.status === "pending" ? (
+              <Card>
+                <Text style={styles.cardTitle}>لديك عملية دفع سابقة</Text>
+                <Text style={styles.help}>إذا أغلقت التطبيق بعد الدفع أو رجعت من المصادقة البنكية، تحقق من العملية بدل إنشاء طلب جديد.</Text>
+                <PrimaryButton label="التحقق من العملية السابقة" onPress={() => verify(billing.payment!.id)} loading={verifying} secondary />
+              </Card>
+            ) : null}
+
             {!checkout ? (
-              <PrimaryButton label="متابعة إلى طرق الدفع" onPress={() => prepare(false)} loading={busy} disabled={!billing} />
+              <PrimaryButton label={billing?.payment?.status === "failed" ? "إعادة المحاولة" : "متابعة إلى طرق الدفع"} onPress={() => prepare(billing?.payment?.status === "failed")} loading={busy} disabled={!billing} />
             ) : config ? (
               <Card>
                 <Text style={styles.cardTitle}>اختر طريقة الدفع</Text>
