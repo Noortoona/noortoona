@@ -1,2 +1,2 @@
 Hala first iOS TestFlight build
-Clean dependency install, persistent EAS linking, signed build and verified submission.
+Retry after verified EAS project link commit c4605c03aac6589e2a574f444854a97ff3c3d9b6.
