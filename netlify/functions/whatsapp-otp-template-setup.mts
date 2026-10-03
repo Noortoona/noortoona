@@ -8,6 +8,7 @@ function json(data: unknown, status = 200) {
 }
 
 export default async (req: Request) => {
+  return json({ok:false,error:"Temporary provisioning endpoint disabled"},410);
   if (req.method !== "GET") return json({ok:false,error:"Method not allowed"},405);
 
   const apiKey = Netlify.env.get("D360_API_KEY");

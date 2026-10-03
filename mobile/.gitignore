@@ -1,0 +1,14 @@
+node_modules/
+.expo/
+ios/
+android/
+dist*/
+.eas-bootstrap-*/
+eas-project.json
+eas-build.json
+.env*
+!.env.example
+credentials.json
+*.p8
+*.p12
+*.mobileprovision

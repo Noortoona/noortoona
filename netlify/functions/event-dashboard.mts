@@ -1,19 +1,24 @@
 import { getDatabase } from "@netlify/database";
 import type { Config } from "@netlify/functions";
 import { ownerTokenFrom, secureJson } from "./_shared/domain.mjs";
+import { canAccessEvent, getAuth } from "./_shared/auth.mjs";
 
 export default async (req: Request) => {
   if (req.method !== "GET") return new Response("Method Not Allowed", { status: 405 });
   const url = new URL(req.url);
   const eventId = url.searchParams.get("event");
   const token = ownerTokenFrom(req, { ownerToken: url.searchParams.get("token") });
-  if (!eventId || !token) return secureJson({ error: "بيانات الدخول ناقصة" }, 400);
+  if (!eventId) return secureJson({ error: "بيانات الدخول ناقصة" }, 400);
   const db = getDatabase();
+  const auth = await getAuth(req);
+  let allowed = false;
+  if (token) { const rows=await db.sql`SELECT 1 FROM events WHERE id=${eventId} AND owner_token=${token} LIMIT 1`; allowed=Boolean(rows[0]); }
+  if (!allowed && auth) allowed = await canAccessEvent(auth.user,eventId);
+  if (!allowed) return secureJson({ error: "غير مصرح" }, 403);
   const [event] = await db.sql`
     SELECT id, title, occasion, name1, name2, event_date, event_time, duration_hours, activity_type, capacity, share_amount, share_label, require_share_consent, allow_named_companions, waitlist_enabled, country, city, location, maps_url, description, video_url, pdf_url, message, template, package_name, design_json, created_at
-    FROM events WHERE id=${eventId} AND owner_token=${token}
+    FROM events WHERE id=${eventId}
   `;
-  if (!event) return secureJson({ error: "غير مصرح" }, 403);
   const guests = await db.sql`
     SELECT id, name, phone, code, viewed_at, checked_in_at, rsvp_status, companion_count, children_count, note, companion_names, share_consent, share_total, attendance_state, payment_status, payment_amount, paid_at, responded_at,
            whatsapp_message_id, whatsapp_status, whatsapp_sent_at, whatsapp_delivered_at, whatsapp_read_at, whatsapp_failed_at, whatsapp_error, created_at
