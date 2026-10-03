@@ -2,7 +2,7 @@
   const KEY="halaSession", SID="halaVisitorId";
   const session=()=>{try{return JSON.parse(localStorage.getItem(KEY)||"null")}catch{return null}};
   const save=s=>localStorage.setItem(KEY,JSON.stringify(s));
-  let resolver=null, purpose="login", supervisorPrice=199;
+  let resolver=null, purpose="login", supervisorPrice=299;
 
   function ensureVisitor(){
     let id=localStorage.getItem(SID);
