@@ -17,5 +17,9 @@ jobs:
           cache: npm
       - run: npm ci
       - run: npm test
+      - name: Install browser for invitation journeys
+        run: npx playwright install --with-deps chromium
+      - name: Verify seven invitation and guest journeys
+        run: npm run test:e2e
       - name: Type-check Netlify functions
         run: npx tsc --noEmit --skipLibCheck --allowJs false --module nodenext --moduleResolution nodenext --target ES2022 --lib ES2022,DOM netlify/functions/*.mts
