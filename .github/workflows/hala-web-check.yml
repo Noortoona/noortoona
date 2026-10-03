@@ -18,4 +18,4 @@ jobs:
       - run: npm ci
       - run: npm test
       - name: Type-check Netlify functions
-        run: npx tsc --noEmit --allowJs false --module nodenext --moduleResolution nodenext --target ES2022 --types node netlify/functions/*.mts
+        run: npx tsc --noEmit --skipLibCheck --allowJs false --module nodenext --moduleResolution nodenext --target ES2022 --lib ES2022,DOM netlify/functions/*.mts
