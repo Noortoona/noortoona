@@ -1,6 +1,7 @@
 import { getDatabase } from "@netlify/database";
 import type { Config } from "@netlify/functions";
 import { isSameOriginRequest, ownerTokenFrom, secureJson } from "./_shared/domain.mjs";
+import { canAccessEvent, getAuth } from "./_shared/auth.mjs";
 import { providerConfig, providerError } from "./_shared/whatsapp.mjs";
 
 function normalizePhone(phone: string) {
@@ -54,15 +55,30 @@ export default async (req: Request) => {
   const templateLanguage = Netlify.env.get("D360_TEMPLATE_LANGUAGE");
   if (mode === "production" && (!selectedTemplate || !templateLanguage)) return json({ error: "اسم القالب المعتمد أو لغته غير مضبوطين", code: "D360_TEMPLATE_REQUIRED" }, 409);
   const ownerToken = ownerTokenFrom(req, body).slice(0, 120);
-  if (!eventId || !ownerToken || !guestId) return json({ error: "Missing fields" }, 400);
+  if (!eventId || !guestId) return json({ error: "Missing fields" }, 400);
 
   const db = getDatabase();
-  const [row]: any[] = await db.sql`
-    SELECT g.*, e.title, e.event_date, e.event_time, e.location, e.owner_token
-    FROM guests g
-    JOIN events e ON e.id = g.event_id
-    WHERE g.id = ${guestId} AND g.event_id = ${eventId} AND e.owner_token = ${ownerToken}
-  `;
+  const auth = await getAuth(req);
+  const accountAccess = auth ? await canAccessEvent(auth.user, String(eventId)) : false;
+  let rows: any[];
+  if (accountAccess) {
+    rows = await db.sql\`
+      SELECT g.*, e.title, e.event_date, e.event_time, e.location, e.owner_token
+      FROM guests g
+      JOIN events e ON e.id = g.event_id
+      WHERE g.id = ${guestId} AND g.event_id = ${eventId}
+    \`;
+  } else if (ownerToken) {
+    rows = await db.sql\`
+      SELECT g.*, e.title, e.event_date, e.event_time, e.location, e.owner_token
+      FROM guests g
+      JOIN events e ON e.id = g.event_id
+      WHERE g.id = ${guestId} AND g.event_id = ${eventId} AND e.owner_token = ${ownerToken}
+    \`;
+  } else {
+    return json({ error: "غير مصرح" }, 403);
+  }
+  const row: any = rows[0];
   if (!row) return json({ error: "Guest not found" }, 404);
 
   const to = normalizePhone(row.phone || "");
