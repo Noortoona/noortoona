@@ -1,0 +1,65 @@
+name: Hala Mobile Check
+
+on:
+  push:
+    branches:
+      - hala-mobile
+    paths:
+      - "mobile/**"
+      - "netlify/functions/**"
+      - "netlify/database/**"
+      - "tests/**"
+      - ".github/workflows/hala-mobile-check.yml"
+  workflow_dispatch:
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+
+      - name: Setup Node
+        uses: actions/setup-node@v6
+        with:
+          node-version: "24.19.0"
+          cache: npm
+          cache-dependency-path: |
+            package-lock.json
+            mobile/package-lock.json
+
+      - name: Test existing backend
+        run: |
+          npm ci
+          npm test
+
+      - name: Install mobile dependencies
+        working-directory: mobile
+        run: npm ci
+
+      - name: Typecheck mobile app
+        working-directory: mobile
+        run: npm run typecheck
+
+      - name: Expo doctor
+        working-directory: mobile
+        run: npx expo-doctor@1.20.4
+
+      - name: Prebuild native projects
+        working-directory: mobile
+        env:
+          EXPO_PUBLIC_APPLE_MERCHANT_ID: merchant.com.hala.ci
+        run: npx expo prebuild --clean --no-install
+
+      - name: Verify Apple Pay entitlement config
+        working-directory: mobile
+        run: grep -R "merchant.com.hala.ci" ios >/dev/null
+
+      - name: Bundle iOS
+        working-directory: mobile
+        run: npx expo export --platform ios --output-dir dist-ios
+
+      - name: Bundle Android
+        working-directory: mobile
+        run: npx expo export --platform android --output-dir dist-android

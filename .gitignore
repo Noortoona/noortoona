@@ -5,3 +5,8 @@
 node_modules/
 test-results/
 playwright-report/
+mobile/.expo/
+mobile/dist-ios/
+mobile/dist-android/
+mobile/ios/
+mobile/android/
