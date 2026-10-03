@@ -44,7 +44,10 @@
     const t=templateByName(data.template),design=data.design||{},activity=data.occasionKey==='activity'||data.occasion==='تجمع ونشاط';
     const fallbackLabel=typeLabel(data.occasionKey||data.occasion_key,data.activityKey||data.activity_key||data.activityType);
     const label=activity?(data.customActivity||data.activityType||data.activity_type||fallbackLabel):(data.customOccasion||data.occasion||fallbackLabel);
-    const title=activity?(data.name1||label):[data.name1,data.name2].filter(Boolean).join(' و ');
+    const key=data.occasionKey||data.occasion_key||'custom';
+    const pairTypes=['wedding','engagement'];
+    const title=activity?(data.name1||label):(pairTypes.includes(key)?[data.name1,data.name2].filter(Boolean).join(' و '):(data.name1||label));
+    const hostLine=!activity&&data.hostName?`<p class="invite-host">${esc(data.hostName)}</p>`:'';
     const accent=design.accent||t.accent;
     const fonts={ruqaa:'Aref Ruqaa',tajawal:'Tajawal',serif:'Georgia'};
     const custom=design.image?`background-image:url('${String(design.image).replaceAll("'",'%27')}');background-size:cover;background-position:center;`:'';
@@ -55,7 +58,7 @@
         <span class="invite-type">${esc(label)}</span>
         ${opts.guestName?`<p class="invite-personal">دعوة خاصة إلى <strong>${esc(opts.guestName)}</strong></p>`:''}
         <p class="invite-headline">${esc(design.headline||'يسعدنا حضوركم')}</p>
-        <h1>${esc(title||'عنوان المناسبة')}</h1>
+        <h1>${esc(title||'عنوان المناسبة')}</h1>${hostLine}
         <p class="invite-message">${esc(data.message||'وجودكم يكمل فرحتنا')}</p>
         <i class="invite-rule"></i>
         <div class="invite-meta"><span>▣ <b>${esc(data.date||data.event_date||'أضف التاريخ')}</b></span><span>◷ <b>${esc(String(data.time||data.event_time||'00:00').slice(0,5))}</b></span><span>⌖ <b>${esc(data.location||'أضف الموقع')}</b></span></div>
