@@ -1,7 +1,7 @@
 import { getDatabase } from "@netlify/database";
 import type { Config } from "@netlify/functions";
 import { isSameOriginRequest, ownerTokenFrom, secureJson } from "./_shared/domain.mjs";
-import { canAccessEvent, getAuth } from "./_shared/auth.mjs";
+import { canAccessEvent, getAuth, recordAudit } from "./_shared/auth.mjs";
 
 function makeCode() {
   const alphabet = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
@@ -40,6 +40,7 @@ export default async (req: Request) => {
         RETURNING id, payment_status, payment_amount, paid_at
       `;
       if (!guest) return secureJson({ error: "الضيف غير موجود" }, 404);
+      await recordAudit(auth?.user?.id||null,"guest.payment_status","guest",guest.id,{eventId:String(data.eventId),paymentStatus});
       return secureJson({ guest });
     }
 
@@ -48,6 +49,7 @@ export default async (req: Request) => {
       if (!await authorized(String(data.eventId))) return secureJson({ error: "غير مصرح" }, 403);
       const [guest] = await db.sql`DELETE FROM guests WHERE id=${String(data.guestId)} AND event_id=${String(data.eventId)} RETURNING id`;
       if (!guest) return secureJson({ error: "الضيف غير موجود" }, 404);
+      await recordAudit(auth?.user?.id||null,"guest.deleted","guest",String(data.guestId),{eventId:String(data.eventId)});
       return secureJson({ ok: true });
     }
 
@@ -77,6 +79,7 @@ export default async (req: Request) => {
       } finally {
         client.release();
       }
+      await recordAudit(auth?.user?.id||null,"guest.bulk_added","event",String(data.eventId),{count:created.length});
       return secureJson({ guests: created, count: created.length });
     }
 
@@ -89,6 +92,7 @@ export default async (req: Request) => {
       VALUES (${id}, ${String(data.eventId)}, ${single.name}, ${single.phone}, ${code})
       RETURNING id, name, phone, code, rsvp_status, created_at
     `;
+    await recordAudit(auth?.user?.id||null,"guest.added","guest",guest.id,{eventId:String(data.eventId)});
     return secureJson({ guest, invitePath: `/i/${code}` });
   } catch (error) {
     console.error(error);
