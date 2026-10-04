@@ -1,6 +1,7 @@
 import { getDatabase } from "@netlify/database";
 import type { Config } from "@netlify/functions";
 import { isSameOriginRequest, ownerTokenFrom, secureJson } from "./_shared/domain.mjs";
+import { canAccessEvent, getAuth } from "./_shared/auth.mjs";
 import { providerConfig, providerError } from "./_shared/whatsapp.mjs";
 
 function normalizePhone(phone: string) {
@@ -54,15 +55,30 @@ export default async (req: Request) => {
   const templateLanguage = Netlify.env.get("D360_TEMPLATE_LANGUAGE");
   if (mode === "production" && (!selectedTemplate || !templateLanguage)) return json({ error: "اسم القالب المعتمد أو لغته غير مضبوطين", code: "D360_TEMPLATE_REQUIRED" }, 409);
   const ownerToken = ownerTokenFrom(req, body).slice(0, 120);
-  if (!eventId || !ownerToken || !guestId) return json({ error: "Missing fields" }, 400);
+  if (!eventId || !guestId) return json({ error: "Missing fields" }, 400);
 
   const db = getDatabase();
-  const [row]: any[] = await db.sql`
-    SELECT g.*, e.title, e.event_date, e.event_time, e.location, e.owner_token
-    FROM guests g
-    JOIN events e ON e.id = g.event_id
-    WHERE g.id = ${guestId} AND g.event_id = ${eventId} AND e.owner_token = ${ownerToken}
-  `;
+  const auth = await getAuth(req);
+  const accountAccess = auth ? await canAccessEvent(auth.user, String(eventId)) : false;
+  let rows: any[];
+  if (accountAccess) {
+    rows = await db.sql`
+      SELECT g.*, e.title, e.event_date, e.event_time, e.location, e.owner_token
+      FROM guests g
+      JOIN events e ON e.id = g.event_id
+      WHERE g.id = ${guestId} AND g.event_id = ${eventId}
+    `;
+  } else if (ownerToken) {
+    rows = await db.sql`
+      SELECT g.*, e.title, e.event_date, e.event_time, e.location, e.owner_token
+      FROM guests g
+      JOIN events e ON e.id = g.event_id
+      WHERE g.id = ${guestId} AND g.event_id = ${eventId} AND e.owner_token = ${ownerToken}
+    `;
+  } else {
+    return json({ error: "غير مصرح" }, 403);
+  }
+  const row: any = rows[0];
   if (!row) return json({ error: "Guest not found" }, 404);
 
   const to = normalizePhone(row.phone || "");
@@ -79,7 +95,26 @@ export default async (req: Request) => {
   let log: any;
   try {
     await client.query("BEGIN");
+    await client.query("SELECT id FROM events WHERE id=$1 FOR UPDATE", [eventId]);
     await client.query("SELECT id FROM guests WHERE id=$1 FOR UPDATE", [guestId]);
+
+    if (accountAccess && auth?.user?.role === "customer") {
+      const paid = await client.query(
+        "SELECT package_code FROM payment_orders WHERE event_id=$1 AND user_id=$2 AND status='paid' LIMIT 1",
+        [eventId, auth.user.id]
+      );
+      if (!paid.rows.length) {
+        const trial = await client.query(
+          "SELECT COUNT(*)::int AS count FROM whatsapp_messages WHERE event_id=$1 AND status IN ('queued','sent','delivered','read')",
+          [eventId]
+        );
+        if (reminder || Number(trial.rows[0]?.count || 0) >= 1) {
+          await client.query("ROLLBACK");
+          return json({ error: "استخدمت الدعوة التجريبية المجانية. اختر باقة لإرسال بقية الدعوات.", code: "PAYMENT_REQUIRED" }, 402);
+        }
+      }
+    }
+
     const previous = await client.query(`SELECT id, message_id, status FROM whatsapp_messages
       WHERE guest_id=$1 AND (status='queued' OR (kind=$2 AND status IN ('sent','delivered','read')))
       ORDER BY created_at DESC LIMIT 1`, [guestId, kind]);

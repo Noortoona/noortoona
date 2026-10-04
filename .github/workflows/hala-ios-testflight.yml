@@ -1,0 +1,122 @@
+name: Hala iOS TestFlight
+
+on:
+  workflow_dispatch:
+    inputs:
+      build_id:
+        description: "Existing successful EAS iOS build to submit (leave empty to build)"
+        required: false
+        type: string
+  push:
+    branches:
+      - hala-mobile
+    paths:
+      - ".github/testflight-trigger"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: hala-ios-testflight
+  cancel-in-progress: false
+
+jobs:
+  ios-testflight:
+    if: github.ref == 'refs/heads/hala-mobile'
+    name: Build and submit Hala iOS
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+
+    env:
+      CI: "1"
+      EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
+
+    defaults:
+      run:
+        working-directory: mobile
+
+    steps:
+      - name: Checkout requested hala-mobile commit
+        uses: actions/checkout@v5
+        with:
+          ref: ${{ github.sha }}
+
+      - name: Setup Node
+        uses: actions/setup-node@v6
+        with:
+          node-version: "24.19.0"
+          cache: npm
+          cache-dependency-path: mobile/package-lock.json
+
+      - name: Validate Expo token
+        shell: bash
+        run: |
+          if [ -z "$EXPO_TOKEN" ]; then
+            echo "::error::Missing GitHub Actions secret EXPO_TOKEN."
+            echo "Create an Expo access token and save it in this repository as EXPO_TOKEN, then run this workflow again."
+            exit 1
+          fi
+
+      - name: Setup Expo and EAS
+        uses: expo/expo-github-action@v8
+        with:
+          eas-version: "24.10.0"
+          token: ${{ secrets.EXPO_TOKEN }}
+
+      - name: Install mobile dependencies
+        run: npm ci
+
+      - name: Typecheck mobile app
+        run: npm run typecheck
+
+      - name: Verify Expo app
+        run: npx expo-doctor@1.20.4
+
+      - name: Reuse or initialize the correct Hala EAS project
+        run: node scripts/link-eas-project.mjs
+
+      - name: Show EAS project info
+        run: eas project:info
+
+      - name: Save EAS project link for the branch
+        uses: actions/upload-artifact@v4
+        with:
+          name: hala-eas-project
+          path: |
+            mobile/eas-project.json
+            mobile/app.json
+          retention-days: 30
+
+      - name: Build signed iOS archive and wait for completion
+        id: build
+        if: inputs.build_id == ''
+        run: |
+          eas build --platform ios --profile testflight --non-interactive --wait --json --message "Hala TestFlight $GITHUB_SHA" > eas-build.json
+          node --input-type=module <<'NODE'
+          import { readFileSync, appendFileSync } from 'node:fs';
+          const [build] = JSON.parse(readFileSync('eas-build.json', 'utf8'));
+          if (!build?.id || build.status !== 'FINISHED' || !build.artifacts?.buildUrl) {
+            throw new Error('EAS did not return a successful signed iOS archive.');
+          }
+          appendFileSync(process.env.GITHUB_OUTPUT, `id=${build.id}\n`);
+          appendFileSync(process.env.GITHUB_STEP_SUMMARY, `Signed iOS build: ${build.id}\n\n[Download IPA](${build.artifacts.buildUrl})\n`);
+          NODE
+
+      - name: Submit the exact successful build to TestFlight
+        env:
+          BUILD_ID: ${{ steps.build.outputs.id || inputs.build_id }}
+        run: |
+          if [[ ! "$BUILD_ID" =~ ^[0-9a-fA-F-]{36}$ ]]; then
+            echo "::error::A valid successful EAS build ID is required."
+            exit 1
+          fi
+          eas submit --platform ios --profile testflight --id "$BUILD_ID" --non-interactive --wait
+
+      - name: Preserve build result
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: hala-ios-build-result
+          path: mobile/eas-build.json
+          if-no-files-found: ignore
+          retention-days: 30

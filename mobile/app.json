@@ -1,0 +1,59 @@
+{
+  "expo": {
+    "name": "هلا",
+    "slug": "hala",
+    "scheme": "hala",
+    "version": "0.1.0",
+    "orientation": "portrait",
+    "userInterfaceStyle": "light",
+    "icon": "./assets/hala-icon.png",
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "com.noortoona.hala",
+      "config": {
+        "usesNonExemptEncryption": false
+      }
+    },
+    "android": {
+      "package": "com.noortoona.hala",
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/hala-icon.png",
+        "backgroundColor": "#4A0E1E"
+      }
+    },
+    "plugins": [
+      "expo-router",
+      [
+        "expo-secure-store",
+        {
+          "configureAndroidBackup": true,
+          "faceIDPermission": "السماح لهلا باستخدام Face ID لحماية تسجيل الدخول."
+        }
+      ],
+      [
+        "expo-camera",
+        {
+          "cameraPermission": "نحتاج الكاميرا لمسح رمز QR والتحقق من دخول الضيوف."
+        }
+      ],
+      [
+        "expo-splash-screen",
+        {
+          "image": "./assets/hala-icon.png",
+          "imageWidth": 180,
+          "resizeMode": "contain",
+          "backgroundColor": "#4A0E1E"
+        }
+      ]
+    ],
+    "extra": {
+      "router": {
+        "origin": false
+      },
+      "eas": {
+        "projectId": "5aeba34d-6f95-424b-92b1-5519b5d20197"
+      }
+    },
+    "owner": "hala.app"
+  }
+}

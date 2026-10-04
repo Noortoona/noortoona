@@ -1,18 +1,35 @@
 import { getDatabase } from "@netlify/database";
 import type { Config } from "@netlify/functions";
+import { canAccessEvent, getAuth } from "./_shared/auth.mjs";
 import { ownerTokenFrom, secureJson } from "./_shared/domain.mjs";
 
 export default async (req: Request) => {
   if (req.method !== "GET") return new Response("Method Not Allowed", { status: 405 });
   const url = new URL(req.url);
-  const eventId = url.searchParams.get("event");
+  const eventId = String(url.searchParams.get("event") || "");
   const token = ownerTokenFrom(req, { ownerToken: url.searchParams.get("token") });
-  if (!eventId || !token) return secureJson({ error: "بيانات الدخول ناقصة" }, 400);
+  if (!eventId) return secureJson({ error: "المناسبة مطلوبة" }, 400);
+
   const db = getDatabase();
-  const [event] = await db.sql`
-    SELECT id, title, occasion, name1, name2, event_date, event_time, duration_hours, activity_type, capacity, share_amount, share_label, require_share_consent, allow_named_companions, waitlist_enabled, country, city, location, maps_url, description, video_url, pdf_url, message, template, package_name, design_json, created_at
-    FROM events WHERE id=${eventId} AND owner_token=${token}
-  `;
+  const auth = await getAuth(req);
+  const accountAccess = auth ? await canAccessEvent(auth.user, eventId) : false;
+
+  let eventRows;
+  if (accountAccess) {
+    eventRows = await db.sql`
+      SELECT id, title, occasion, name1, name2, event_date, event_time, duration_hours, activity_type, capacity, share_amount, share_label, require_share_consent, allow_named_companions, waitlist_enabled, country, city, location, maps_url, description, video_url, pdf_url, message, template, package_name, design_json, created_at
+      FROM events WHERE id=${eventId}
+    `;
+  } else if (token) {
+    eventRows = await db.sql`
+      SELECT id, title, occasion, name1, name2, event_date, event_time, duration_hours, activity_type, capacity, share_amount, share_label, require_share_consent, allow_named_companions, waitlist_enabled, country, city, location, maps_url, description, video_url, pdf_url, message, template, package_name, design_json, created_at
+      FROM events WHERE id=${eventId} AND owner_token=${token}
+    `;
+  } else {
+    return secureJson({ error: "غير مصرح" }, 403);
+  }
+
+  const event = eventRows[0];
   if (!event) return secureJson({ error: "غير مصرح" }, 403);
   const guests = await db.sql`
     SELECT id, name, phone, code, viewed_at, checked_in_at, rsvp_status, companion_count, children_count, note, companion_names, share_consent, share_total, attendance_state, payment_status, payment_amount, paid_at, responded_at,
