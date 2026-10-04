@@ -2,6 +2,7 @@ import React from "react";
 import { ActivityIndicator, Pressable, SafeAreaView as RNSafeAreaView, StyleSheet, Text, View, ViewStyle } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { theme } from "./theme";
+import { BrandLogo } from "./BrandLogo";
 
 export function Screen({ children, style }: { children: React.ReactNode; style?: ViewStyle }) {
   return <SafeAreaView style={[styles.screen, style]} edges={["top", "left", "right"]}>{children}</SafeAreaView>;
@@ -11,7 +12,7 @@ export function BrandHeader({ title, subtitle, onLogout }: { title?: string; sub
   return (
     <View style={styles.header}>
       <View style={styles.headerCopy}>
-        <Text style={styles.brand}>هلا</Text>
+        <BrandLogo width={105} />
         {title ? <Text style={styles.headerTitle}>{title}</Text> : null}
         {subtitle ? <Text style={styles.headerSubtitle}>{subtitle}</Text> : null}
       </View>
@@ -49,7 +50,6 @@ const styles = StyleSheet.create({
   screen: { flex: 1, backgroundColor: theme.colors.cream },
   header: { paddingHorizontal: 20, paddingVertical: 18, flexDirection: "row-reverse", alignItems: "flex-start", justifyContent: "space-between" },
   headerCopy: { flex: 1, alignItems: "flex-end" },
-  brand: { color: theme.colors.gold, fontSize: 26, fontWeight: "900", writingDirection: "rtl" },
   headerTitle: { color: theme.colors.ink, fontSize: 24, fontWeight: "800", marginTop: 6, textAlign: "right", writingDirection: "rtl" },
   headerSubtitle: { color: theme.colors.muted, fontSize: 13, marginTop: 5, textAlign: "right", writingDirection: "rtl", lineHeight: 20 },
   logout: { borderWidth: 1, borderColor: theme.colors.line, borderRadius: 12, paddingHorizontal: 12, paddingVertical: 8, backgroundColor: theme.colors.paper },
