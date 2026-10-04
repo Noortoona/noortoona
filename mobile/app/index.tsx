@@ -19,7 +19,7 @@ export default function EntryScreen() {
   return (
     <View style={styles.wrap}>
       <StatusBar style="light" />
-      <View style={styles.mark}><BrandLogo width={230} /><Text style={styles.tag}>لحظتك تبدأ بهلا</Text></View>
+      <View style={styles.mark}><BrandLogo width={230} /><Text style={styles.tag}>لحظتك .. تبدأ بهلا</Text></View>
       <ActivityIndicator color={theme.colors.gold} size="large" />
     </View>
   );
