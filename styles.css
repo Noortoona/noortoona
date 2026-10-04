@@ -158,3 +158,7 @@ footer{background:#06080C}
       linear-gradient(165deg,#080B11 0%,#11141A 58%,#07090D 100%);
   }
 }
+
+/* Compact approved headline */
+.hero-copy h1{font-size:clamp(36px,4.1vw,56px);line-height:1.25;letter-spacing:0;white-space:nowrap}
+@media(max-width:700px){.hero-copy h1{font-size:clamp(27px,8vw,36px)}}
