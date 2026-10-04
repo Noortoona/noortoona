@@ -1,11 +1,13 @@
 import React, { useEffect, useState } from "react";
 import { KeyboardAvoidingView, Platform, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from "react-native";
 import { useRouter } from "expo-router";
+import { StatusBar } from "expo-status-bar";
 import { useAuth } from "@/auth";
 import { ApiError } from "@/api";
 import { homeByRole } from "@/roleGate";
 import { PrimaryButton } from "@/ui";
 import { theme } from "@/theme";
+import { BrandLogo } from "@/BrandLogo";
 
 export default function LoginScreen() {
   const auth = useAuth();
@@ -37,10 +39,11 @@ export default function LoginScreen() {
 
   return (
     <KeyboardAvoidingView style={styles.root} behavior={Platform.OS === "ios" ? "padding" : undefined}>
+      <StatusBar style="light" />
       <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
         <View style={styles.brandBlock}>
-          <Text style={styles.logo}>هلا</Text>
-          <Text style={styles.tagline}>هلا بضيوفك من أول دعوة</Text>
+          <BrandLogo width={230} />
+          <Text style={styles.tagline}>لحظتك تبدأ بهلا</Text>
         </View>
         <View style={styles.sheet}>
           <View style={styles.tabs}>
@@ -68,7 +71,6 @@ const styles = StyleSheet.create({
   root: { flex: 1, backgroundColor: theme.colors.burgundyDeep },
   content: { flexGrow: 1, justifyContent: "flex-end" },
   brandBlock: { flex: 1, minHeight: 260, alignItems: "center", justifyContent: "center", paddingTop: 60 },
-  logo: { color: theme.colors.gold, fontSize: 78, fontWeight: "900", writingDirection: "rtl" },
   tagline: { color: theme.colors.goldSoft, marginTop: 10, fontSize: 16, writingDirection: "rtl" },
   sheet: { backgroundColor: theme.colors.cream, borderTopLeftRadius: 34, borderTopRightRadius: 34, padding: 24, gap: 13 },
   tabs: { flexDirection: "row-reverse", backgroundColor: "#EEE2D8", padding: 4, borderRadius: 16 },
