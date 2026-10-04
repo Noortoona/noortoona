@@ -43,7 +43,7 @@ export default function LoginScreen() {
       <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
         <View style={styles.brandBlock}>
           <BrandLogo width={230} />
-          <Text style={styles.tagline}>لحظتك تبدأ بهلا</Text>
+          <Text style={styles.tagline}>لحظتك .. تبدأ بهلا</Text>
         </View>
         <View style={styles.sheet}>
           <View style={styles.tabs}>
