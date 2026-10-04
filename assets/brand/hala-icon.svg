@@ -1,14 +1,17 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-labelledby="title desc">
-  <title id="title">شعار هلا</title>
-  <desc id="desc">بوابة ترحيب ذهبية تتوسطها نجمة احتفال</desc>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="620 0 300 300" role="img" aria-labelledby="title desc">
+  <title id="title">هلا</title>
+  <desc id="desc">شعار هلا الذهبي للخلفيات الداكنة</desc>
   <defs>
     <linearGradient id="gold" x1="0" y1="0" x2="1" y2="1">
-      <stop offset="0" stop-color="#F2D69A"/>
-      <stop offset="0.48" stop-color="#C9A55A"/>
-      <stop offset="1" stop-color="#9B7130"/>
+      <stop offset="0" stop-color="#F6DFA7"/>
+      <stop offset="0.48" stop-color="#D6A94A"/>
+      <stop offset="1" stop-color="#A97727"/>
     </linearGradient>
   </defs>
-  <path fill="url(#gold)" d="M256 48C363 112 421 198 421 305v135h-52V307c0-78-36-145-113-198-77 53-113 120-113 198v133H91V305C91 198 149 112 256 48Z"/>
-  <path fill="#071B2C" d="M256 128c60 44 88 100 88 172v140h-42V302c0-49-14-88-46-121-32 33-46 72-46 121v138h-42V300c0-72 28-128 88-172Z"/>
-  <path fill="url(#gold)" d="M256 208c12 40 29 57 69 69-40 12-57 29-69 69-12-40-29-57-69-69 40-12 57-29 69-69Z"/>
+  <rect x="620" y="0" width="300" height="300" fill="#0A0D13"/>
+  <g fill="none" stroke="url(#gold)" stroke-width="24" stroke-linecap="round" stroke-linejoin="round">
+    <rect x="704" y="86" width="170" height="170" rx="44" transform="rotate(8 789 171)"/>
+    <rect x="748" y="128" width="108" height="108" rx="28" transform="rotate(8 802 182)"/>
+  </g>
+  <path fill="url(#gold)" d="M719 42c10 34 25 49 59 59-34 10-49 25-59 59-10-34-25-49-59-59 34-10 49-25 59-59Z"/>
 </svg>
