@@ -18,7 +18,7 @@
       "package": "com.noortoona.hala",
       "adaptiveIcon": {
         "foregroundImage": "./assets/hala-icon.png",
-        "backgroundColor": "#4A0E1E"
+        "backgroundColor": "#0A0D13"
       }
     },
     "plugins": [
@@ -42,7 +42,7 @@
           "image": "./assets/hala-icon.png",
           "imageWidth": 180,
           "resizeMode": "contain",
-          "backgroundColor": "#4A0E1E"
+          "backgroundColor": "#0A0D13"
         }
       ]
     ],
