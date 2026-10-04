@@ -110,3 +110,51 @@ footer{background:#22030b}.modal-backdrop{background:rgba(33,3,11,.78)}
 
 @media(max-width:900px){.service-grid{grid-template-columns:repeat(2,1fr)}.planner-grid,.partner-grid{grid-template-columns:1fr}}
 @media(max-width:640px){.service-grid{grid-template-columns:1fr}.planner-form{grid-template-columns:1fr}.planner-form .gold-btn{grid-column:auto}.planner-copy h2{font-size:40px}.partner-card{grid-template-columns:auto 1fr}.partner-card>b{grid-column:1/-1;width:max-content}}
+
+.brand-full-logo{width:138px;height:auto;display:block;filter:drop-shadow(0 6px 18px rgba(0,0,0,.12))}
+@media(max-width:640px){.brand-full-logo{width:112px}}
+
+
+/* Hala reference lock — exact dark navy/black + warm gold direction */
+:root{
+  --ink:#0A0D13;
+  --ink2:#11151D;
+  --ink3:#07090D;
+  --gold:#D3A447;
+  --gold-soft:#F0D08A;
+  --paper:#FBF7EF;
+  --royal:#1A2330;
+  --shadow:0 28px 80px rgba(0,0,0,.34)
+}
+body{background:#090C12}
+.topbar{background:rgba(8,11,17,.94);border-bottom-color:rgba(240,208,138,.12)}
+.hero{
+  background:
+    radial-gradient(circle at 50% 43%,rgba(211,164,71,.16),transparent 24%),
+    radial-gradient(circle at 78% 20%,rgba(211,164,71,.07),transparent 18%),
+    linear-gradient(155deg,#070A10 0%,#0E1118 52%,#080A0F 100%);
+}
+.hero-copy h1 span{color:#F0C96E;text-shadow:0 0 34px rgba(211,164,71,.22)}
+.orb-a{background:#C9963B}.orb-b{background:#111B2A}
+.silk{background:linear-gradient(135deg,#090D14,#151B25 45%,#06080D)}
+.invite-card-visual{background:linear-gradient(145deg,#15171D,#080A0F)}
+.phone-screen{background:radial-gradient(circle at 50% 28%,rgba(211,164,71,.15),transparent 22%),linear-gradient(#11151D,#080A0F)}
+.scene-badge{background:rgba(9,12,18,.92)}
+.feature-ribbon{background:#090B10}
+.night-section{background:radial-gradient(circle at 80% 0,rgba(211,164,71,.07),transparent 22%),linear-gradient(180deg,#10131A,#090B10)}
+.process-section{background:linear-gradient(145deg,#090B10,#141820)}
+.dashboard-card{background:#11151D;border-color:rgba(240,208,138,.18)}
+.stats div,.guest-list>div{background:#171C25}.avatar{background:#202734}
+.pricing-luxe{background:radial-gradient(circle at 20% 20%,rgba(211,164,71,.07),transparent 22%),#090B10}
+.price-card{background:#12161E}.price-card.featured{background:linear-gradient(180deg,#1B202A,#11151D)}
+.final-cta{background:#090B10}.cta-card{background:linear-gradient(110deg,#11151D,#090B10);border-color:rgba(240,208,138,.18)}
+footer{background:#06080C}
+.gold-btn{background:linear-gradient(135deg,#F1D28A 0%,#D6A94A 56%,#B9862E 100%);box-shadow:0 12px 36px rgba(211,164,71,.25)}
+.mobile-menu{background:rgba(8,11,17,.985)}
+@media(max-width:700px){
+  .hero{
+    background:
+      radial-gradient(circle at 50% 36%,rgba(211,164,71,.15),transparent 22%),
+      linear-gradient(165deg,#080B11 0%,#11141A 58%,#07090D 100%);
+  }
+}
