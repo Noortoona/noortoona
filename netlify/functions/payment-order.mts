@@ -4,10 +4,11 @@ import { canAccessEvent, requireRole } from "./_shared/auth.mjs";
 import { isSameOriginRequest, secureJson } from "./_shared/domain.mjs";
 import { moyasarFeatures, packageFor, publicPackages } from "./_shared/payments.mjs";
 import { supervisorAddonHalalas } from "./_shared/settings.mjs";
+import { activePartner, normalizeReferralCode, referralAmounts } from "./_shared/partners.mjs";
 
 async function snapshot(db: any, userId: string, eventId: string) {
   const orders = await db.sql`
-    SELECT id, event_id, package_code, amount, currency, status, provider_payment_id, payment_method, created_at, paid_at
+    SELECT id, event_id, package_code, amount, currency, status, provider_payment_id, payment_method, referral_code, discount_amount, created_at, paid_at
     FROM payment_orders
     WHERE event_id=${eventId} AND user_id=${userId}
     ORDER BY created_at DESC
@@ -77,21 +78,27 @@ export default async (req: Request) => {
     const requests = await db.sql`SELECT status FROM supervisor_requests WHERE event_id=${eventId} AND user_id=${auth.user.id} LIMIT 1`;
     const addon = requests[0] && requests[0].status !== 'canceled' ? await supervisorAddonHalalas(db) : 0;
     if(addon)await db.sql`UPDATE supervisor_requests SET amount=${addon},updated_at=NOW() WHERE event_id=${eventId} AND user_id=${auth.user.id} AND status IN ('requested','assigned')`;
-    const total = selected.amount + addon;
+    const rawCode = body.referralCode || '';
+    const code = normalizeReferralCode(rawCode);
+    if (rawCode && !code) return secureJson({ error: 'كود الإحالة غير صالح' }, 400);
+    const partner = code ? await activePartner(db, code, auth.user.id) : null;
+    if (code && !partner) return secureJson({ error: 'كود الإحالة غير متاح' }, 400);
+    const { total, discountAmount, commissionAmount } = referralAmounts(selected.amount, addon, partner);
+    if (total <= 0) return secureJson({ error: 'قيمة الطلب غير صالحة' }, 400);
 
     const pending = await db.sql`
-      SELECT id, event_id, package_code, amount, currency, status, provider_payment_id, payment_method, created_at, paid_at
+      SELECT id, event_id, package_code, amount, currency, status, provider_payment_id, payment_method, referral_code, discount_amount, created_at, paid_at
       FROM payment_orders
-      WHERE event_id=${eventId} AND user_id=${auth.user.id} AND package_code=${selected.code} AND amount=${total} AND status='pending'
+      WHERE event_id=${eventId} AND user_id=${auth.user.id} AND package_code=${selected.code} AND amount=${total} AND referral_code IS NOT DISTINCT FROM ${partner?.code || null} AND status='pending'
       ORDER BY created_at DESC LIMIT 1
     `;
     let order = pending[0];
     if (!order || body.forceNew === true) {
       const id = crypto.randomUUID();
       const rows = await db.sql`
-        INSERT INTO payment_orders (id, event_id, user_id, package_code, amount, supervisor_addon_amount, currency)
-        VALUES (${id}, ${eventId}, ${auth.user.id}, ${selected.code}, ${total}, ${addon}, ${selected.currency})
-        RETURNING id, event_id, package_code, amount, supervisor_addon_amount, currency, status, created_at
+        INSERT INTO payment_orders (id, event_id, user_id, package_code, amount, supervisor_addon_amount, currency, referral_code, referral_partner_id, discount_amount, commission_amount)
+        VALUES (${id}, ${eventId}, ${auth.user.id}, ${selected.code}, ${total}, ${addon}, ${selected.currency}, ${partner?.code || null}, ${partner?.user_id || null}, ${discountAmount}, ${commissionAmount})
+        RETURNING id, event_id, package_code, amount, supervisor_addon_amount, currency, status, referral_code, discount_amount, created_at
       `;
       order = rows[0];
     }

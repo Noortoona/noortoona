@@ -5,7 +5,8 @@ import { Role, useAuth } from "./auth";
 const homeByRole: Record<Role, string> = {
   admin: "/admin",
   supervisor: "/supervisor",
-  customer: "/customer"
+  customer: "/customer",
+  partner: "/partner"
 };
 
 export function useRequireRole(role: Role) {

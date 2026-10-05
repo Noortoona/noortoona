@@ -10,7 +10,7 @@ export default async(req:Request)=>{
  if(!isSameOriginRequest(req))return secureJson({error:"طلب غير مسموح"},403);
  try{const b:any=await req.json(),name=String(b.name||"").trim().slice(0,120),phone=normalizePhone(b.phone||""),role=b.role==="supervisor"?"supervisor":"customer";if(name.length<2||!/^[1-9]\d{7,14}$/.test(phone))return secureJson({error:"تحقق من الاسم ورقم الجوال"},400);
  const rows=await db.sql`INSERT INTO users(id,name,phone,role) VALUES(${crypto.randomUUID()},${name},${phone},${role})
- ON CONFLICT(phone) DO UPDATE SET name=EXCLUDED.name,role=CASE WHEN users.role='admin' THEN users.role ELSE EXCLUDED.role END,updated_at=NOW()
+ ON CONFLICT(phone) DO UPDATE SET name=EXCLUDED.name,role=CASE WHEN users.role IN ('admin','partner') THEN users.role ELSE EXCLUDED.role END,updated_at=NOW()
  RETURNING id,name,email,phone,role,status`;
  await recordAudit(auth.user.id,"admin.user_upsert","user",rows[0].id,{role});return secureJson({user:publicUser(rows[0])},201)}
  catch(error){console.error(error);return secureJson({error:"تعذر حفظ المستخدم"},500)}

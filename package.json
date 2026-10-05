@@ -3,7 +3,7 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "test": "node tests/smoke.mjs && node --test tests/whatsapp.mjs tests/payments.mjs tests/moyasar.mjs tests/accounts.mjs",
+    "test": "node tests/smoke.mjs && node --test tests/whatsapp.mjs tests/payments.mjs tests/moyasar.mjs tests/accounts.mjs tests/partners.mjs",
     "test:e2e": "playwright test"
   },
   "dependencies": {

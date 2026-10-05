@@ -16,13 +16,13 @@ async function api(url,opt={}){
 function card(label,value,sub=""){return `<article class="metric-card"><span>${label}</span><strong>${value}</strong><small>${sub}</small></article>`}
 async function load(){
   try{
-    const [overview,usersData,supData,settings]=await Promise.all([api("/api/admin/overview"),api("/api/admin/users"),api("/api/admin/supervisors"),api("/api/admin/settings")]);
-    render(overview,usersData.users||[],supData,settings);
+    const [overview,usersData,supData,settings,partners]=await Promise.all([api("/api/admin/overview"),api("/api/admin/users"),api("/api/admin/supervisors"),api("/api/admin/settings"),api("/api/admin/partners")]);
+    render(overview,usersData.users||[],supData,settings,partners);
   }catch(e){
     root.innerHTML=`<div class="portal-empty"><h2>تعذر فتح لوحة الإدارة</h2><p>${esc(e.message)}</p></div>`;
   }
 }
-function render(d,users,supData,settings){
+function render(d,users,supData,settings,partners){
   const x=d.stats,w=x.whatsapp||{},sr=x.supervisorRequests||{};
   const supervisors=supData.supervisors||[],requests=supData.requests||[];
   root.className="";
@@ -71,6 +71,13 @@ function render(d,users,supData,settings){
       </div>
     </section>
 
+    <section class="portal-panel">
+      <div class="panel-head"><div><span class="eyebrow dark">شركاء العمل</span><h2>القاعات والمشاهير</h2><p>عمولة 10% على أول شراء مدفوع؛ كود المشهور يمنح خصمًا 10% على الباقة.</p></div>
+        <form id="createPartnerForm" class="inline-admin-form"><input name="name" placeholder="اسم الشريك" required><input name="phone" inputmode="tel" placeholder="05XXXXXXXX" required><input name="code" placeholder="كود إنجليزي فريد" minlength="4" maxlength="24" required><select name="kind"><option value="venue">قاعة</option><option value="influencer">مشهور</option></select><button class="gold-btn" type="submit">حفظ الشريك</button></form></div>
+      <div class="portal-list">${(partners.partners||[]).map(p=>`<div><b>${esc(p.name)} • ${esc(p.code)}</b><span>${p.kind==='venue'?'قاعة':'مشهور'} • ${n(p.customers)} عميل • مستحق ${money(p.commission_due)} • مدفوع ${money(p.commission_paid)}</span><small>${esc(p.phone)} • ${esc(p.status)}</small><button class="outline-btn dark-outline" data-partner="${esc(p.user_id)}" data-status="${p.status==='active'?'paused':'active'}">${p.status==='active'?'إيقاف الكود':'تفعيل الكود'}</button></div>`).join('')||'<p>لم تُضف شركاء بعد</p>'}</div>
+      <h3>آخر العمولات</h3><div class="portal-list">${(partners.commissions||[]).slice(0,20).map(c=>`<div><b>${esc(c.partner_name)} • ${money(c.amount)}</b><span>${esc(c.customer_name)} • ${esc(c.status)}</span><small>${new Date(c.created_at).toLocaleDateString('ar-SA')}</small>${c.status==='pending'||c.status==='approved'?`<button class="outline-btn dark-outline" data-commission="${esc(c.id)}" data-next="${c.status==='pending'?'approved':'paid'}">${c.status==='pending'?'مراجعة واعتماد':'تسجيل تحويل العمولة'}</button><button class="outline-btn dark-outline" data-commission="${esc(c.id)}" data-next="void">إلغاء العمولة</button>`:''}</div>`).join('')||'<p>لا توجد عمولات بعد</p>'}</div>
+    </section>
+
     <section class="portal-grid admin-lower-grid">
       <article class="portal-panel">
         <h2>أحدث عمليات الدفع</h2>
@@ -89,7 +96,25 @@ function render(d,users,supData,settings){
 
   document.getElementById("supervisorPriceForm")?.addEventListener("submit",saveSupervisorPrice);
   document.getElementById("createSupervisorForm")?.addEventListener("submit",createSupervisor);
+  document.getElementById("createPartnerForm")?.addEventListener("submit",createPartner);
+  document.querySelectorAll('[data-partner]').forEach(b=>b.addEventListener('click',()=>togglePartner(b.dataset.partner,b.dataset.status)));
+  document.querySelectorAll('[data-commission]').forEach(b=>b.addEventListener('click',()=>updateCommission(b.dataset.commission,b.dataset.next)));
   document.querySelectorAll("[data-assign-request]").forEach(b=>b.addEventListener("click",()=>assignSupervisor(b.dataset.assignRequest)));
+}
+async function createPartner(e){
+  e.preventDefault();const fd=new FormData(e.currentTarget),button=e.currentTarget.querySelector('button');button.disabled=true;
+  try{await api('/api/admin/partners',{method:'POST',body:JSON.stringify(Object.fromEntries(fd))});await load()}
+  catch(err){alert(err.message);button.disabled=false}
+}
+async function togglePartner(userId,status){
+  try{await api('/api/admin/partners',{method:'PATCH',body:JSON.stringify({userId,status})});await load()}
+  catch(err){alert(err.message)}
+}
+async function updateCommission(id,status){
+  if(status==='paid'&&!confirm('هل تم تحويل العمولة فعليًا خارج هلا؟'))return;
+  if(status==='void'&&!confirm('هل تريد إلغاء استحقاق هذه العمولة؟'))return;
+  try{await api('/api/admin/partner-commissions',{method:'PATCH',body:JSON.stringify({id,status})});await load()}
+  catch(err){alert(err.message)}
 }
 async function createSupervisor(e){
   e.preventDefault();const fd=new FormData(e.currentTarget),button=e.currentTarget.querySelector("button");button.disabled=true;

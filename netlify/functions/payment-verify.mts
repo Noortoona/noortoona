@@ -3,6 +3,7 @@ import type { Config } from "@netlify/functions";
 import { requireRole } from "./_shared/auth.mjs";
 import { isSameOriginRequest, secureJson } from "./_shared/domain.mjs";
 import { fetchMoyasarPayment, reconcileMoyasarOrder } from "./_shared/moyasar.mjs";
+import { recordAcquisition } from "./_shared/partners.mjs";
 
 export default async (req: Request) => {
   if (req.method !== "POST") return new Response("Method Not Allowed", { status: 405 });
@@ -17,12 +18,12 @@ export default async (req: Request) => {
 
     const db = getDatabase();
     const rows = await db.sql`
-      SELECT id, event_id, user_id, package_code, amount, currency, status
+      SELECT id, event_id, user_id, package_code, amount, currency, status, referral_partner_id, commission_amount
       FROM payment_orders WHERE id=${orderId} AND user_id=${auth.user.id} LIMIT 1
     `;
     const order = rows[0];
     if (!order) return secureJson({ error: "طلب الدفع غير موجود" }, 404);
-    if (order.status === "paid") return secureJson({ paid: true, status: "paid", order });
+    if (order.status === "paid") { await recordAcquisition(db, order); return secureJson({ paid: true, status: "paid", order }); }
 
     const payment = await fetchMoyasarPayment(order.id);
     const result = await reconcileMoyasarOrder(db, order, payment);

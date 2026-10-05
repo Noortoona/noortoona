@@ -19,7 +19,7 @@ export default async (req: Request) => {
 
     const db = getDatabase();
     const rows = await db.sql`
-      SELECT id, event_id, user_id, package_code, amount, currency, status
+      SELECT id, event_id, user_id, package_code, amount, currency, status, referral_partner_id, commission_amount
       FROM payment_orders WHERE id=${paymentId} LIMIT 1
     `;
     const order = rows[0];

@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import { readFile, stat } from 'node:fs/promises';
 import ts from 'typescript';
 import { packageFor, publicPackages } from '../netlify/functions/_shared/payments.mjs';
+import { normalizeReferralCode, referralAmounts } from '../netlify/functions/_shared/partners.mjs';
 
 async function handler(name, bindings) {
   let source = await readFile(new URL(`../netlify/functions/${name}.mts`, import.meta.url), 'utf8');
@@ -63,7 +64,8 @@ test('payment order uses server price plus 299 SAR supervisor addon and owner au
   const order=await handler('payment-order', {
     getDatabase:()=>db, canAccessEvent:async()=>true, requireRole:async()=>({ok:true,user:{id:'customer',role:'customer'}}),
     isSameOriginRequest, secureJson, moyasarFeatures:()=>({configured:true,publishableKey:'pk_test',applePay:{enabled:false},stcPay:{enabled:false}}),
-    packageFor,publicPackages,supervisorAddonHalalas:async()=>addon
+    packageFor,publicPackages,supervisorAddonHalalas:async()=>addon,normalizeReferralCode,
+    activePartner:async()=>null,referralAmounts
   });
   let res=await order(request('/api/payments/order',{eventId:'event',packageCode:'basic',amount:1}));
   assert.equal(res.status,201);assert.equal((await res.json()).order.amount,39800);

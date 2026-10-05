@@ -1,5 +1,7 @@
 (()=> {
   const KEY="halaSession", SID="halaVisitorId";
+  const referral=new URLSearchParams(location.search).get('ref');
+  if(referral&&/^[A-Z0-9_-]{4,24}$/i.test(referral))localStorage.setItem('halaReferralCode',referral.toUpperCase());
   const session=()=>{try{return JSON.parse(localStorage.getItem(KEY)||"null")}catch{return null}};
   const save=s=>localStorage.setItem(KEY,JSON.stringify(s));
   let resolver=null, purpose="login", supervisorPrice=299;
@@ -72,7 +74,7 @@
     catch(e){m.querySelector("#authError").textContent=e.message}
     finally{btn.disabled=false;btn.textContent="تأكيد والدخول"}
   }
-  function route(user){location.href=user?.role==="admin"?"/admin.html":user?.role==="supervisor"?"/supervisor.html":"/customer.html"}
+  function route(user){location.href=user?.role==="admin"?"/admin.html":user?.role==="supervisor"?"/supervisor.html":user?.role==="partner"?"/partner.html":"/customer.html"}
   async function validSession(){
     const s=session();if(!s?.token)return null;
     try{const r=await fetch("/api/auth/me",{headers:{authorization:`Bearer ${s.token}`}});if(!r.ok){localStorage.removeItem(KEY);return null}const d=await r.json();s.user=d.user;save(s);return s}catch{return s}

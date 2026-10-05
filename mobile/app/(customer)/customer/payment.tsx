@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useState } from "react";
-import { Alert, Platform, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
+import { Alert, Platform, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from "react-native";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import {
   ApplePay,
@@ -34,6 +34,7 @@ type Billing = {
   features: { applePay: { enabled: boolean; merchantId?: string | null }; stcPay: { enabled: boolean }; card: { enabled: boolean } };
 };
 type Checkout = { order: Order; publishableKey: string; features: { applePay: { enabled: boolean; merchantId?: string | null }; stcPay: { enabled: boolean } } };
+type ReferralQuote = { code: string; kind: string; discountAmount: number; discountedPackageAmount: number };
 
 export default function PaymentScreen() {
   const auth = useRequireRole("customer");
@@ -45,6 +46,8 @@ export default function PaymentScreen() {
   const [checkout, setCheckout] = useState<Checkout | null>(null);
   const [busy, setBusy] = useState(false);
   const [verifying, setVerifying] = useState(false);
+  const [referralCode, setReferralCode] = useState("");
+  const [referral, setReferral] = useState<ReferralQuote | null>(null);
 
   const load = useCallback(async () => {
     if (!auth.token || !eventId) return;
@@ -80,6 +83,15 @@ export default function PaymentScreen() {
   if (auth.loading || !auth.user) return null;
   const paid = billing?.payment?.status === "paid";
 
+  async function applyReferral() {
+    const code = referralCode.trim().toUpperCase();
+    if (!code) { setReferral(null); setCheckout(null); return; }
+    try {
+      const result = await api<ReferralQuote>(`/api/referrals/quote?code=${encodeURIComponent(code)}&package=${encodeURIComponent(selected)}`, {}, auth.token);
+      setReferral(result); setReferralCode(result.code); setCheckout(null);
+    } catch (e: any) { setReferral(null); setCheckout(null); Alert.alert("الكود غير متاح", e?.message || "تحقق من الكود"); }
+  }
+
   async function prepare(forceNew = false) {
     if (!billing?.paymentConfigured) {
       return Alert.alert("الدفع غير مفعّل بعد", "تم تجهيز التكامل، ويلزم إضافة مفاتيح Moyasar التجريبية في Netlify قبل أول عملية.");
@@ -88,7 +100,7 @@ export default function PaymentScreen() {
     try {
       const result = await api<Checkout>("/api/payments/order", {
         method: "POST",
-        body: JSON.stringify({ eventId, packageCode: selected, forceNew }),
+        body: JSON.stringify({ eventId, packageCode: selected, forceNew, referralCode: referral?.code || "" }),
       }, auth.token);
       setCheckout(result);
     } catch (e: any) {
@@ -151,7 +163,7 @@ export default function PaymentScreen() {
           <>
             <Text style={styles.section}>اختر الباقة</Text>
             {billing?.packages?.map(pkg => (
-              <Pressable key={pkg.code} onPress={() => { setSelected(pkg.code); setCheckout(null); }} style={[styles.package, selected === pkg.code && styles.packageActive]}>
+              <Pressable key={pkg.code} onPress={() => { setSelected(pkg.code); setReferral(null); setCheckout(null); }} style={[styles.package, selected === pkg.code && styles.packageActive]}>
                 <View style={styles.packageCopy}>
                   <Text style={[styles.packageName, selected === pkg.code && styles.packageNameActive]}>{pkg.name}</Text>
                   <Text style={[styles.packageGuests, selected === pkg.code && styles.packageGuestsActive]}>حتى {pkg.guestLimit} مدعو</Text>
@@ -160,7 +172,8 @@ export default function PaymentScreen() {
               </Pressable>
             ))}
             {billing?.supervisorAddonAmount ? <Card><Text style={styles.cardTitle}>مشرف المناسبة: +{(billing.supervisorAddonAmount / 100).toFixed(2)} ر.س</Text><Text style={styles.help}>يُضاف إلى إجمالي الباقة عند تجهيز طلب الدفع.</Text></Card> : null}
-            {billing?.packages?.find(pkg => pkg.code === selected) ? <Card><Text style={styles.cardTitle}>الإجمالي: {((billing.packages.find(pkg => pkg.code === selected)!.amount + (billing.supervisorAddonAmount || 0)) / 100).toFixed(2)} ر.س</Text></Card> : null}
+            <Card><Text style={styles.cardTitle}>كود إحالة أو خصم</Text><TextInput value={referralCode} onChangeText={value => { setReferralCode(value); setReferral(null); setCheckout(null); }} autoCapitalize="characters" placeholder="أدخل كود الشريك" style={styles.promoInput} /><PrimaryButton label="تطبيق الكود" onPress={applyReferral} secondary />{referral ? <Text style={styles.help}>تم تطبيق {referral.code}{referral.discountAmount ? ` • خصم ${(referral.discountAmount / 100).toFixed(2)} ر.س` : " • إحالة شريك"}</Text> : null}</Card>
+            {billing?.packages?.find(pkg => pkg.code === selected) ? <Card><Text style={styles.cardTitle}>الإجمالي: {(((referral?.discountedPackageAmount ?? billing.packages.find(pkg => pkg.code === selected)!.amount) + (billing.supervisorAddonAmount || 0)) / 100).toFixed(2)} ر.س</Text></Card> : null}
 
             {!billing?.paymentConfigured ? (
               <Card>
@@ -215,6 +228,7 @@ const styles = StyleSheet.create({
   priceActive: { color: theme.colors.gold },
   cardTitle: { color: theme.colors.burgundy, fontSize: 19, fontWeight: "900", textAlign: "right", writingDirection: "rtl", marginBottom: 8 },
   help: { color: theme.colors.muted, textAlign: "right", writingDirection: "rtl", lineHeight: 21 },
+  promoInput: { minHeight: 50, borderRadius: 14, borderWidth: 1, borderColor: theme.colors.line, backgroundColor: theme.colors.paper, paddingHorizontal: 13, color: theme.colors.ink, textAlign: "right", marginBottom: 10 },
   method: { borderTopWidth: 1, borderTopColor: theme.colors.line, paddingTop: 14, marginTop: 14, gap: 8 },
   methodTitle: { color: theme.colors.ink, fontWeight: "900", textAlign: "right", writingDirection: "rtl" },
   success: { gap: 10, alignItems: "center" },

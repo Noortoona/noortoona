@@ -1,4 +1,5 @@
 import { moyasarFeatures } from "./payments.mjs";
+import { recordAcquisition } from "./partners.mjs";
 
 export function constantTimeEqual(left, right) {
   const a = String(left || "");
@@ -58,6 +59,7 @@ export async function reconcileMoyasarOrder(db, order, payment) {
       WHERE id=${order.id}
       RETURNING id, event_id, user_id, package_code, amount, currency, status, provider_payment_id, payment_method, paid_at
     `;
+    await recordAcquisition(db, order);
     return { paid: true, status: "paid", order: rows[0] };
   }
 
