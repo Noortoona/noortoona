@@ -15,6 +15,7 @@ CREATE TABLE IF NOT EXISTS partner_profiles (
 );
 
 ALTER TABLE payment_orders ADD COLUMN IF NOT EXISTS referral_code text;
+ALTER TABLE events ADD COLUMN IF NOT EXISTS referral_code text;
 ALTER TABLE payment_orders ADD COLUMN IF NOT EXISTS referral_partner_id text REFERENCES partner_profiles(user_id) ON DELETE SET NULL;
 ALTER TABLE payment_orders ADD COLUMN IF NOT EXISTS discount_amount integer NOT NULL DEFAULT 0 CHECK (discount_amount >= 0);
 ALTER TABLE payment_orders ADD COLUMN IF NOT EXISTS commission_amount integer NOT NULL DEFAULT 0 CHECK (commission_amount >= 0);

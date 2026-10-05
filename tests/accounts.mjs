@@ -56,6 +56,7 @@ test('payment order uses server price plus 299 SAR supervisor addon and owner au
     if(sql.includes('FROM guests'))return [{count:12}];
     if(sql.includes("status='paid'"))return [];
     if(sql.includes('FROM supervisor_requests'))return [{status:'requested'}];
+    if(sql.includes('SELECT referral_code FROM events'))return [{referral_code:null}];
     if(sql.includes('UPDATE supervisor_requests'))return [];
     if(sql.includes("status='pending'"))return [];
     if(sql.includes('INSERT INTO payment_orders')){inserted=args;return [{id:args[0],amount:args[4],supervisor_addon_amount:args[5],status:'pending'}];}

@@ -109,7 +109,7 @@ async function createEvent(){
     const session=await window.HALA_AUTH?.ensureLogin?.('create');
     if(!session?.token)throw new Error('سجّل دخولك برقم الجوال للمتابعة');
     if(session.user?.role!=='customer')throw new Error('إنشاء المناسبة متاح من حساب العميل');
-    const payload={...state,occasion:eventLabel(),activityType:activityLabel(),title:eventTitle(),design:{...state.design,hostName:state.hostName||'',occasionKey:state.occasionKey,activityKey:state.activityKey}};
+    const payload={...state,referralCode:localStorage.getItem('halaReferralCode')||'',occasion:eventLabel(),activityType:activityLabel(),title:eventTitle(),design:{...state.design,hostName:state.hostName||'',occasionKey:state.occasionKey,activityKey:state.activityKey}};
     const res=await fetch('/api/events',{method:'POST',headers:{'content-type':'application/json',authorization:`Bearer ${session.token}`},body:JSON.stringify(payload)}),data=await res.json();
     if(!res.ok)throw new Error(data.error||'تعذر إنشاء المناسبة');
     const dashboardUrl=`/dashboard?event=${encodeURIComponent(data.event.id)}`;

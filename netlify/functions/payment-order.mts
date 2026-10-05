@@ -29,6 +29,7 @@ async function snapshot(db: any, userId: string, eventId: string) {
     guestCount: guestCount?.count || 0,
     freeTestUsed: Number(sentCount?.count || 0) > 0,
     paymentConfigured: features.configured,
+    referralCode: (await db.sql`SELECT referral_code FROM events WHERE id=${eventId} LIMIT 1`)[0]?.referral_code || null,
     supervisorAddonAmount,
     features: {
       applePay: { enabled: features.applePay.enabled, merchantId: features.applePay.merchantId || null },
@@ -78,7 +79,8 @@ export default async (req: Request) => {
     const requests = await db.sql`SELECT status FROM supervisor_requests WHERE event_id=${eventId} AND user_id=${auth.user.id} LIMIT 1`;
     const addon = requests[0] && requests[0].status !== 'canceled' ? await supervisorAddonHalalas(db) : 0;
     if(addon)await db.sql`UPDATE supervisor_requests SET amount=${addon},updated_at=NOW() WHERE event_id=${eventId} AND user_id=${auth.user.id} AND status IN ('requested','assigned')`;
-    const rawCode = body.referralCode || '';
+    const eventReferral = body.referralCode === undefined ? (await db.sql`SELECT referral_code FROM events WHERE id=${eventId} LIMIT 1`)[0]?.referral_code : null;
+    const rawCode = body.referralCode === undefined ? eventReferral || '' : body.referralCode || '';
     const code = normalizeReferralCode(rawCode);
     if (rawCode && !code) return secureJson({ error: 'كود الإحالة غير صالح' }, 400);
     const partner = code ? await activePartner(db, code, auth.user.id) : null;

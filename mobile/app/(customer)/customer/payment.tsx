@@ -31,6 +31,7 @@ type Billing = {
   freeTestUsed: boolean;
   paymentConfigured: boolean;
   supervisorAddonAmount: number;
+  referralCode?: string | null;
   features: { applePay: { enabled: boolean; merchantId?: string | null }; stcPay: { enabled: boolean }; card: { enabled: boolean } };
 };
 type Checkout = { order: Order; publishableKey: string; features: { applePay: { enabled: boolean; merchantId?: string | null }; stcPay: { enabled: boolean } } };
@@ -56,10 +57,16 @@ export default function PaymentScreen() {
       setBilling(data);
       if (data.payment?.package_code && data.payment.status !== "paid") setSelected(data.payment.package_code);
       if (data.payment?.status === "paid") setCheckout(null);
+      if (data.referralCode && data.payment?.status !== "paid" && !referralCode) {
+        const code = data.referralCode;
+        setReferralCode(code);
+        try { setReferral(await api<ReferralQuote>(`/api/referrals/quote?code=${encodeURIComponent(code)}&package=${encodeURIComponent(data.payment?.package_code || String(params.package || "basic"))}`, {}, auth.token)); }
+        catch { setReferral(null); }
+      }
     } catch (e: any) {
       Alert.alert("تعذر تحميل الدفع", e?.message || "حاول مرة أخرى");
     }
-  }, [auth.token, eventId]);
+  }, [auth.token, eventId, params.package, referralCode]);
 
   useEffect(() => { load(); }, [load]);
 

@@ -33,6 +33,7 @@ test('checkout ignores client prices, validates a code, and snapshots the discou
     if(sql.includes('FROM guests'))return [{count:2}];
     if(sql.includes("status='paid'"))return [];
     if(sql.includes('FROM supervisor_requests'))return [{status:'requested'}];
+    if(sql.includes('SELECT referral_code FROM events'))return [{referral_code:null}];
     if(sql.includes('UPDATE supervisor_requests'))return [];
     if(sql.includes("status='pending'"))return [];
     if(sql.includes('INSERT INTO payment_orders')){inserts.push(args);return [{id:args[0],amount:args[4],discount_amount:args[9],status:'pending'}];}
