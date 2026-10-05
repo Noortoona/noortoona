@@ -5,7 +5,7 @@ import { useRequireRole } from "@/roleGate";
 import { BrandHeader, Card, PrimaryButton, Screen } from "@/ui";
 import { theme } from "@/theme";
 
-type User = { id: string; name: string; email: string; phone?: string; role: "admin" | "supervisor" | "customer"; status: string };
+type User = { id: string; name: string; email: string; phone?: string; role: "admin" | "supervisor" | "customer" | "partner"; status: string };
 
 export default function AdminUsers() {
   const auth = useRequireRole("admin");
@@ -40,7 +40,7 @@ export default function AdminUsers() {
           <PrimaryButton label="إنشاء حساب المشرف" onPress={createSupervisor} loading={busy} disabled={!name || phone.replace(/\D/g, "").length < 9} />
         </Card>
         <Text style={styles.section}>الحسابات</Text>
-        {users.map(u => <Card key={u.id}><View style={styles.user}><View style={styles.copy}><Text style={styles.name}>{u.name}</Text><Text style={styles.email}>{u.phone || u.email}</Text></View><View style={[styles.badge, u.role === "admin" && styles.adminBadge]}><Text style={styles.badgeText}>{u.role === "admin" ? "Admin" : u.role === "supervisor" ? "مشرف" : "عميل"}</Text></View></View></Card>)}
+        {users.map(u => <Card key={u.id}><View style={styles.user}><View style={styles.copy}><Text style={styles.name}>{u.name}</Text><Text style={styles.email}>{u.phone || u.email}</Text></View><View style={[styles.badge, u.role === "admin" && styles.adminBadge]}><Text style={styles.badgeText}>{u.role === "admin" ? "Admin" : u.role === "supervisor" ? "مشرف" : u.role === "partner" ? "شريك" : "عميل"}</Text></View></View></Card>)}
       </ScrollView>
     </Screen>
   );
