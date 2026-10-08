@@ -2,6 +2,31 @@ import { getDatabase } from "@netlify/database";
 
 const encoder = new TextEncoder();
 const bytesToHex = bytes => Array.from(bytes, b => b.toString(16).padStart(2, "0")).join("");
+const hexToBytes = hex => {
+  const clean = String(hex || "");
+  const out = new Uint8Array(Math.floor(clean.length / 2));
+  for (let i = 0; i < out.length; i++) out[i] = parseInt(clean.slice(i * 2, i * 2 + 2), 16);
+  return out;
+};
+
+export async function hashPassword(password, saltHex = "") {
+  const salt = saltHex ? hexToBytes(saltHex) : crypto.getRandomValues(new Uint8Array(16));
+  const key = await crypto.subtle.importKey("raw", encoder.encode(String(password)), "PBKDF2", false, ["deriveBits"]);
+  const bits = await crypto.subtle.deriveBits(
+    { name: "PBKDF2", hash: "SHA-256", salt, iterations: 210000 },
+    key,
+    256
+  );
+  return { salt: bytesToHex(salt), hash: bytesToHex(new Uint8Array(bits)) };
+}
+
+export async function verifyPassword(password, salt, expectedHash) {
+  const result = await hashPassword(password, salt);
+  if (result.hash.length !== String(expectedHash || "").length) return false;
+  let mismatch = 0;
+  for (let i = 0; i < result.hash.length; i++) mismatch |= result.hash.charCodeAt(i) ^ String(expectedHash).charCodeAt(i);
+  return mismatch === 0;
+}
 
 export async function sha256(value) {
   const digest = await crypto.subtle.digest("SHA-256", encoder.encode(String(value)));
