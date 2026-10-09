@@ -1,11 +1,41 @@
 const root=document.getElementById("adminRoot");
-const s=JSON.parse(localStorage.getItem("halaSession")||"null");
+let s=null;
 const esc=x=>String(x??"").replace(/[&<>'"]/g,m=>({"&":"&amp;","<":"&lt;",">":"&gt;","'":"&#39;",'"':"&quot;"}[m]));
 const n=x=>Number(x||0).toLocaleString("ar-SA");
 const money=x=>(Number(x||0)/100).toLocaleString("ar-SA",{maximumFractionDigits:2})+" ر.س";
 document.getElementById("logoutBtn").onclick=()=>{localStorage.removeItem("halaSession");location.href="/"};
 
-if(!s?.token||s.user?.role!=="admin"){location.href="/"}else load();
+async function boot(){
+  const authScript=document.createElement("script");
+  authScript.src="/account.js";
+  authScript.onload=async()=>{
+    try{
+      const session=await window.HALA_AUTH.ensureLogin("admin");
+      if(!session){
+        root.innerHTML='<div class="portal-empty"><h2>دخول الأدمن</h2><p>سجّل دخولك برقم جوال الأدمن ورمز التحقق.</p><button class="gold-btn" id="adminLoginAgain">تسجيل الدخول</button></div>';
+        document.getElementById("adminLoginAgain").onclick=bootLogin;
+        return;
+      }
+      if(session.user?.role!=="admin"){
+        root.innerHTML='<div class="portal-empty"><h2>هذا الحساب ليس أدمن</h2><p>استخدم رقم جوال مسجّلًا بصلاحية الأدمن.</p><button class="gold-btn" id="switchAdminPhone">دخول برقم آخر</button></div>';
+        document.getElementById("switchAdminPhone").onclick=()=>{localStorage.removeItem("halaSession");location.reload()};
+        return;
+      }
+      s=session;
+      load();
+    }catch(error){
+      root.innerHTML='<div class="portal-empty"><h2>تعذر فتح تسجيل الدخول</h2><p>أعد تحميل الصفحة وحاول مرة أخرى.</p></div>';
+    }
+  };
+  authScript.onerror=()=>{root.innerHTML='<div class="portal-empty"><h2>تعذر تحميل تسجيل الدخول</h2><p>أعد تحميل الصفحة وحاول مرة أخرى.</p></div>'};
+  document.body.appendChild(authScript);
+}
+async function bootLogin(){
+  const session=await window.HALA_AUTH.ensureLogin("admin");
+  if(session?.user?.role==="admin"){s=session;load()}
+  else if(session){localStorage.removeItem("halaSession");location.reload()}
+}
+boot();
 
 async function api(url,opt={}){
   const r=await fetch(url,{...opt,headers:{"content-type":"application/json",authorization:`Bearer ${s.token}`,...(opt.headers||{})}});
