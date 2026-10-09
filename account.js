@@ -84,5 +84,5 @@
     purpose=reason;open();return new Promise(resolve=>{resolver=resolve});
   }
   window.HALA_AUTH={session,ensureLogin,track,get supervisorPrice(){return supervisorPrice}};
-  const login=document.getElementById("loginBtn");if(login)login.onclick=async()=>{const s=await ensureLogin("login");if(s)route(s.user)};
+  document.querySelectorAll("#loginBtn, #mobileLoginBtn").forEach(login=>login.onclick=async()=>{const s=await ensureLogin("login");if(s)route(s.user)});
 })();
