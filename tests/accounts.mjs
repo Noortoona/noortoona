@@ -18,7 +18,7 @@ const isSameOriginRequest = () => true;
 const request = (path, body) => new Request(`https://preview.example${path}`, {method:'POST', headers:{'content-type':'application/json'}, body:JSON.stringify(body)});
 
 test('OTP routes the two configured admin numbers, creates customer accounts, and rejects replay', async () => {
-  const env={HALA_ADMIN_PHONES:'966559390073,966563133109'};
+  const env={HALA_ADMIN_PHONES:'966501112234,966501112235'};
   globalThis.Netlify={env:{get:key=>env[key]}};
   let currentPhone='', consumed=false, sessionUser='', wrongAttempts=0;
   const db={sql:async(parts,...args)=>{
@@ -35,7 +35,7 @@ test('OTP routes the two configured admin numbers, creates customer accounts, an
     publicUser:u=>u, recordAudit:async()=>{}, isSameOriginRequest, normalizePhone:p=>p, secureJson,
     hashOtp:async(_phone,code)=>code==='123456'?'good':'bad', normalizeLoginPhone:p=>p
   });
-  for(const phone of ['966559390073','966563133109','966501112233']){
+  for(const phone of ['966501112234','966501112235','966501112233']){
     consumed=false;
     const res=await verify(request('/api/auth/otp/verify',{phone,code:'123456'}));
     assert.equal(res.status,200);assert.equal((await res.json()).user.role,env.HALA_ADMIN_PHONES.includes(phone)?'admin':'customer');
