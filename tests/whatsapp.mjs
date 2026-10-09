@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { readFile } from 'node:fs/promises';
+import { readFile, stat } from 'node:fs/promises';
 import ts from 'typescript';
 import { providerConfig, nextStatus, extractStatuses } from '../netlify/functions/_shared/whatsapp.mjs';
 
@@ -8,10 +8,11 @@ import { providerConfig, nextStatus, extractStatuses } from '../netlify/function
 async function handler(file) {
   let source = await readFile(new URL('../netlify/functions/'+file, import.meta.url), 'utf8');
   source=source.replace('import { getDatabase } from "@netlify/database";','const getDatabase = () => globalThis.__waDb;');
+  source=source.replace('import { canAccessEvent, getAuth, recordAudit } from "./_shared/auth.mjs";','const getAuth=async()=>null; const canAccessEvent=async()=>false; const recordAudit=async()=>{};');
   for (const part of ['domain','whatsapp']) source=source.replace(`"./_shared/${part}.mjs"`, JSON.stringify(new URL(`../netlify/functions/_shared/${part}.mjs`,import.meta.url).href));
   return (await import('data:text/javascript;base64,'+Buffer.from(ts.transpileModule(source,{compilerOptions:{module:ts.ModuleKind.ESNext,target:ts.ScriptTarget.ES2022}}).outputText).toString('base64'))).default;
 }
-const send=await handler('whatsapp-send.mts'), webhook=await handler('whatsapp-webhook.mts'), setup=await handler('whatsapp-setup.mts');
+const send=await handler('whatsapp-send.mts'), webhook=await handler('whatsapp-webhook.mts');
 let calls, fetches, env, previous, providerReply, providerThrows, storedStatus, missingMessage, dbFails;
 function reset() {
   calls=[];fetches=[];previous=[];providerThrows=false;storedStatus='queued';missingMessage=false;dbFails=false;
@@ -22,6 +23,7 @@ function reset() {
   globalThis.__waDb={
     sql:async(parts,...args)=>{
       const sql=parts.join('?');calls.push({sql,args});
+      if(sql.includes('SELECT 1 FROM events'))return [{ok:1}];
       if(sql.includes('SELECT g.*'))return [{id:'guest',phone:'0500000000',name:'ضيف الاختبار',code:'INVITE',title:'اختبار هلا',location:'الرياض'}];
       return [];
     },
@@ -94,10 +96,6 @@ test('early callback and database failure request retry instead of losing delive
 test('nested Meta statuses are parsed',()=>{
  assert.deepEqual(extractStatuses({entry:[{changes:[{value:{statuses:[{id:'wamid.x',status:'read'}]}}]}]}),[{id:'wamid.x',status:'read'}]);
 });
-test('setup is protected in sandbox too and GET does not mutate provider',async()=>{
- reset();env.D360_MODE='sandbox';
- assert.equal((await setup(new Request('https://preview.example/api/whatsapp/setup'))).status,403);assert.equal(fetches.length,0);
- env.D360_SETUP_TOKEN='setup-test';
- const res=await setup(new Request('https://preview.example/api/whatsapp/setup',{headers:{'x-noortoona-setup-token':'setup-test'}}));
- assert.equal(res.status,200);assert.equal(fetches.length,0);assert.equal((await res.json()).providerRegistrationVerified,false);
+test('temporary OTP provisioning function is absent from deployment sources',async()=>{
+ await assert.rejects(stat(new URL('../netlify/functions/whatsapp-otp-template-setup.mts',import.meta.url)),{code:'ENOENT'});
 });

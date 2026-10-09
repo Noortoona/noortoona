@@ -6,6 +6,8 @@ test('رحلة إنشاء نشاط بادل كاملة على iPhone', async ({ 
     contentType: 'application/json',
     body: JSON.stringify({ event: { id: 'event-e2e' }, ownerToken: 'owner-e2e' }),
   }));
+  await page.addInitScript(() => localStorage.setItem('halaSession', JSON.stringify({ token: 'test-session', user: { id: 'test-user', role: 'customer' } })));
+  await page.route('**/api/auth/me', route => route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ user: { id: 'test-user', role: 'customer' } }) }));
   await page.goto('/');
   await expect(page.locator('body')).not.toHaveCSS('overflow-x', 'scroll');
   await page.locator('[data-start]:visible').first().click();
@@ -13,7 +15,7 @@ test('رحلة إنشاء نشاط بادل كاملة على iPhone', async ({ 
   await expect(page.getByRole('heading', { name: 'اختر النشاط' })).toBeVisible();
   await page.locator('[data-activity="padel"]').click();
   await page.locator('#nextBtn').click();
-  await expect(page.getByRole('heading', { name: /تفاصيل بادل/ })).toBeVisible();
+  await expect(page.getByRole('heading', { name: /تفاصيل النشاط — بادل/ })).toBeVisible();
   await page.locator('#name1').fill('بادل الخميس');
   await page.locator('#location').fill('ملعب الرياض');
   await page.locator('#nextBtn').click();
@@ -57,7 +59,7 @@ test('دعوة الضيف تحسب القطّة وتسجل الرد', async ({ p
   });
   await page.goto('/guest.html?code=TESTQR');
   await expect(page.locator('.invite-canvas')).toContainText('محمد');
-  await page.getByRole('button', { name: 'نعم، سأحضر' }).last().click();
+  await page.getByRole('button', { name: 'نعم، سأشارك' }).last().click();
   await page.locator('#companionCount').selectOption('2');
   await expect(page.locator('#shareCalc')).toContainText(/105|١٠٥/);
   await page.locator('.companion-name').nth(0).fill('سعد');

@@ -28,7 +28,11 @@ export default async (req: Request) => {
     await client.query("SET LOCAL statement_timeout = '3s'");
     for (const s of statuses) {
       const found = (await client.query("SELECT id, guest_id FROM whatsapp_messages WHERE message_id=$1", [s.id])).rows[0];
-      if (!found) throw new Error("Message not persisted yet");
+      if (!found) {
+        const otp = (await client.query("UPDATE otp_codes SET delivery_status=$1 WHERE message_id=$2 RETURNING id", [s.status,s.id])).rows[0];
+        if (otp) continue;
+        throw new Error("Message not persisted yet");
+      }
       // Same lock order as sender; old attempts must never change the latest guest state.
       await client.query("SELECT id FROM guests WHERE id=$1 FOR UPDATE", [found.guest_id]);
       const row = (await client.query("SELECT status FROM whatsapp_messages WHERE id=$1 FOR UPDATE", [found.id])).rows[0];
