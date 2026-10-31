@@ -43,7 +43,7 @@ export default function PaymentScreen() {
   const params = useLocalSearchParams<{ eventId: string; package?: string }>();
   const eventId = String(params.eventId || "");
   const [billing, setBilling] = useState<Billing | null>(null);
-  const [selected, setSelected] = useState(String(params.package || "basic"));
+  const [selected, setSelected] = useState(String(params.package || "hala_plus"));
   const [checkout, setCheckout] = useState<Checkout | null>(null);
   const [busy, setBusy] = useState(false);
   const [verifying, setVerifying] = useState(false);
@@ -60,7 +60,7 @@ export default function PaymentScreen() {
       if (data.referralCode && data.payment?.status !== "paid" && !referralCode) {
         const code = data.referralCode;
         setReferralCode(code);
-        try { setReferral(await api<ReferralQuote>(`/api/referrals/quote?code=${encodeURIComponent(code)}&package=${encodeURIComponent(data.payment?.package_code || String(params.package || "basic"))}`, {}, auth.token)); }
+        try { setReferral(await api<ReferralQuote>(`/api/referrals/quote?code=${encodeURIComponent(code)}&package=${encodeURIComponent(data.payment?.package_code || String(params.package || "hala_plus"))}`, {}, auth.token)); }
         catch { setReferral(null); }
       }
     } catch (e: any) {
