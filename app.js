@@ -2,9 +2,11 @@ const N=window.NOORTOONA;
 const $=(s,root=document)=>root.querySelector(s);
 const $$=(s,root=document)=>[...root.querySelectorAll(s)];
 const stages=['المناسبة','التفاصيل','القالب','التصميم','الضيوف','المعاينة','الإرسال'];
-const defaults={step:1,occasionKey:'wedding',activityKey:'padel',customOccasion:'',customActivity:'',template:'ليلة كحلية',name1:'أحمد',name2:'سارة',hostName:'',date:'2026-12-14',time:'20:00',duration:'3',country:'السعودية',city:'الرياض',location:'الرياض',mapsUrl:'',description:'',videoUrl:'',pdfUrl:'',message:'يسعدنا حضوركم ومشاركتنا هذه المناسبة',package:'الأساسية',capacity:'20',shareAmount:'35',shareLabel:'قيمة القطّة',requireShareConsent:true,allowNamedCompanions:true,waitlistEnabled:true,requestSupervisor:false,guestText:'',activityPicking:false,design:{font:'ruqaa',layout:'classic',accent:'#e3bd64',headline:'يسعدنا حضوركم',image:'',audio:'',showCountdown:true,showMap:true,showQr:true,showMaybe:true,showDecline:true,allowChildren:true,allowNotes:true,photographyPermission:false}};
+const defaults={step:1,occasionKey:'wedding',activityKey:'padel',customOccasion:'',customActivity:'',template:'ليلة كحلية',name1:'أحمد',name2:'سارة',hostName:'',date:'2026-12-14',time:'20:00',duration:'3',country:'السعودية',city:'الرياض',location:'الرياض',mapsUrl:'',description:'',videoUrl:'',pdfUrl:'',message:'يسعدنا حضوركم ومشاركتنا هذه المناسبة',package:'هلا بلس',capacity:'20',shareAmount:'35',shareLabel:'قيمة القطّة',requireShareConsent:true,allowNamedCompanions:true,waitlistEnabled:true,requestSupervisor:false,guestText:'',activityPicking:false,design:{font:'ruqaa',layout:'classic',accent:'#e3bd64',headline:'يسعدنا حضوركم',image:'',audio:'',showCountdown:true,showMap:true,showQr:true,showMaybe:true,showDecline:true,allowChildren:true,allowNotes:true,photographyPermission:false}};
 let restored={};try{restored=JSON.parse(localStorage.getItem('noortoonaDraftV55')||'{}')||{}}catch{}
 const state={...defaults,...restored,design:{...defaults.design,...(restored.design||{})}};
+// Re-select a current package when opening an older locally saved draft.
+if(!['هلا الأساسية','هلا بلس','هلا بريميوم'].includes(state.package))state.package='هلا بلس';
 const hasSavedDraft=()=>Boolean(localStorage.getItem('noortoonaDraftV55'));
 const modal=$('#builderModal'),body=$('#builderBody'),nextBtn=$('#nextBtn'),prevBtn=$('#prevBtn');
 const saveDraft=()=>{try{localStorage.setItem('noortoonaDraftV55',JSON.stringify({...state,design:{...state.design,image:'',audio:''}}))}catch{}};
@@ -80,9 +82,10 @@ function renderGuests(){const count=parseGuests().length;return `${heading('أض
 function renderReview(){const count=parseGuests().length;return `${heading('راجع دعوتك','هذه المعاينة تستخدم نفس الرسم الذي سيصل للضيف')}<div class="review-grid"><div>${invitePreview()}<button type="button" class="guest-preview-link" data-full-preview>معاينة كضيف</button></div><div class="review-summary"><h3>${N.esc(state.name1)}${state.name2?' و '+N.esc(state.name2):''}</h3>${state.hostName?`<p>${N.esc(state.hostName)}</p>`:''}<dl><div><dt>النوع</dt><dd>${N.esc(state.occasionKey==='activity'?activityLabel():occasion().label)}</dd></div><div><dt>التاريخ</dt><dd>${N.esc(state.date)}</dd></div><div><dt>الموقع</dt><dd>${N.esc(state.location)}</dd></div><div><dt>القالب</dt><dd>${N.esc(state.template)}</dd></div><div><dt>الضيوف</dt><dd>${count}</dd></div>${state.occasionKey==='activity'?`<div><dt>القطّة</dt><dd>${Number(state.shareAmount||0).toLocaleString('ar-SA')} ر.س للفرد</dd></div>`:''}</dl></div></div>`}
 function renderSend(){
   const sp=Number(window.HALA_AUTH?.supervisorPrice||299);
-  const packagePrices={البداية:29,الأساسية:99,الملكية:149};
-  const base=packagePrices[state.package]||99,total=base+(state.requestSupervisor?sp:0);
-  return `${heading('جاهزة للإرسال','راجع الباقة والخدمات الإضافية قبل إنشاء المناسبة')}<div class="send-card"><span>✦</span><h3>كل شيء جاهز</h3><p>سيتم إنشاء روابط فريدة للضيوف وحفظ إعدادات الدعوة والقطّة وقائمة الانتظار.</p><div class="package-row">${['البداية','الأساسية','الملكية'].map(p=>`<button type="button" data-package="${p}" class="${state.package===p?'selected':''}">${p} <small>${packagePrices[p]} ر.س</small></button>`).join('')}</div><label class="supervisor-addon"><input id="requestSupervisor" type="checkbox" ${state.requestSupervisor?'checked':''}><span><b>أضف مشرفًا لمناسبتك</b><small>يتابع الاستقبال والحضور والتنسيق يوم المناسبة</small></span><strong>+${sp.toLocaleString('ar-SA')} ر.س</strong></label><div class="checkout-summary"><span>الإجمالي الحالي</span><strong>${total.toLocaleString('ar-SA')} ر.س</strong><small>${state.requestSupervisor?'يشمل خدمة مشرف المناسبة':'بدون خدمة المشرف'}</small></div></div>`;
+  const packagePrices={'هلا الأساسية':149,'هلا بلس':349,'هلا بريميوم':699};
+  const packageLimits={'هلا الأساسية':100,'هلا بلس':250,'هلا بريميوم':500};
+  const base=packagePrices[state.package]||349,total=base+(state.requestSupervisor?sp:0);
+  return `${heading('جاهزة للإرسال','راجع الباقة والخدمات الإضافية قبل إنشاء المناسبة')}<div class="send-card"><span>✦</span><h3>كل شيء جاهز</h3><p>سيتم إنشاء روابط فريدة للضيوف وحفظ إعدادات الدعوة والقطّة وقائمة الانتظار.</p><div class="package-row">${['هلا الأساسية','هلا بلس','هلا بريميوم'].map(p=>`<button type="button" data-package="${p}" class="${state.package===p?'selected':''}">${p} <small>${packagePrices[p]} ر.س • حتى ${packageLimits[p]} ضيف</small></button>`).join('')}</div><label class="supervisor-addon"><input id="requestSupervisor" type="checkbox" ${state.requestSupervisor?'checked':''}><span><b>أضف مشرفًا لمناسبتك</b><small>يتابع الاستقبال والحضور والتنسيق يوم المناسبة</small></span><strong>+${sp.toLocaleString('ar-SA')} ر.س</strong></label><div class="checkout-summary"><span>الإجمالي الحالي</span><strong>${total.toLocaleString('ar-SA')} ر.س</strong><small>${state.requestSupervisor?'يشمل خدمة مشرف المناسبة':'بدون خدمة المشرف'}</small></div></div>`;
 }
 function render(){
   $('.builder-progress').style.display='none';let content='';
@@ -134,9 +137,9 @@ function renderLanding(){
   if(tg)tg.innerHTML=N.catalog.wedding.map(t=>`<button class="template-card" data-land-template="${N.esc(t.name)}">${thumb(t)}<span class="template-name">${N.esc(t.name)}</span></button>`).join('');
   $$('[data-land-template]').forEach(b=>b.onclick=()=>{state.occasionKey='wedding';cleanTypeFields();applyTypeExperience();state.template=b.dataset.landTemplate;state.step=3;modal.classList.add('open');modal.setAttribute('aria-hidden','false');document.body.classList.add('journey-open');render()});
   const prices=[
-    {name:'البداية',guests:'حتى 50 مدعو',price:'29',items:['دعوة رقمية','رابط فريد لكل ضيف','متابعة الردود']},
-    {name:'الأساسية',guests:'حتى 200 مدعو',price:'99',featured:true,items:['كل مزايا البداية','تذكير غير المستجيبين','تصدير قائمة الضيوف']},
-    {name:'الملكية',guests:'حتى 500 مدعو',price:'149',items:['كل مزايا الأساسية','قوالب بصرية كاملة','أولوية الدعم']}
+    {name:'هلا الأساسية',guests:'حتى 100 ضيف',price:'149',items:['قوالب دعوات قابلة للتخصيص','رابط الدعوة وموقع المناسبة','إدارة التأكيد والاعتذار']},
+    {name:'هلا بلس',guests:'حتى 250 ضيفًا',price:'349',featured:true,items:['كل مزايا الأساسية','إرسال واتساب عند تفعيل الخدمة','QR لكل ضيف','لوحة متابعة المدعوين']},
+    {name:'هلا بريميوم',guests:'حتى 500 ضيف',price:'699',items:['كل مزايا بلس','تخصيصات متقدمة','قوائم انتظار وتقارير حضور','أولوية الدعم حسب التوفر']}
   ];
   const pg=$('#priceGrid');
   if(pg)pg.innerHTML=prices.map(p=>`<article class="price-card ${p.featured?'featured':''}">${p.featured?'<span class="price-tag">الأكثر اختيارًا</span>':''}<h3>${p.name}</h3><p>${p.guests}</p><div class="price-number">${p.price}<small> ريال</small></div><ul>${p.items.map(i=>`<li>${i}</li>`).join('')}</ul><button type="button" class="gold-btn" data-land-package="${p.name}" style="width:100%">اختر الباقة</button></article>`).join('');
