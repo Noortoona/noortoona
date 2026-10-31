@@ -32,9 +32,9 @@ const ACTIVITIES: Array<{ key: ActivityKey; label: string }> = [
 ];
 
 const PACKAGES = [
-  { code: "start", name: "البداية", guests: "حتى 50 مدعو", price: 29 },
-  { code: "basic", name: "الأساسية", guests: "حتى 200 مدعو", price: 99 },
-  { code: "royal", name: "الملكية", guests: "حتى 500 مدعو", price: 149 },
+  { code: "hala_basic", name: "هلا الأساسية", guests: "حتى 100 مدعو", price: 149 },
+  { code: "hala_plus", name: "هلا بلس", guests: "حتى 250 مدعو", price: 349 },
+  { code: "hala_premium", name: "هلا بريميوم", guests: "حتى 500 مدعو", price: 699 },
 ] as const;
 
 export default function CreateEvent() {
@@ -54,7 +54,7 @@ export default function CreateEvent() {
   const [shareAmount, setShareAmount] = useState("");
   const [headline, setHeadline] = useState("لحظتك تبدأ بهلا");
   const [template, setTemplate] = useState("ليلة كحلية");
-  const [packageCode, setPackageCode] = useState<(typeof PACKAGES)[number]["code"]>("basic");
+  const [packageCode, setPackageCode] = useState<(typeof PACKAGES)[number]["code"]>("hala_plus");
   const [requestSupervisor, setRequestSupervisor] = useState(false);
   const [supervisorPrice, setSupervisorPrice] = useState(299);
   const [busy, setBusy] = useState(false);

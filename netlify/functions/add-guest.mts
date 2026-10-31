@@ -1,7 +1,7 @@
 import { getDatabase } from "@netlify/database";
 import type { Config } from "@netlify/functions";
 import { canAccessEvent, getAuth, recordAudit } from "./_shared/auth.mjs";
-import { packageFor } from "./_shared/payments.mjs";
+import { packageForPaidOrder } from "./_shared/payments.mjs";
 import { isSameOriginRequest, ownerTokenFrom, secureJson } from "./_shared/domain.mjs";
 
 function makeCode() {
@@ -71,7 +71,7 @@ export default async (req: Request) => {
       if (!guests.length) return secureJson({ error: "لا توجد أسماء صالحة للاستيراد" }, 400);
       if (accountAccess && auth?.user?.role === "customer") {
         const paid = await db.sql`SELECT package_code FROM payment_orders WHERE event_id=${eventId} AND user_id=${auth.user.id} AND status='paid' LIMIT 1`;
-        const pkg = packageFor(paid[0]?.package_code);
+        const pkg = packageForPaidOrder(paid[0]?.package_code);
         if (pkg) {
           const [existing] = await db.sql`SELECT COUNT(*)::int AS count FROM guests WHERE event_id=${eventId}`;
           if (Number(existing?.count || 0) + guests.length > pkg.guestLimit) {
@@ -106,7 +106,7 @@ export default async (req: Request) => {
     if (!single.name) return secureJson({ error: "بيانات الضيف ناقصة" }, 400);
     if (accountAccess && auth?.user?.role === "customer") {
       const paid = await db.sql`SELECT package_code FROM payment_orders WHERE event_id=${eventId} AND user_id=${auth.user.id} AND status='paid' LIMIT 1`;
-      const pkg = packageFor(paid[0]?.package_code);
+      const pkg = packageForPaidOrder(paid[0]?.package_code);
       if (pkg) {
         const [existing] = await db.sql`SELECT COUNT(*)::int AS count FROM guests WHERE event_id=${eventId}`;
         if (Number(existing?.count || 0) + 1 > pkg.guestLimit) {
