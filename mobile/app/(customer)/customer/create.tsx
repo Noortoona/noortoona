@@ -32,9 +32,9 @@ const ACTIVITIES: Array<{ key: ActivityKey; label: string }> = [
 ];
 
 const PACKAGES = [
-  { code: "hala_basic", name: "هلا الأساسية", guests: "حتى 100 مدعو", price: 149 },
-  { code: "hala_plus", name: "هلا بلس", guests: "حتى 250 مدعو", price: 349 },
-  { code: "hala_premium", name: "هلا بريميوم", guests: "حتى 500 مدعو", price: 699 },
+  { code: "hala_basic", name: "هلا الأساسية", guests: "حتى 100 مدعو", price: 449 },
+  { code: "hala_plus", name: "هلا بلس", guests: "حتى 250 مدعو", price: 1099 },
+  { code: "hala_premium", name: "هلا بريميوم", guests: "حتى 500 مدعو", price: 1799 },
 ] as const;
 
 export default function CreateEvent() {
@@ -56,14 +56,20 @@ export default function CreateEvent() {
   const [template, setTemplate] = useState("ليلة كحلية");
   const [packageCode, setPackageCode] = useState<(typeof PACKAGES)[number]["code"]>("hala_plus");
   const [requestSupervisor, setRequestSupervisor] = useState(false);
-  const [supervisorPrice, setSupervisorPrice] = useState(299);
+  const [supervisorPrice, setSupervisorPrice] = useState(599);
+  const [supervisorPreference, setSupervisorPreference] = useState<"male" | "female" | null>(null);
+  const [serverPrices, setServerPrices] = useState<Record<string, number>>({});
   const [busy, setBusy] = useState(false);
 
   const selected = useMemo(() => OCCASIONS.find(o => o.key === occasionKey)!, [occasionKey]);
   const activity = useMemo(() => ACTIVITIES.find(a => a.key === activityKey)!, [activityKey]);
   const currentTemplates = useMemo(() => templatesFor(occasionKey, activityKey), [occasionKey, activityKey]);
   const selectedTemplate = currentTemplates.find(t => t.name === template) || currentTemplates[0];
-  useEffect(() => { api<{ supervisorAddonSar: number }>("/api/pricing/quote").then(result => setSupervisorPrice(result.supervisorAddonSar)).catch(() => undefined); }, []);
+  useEffect(() => { api<{ supervisorAddonSar: number; packages?: Array<{code:string;amountSar:number}> }>("/api/pricing/quote").then(result => {
+    setSupervisorPrice(result.supervisorAddonSar);
+    if(Array.isArray(result.packages)) setServerPrices(Object.fromEntries(result.packages.map(p=>[p.code,p.amountSar])));
+  }).catch(() => undefined); }, []);
+  const packagePrice = (code: string) => serverPrices[code] ?? PACKAGES.find(p=>p.code===code)?.price ?? 1099;
 
   if (auth.loading || !auth.user) return null;
 
@@ -92,6 +98,7 @@ export default function CreateEvent() {
   async function create() {
     const error = validateDetails();
     if (error) return Alert.alert("أكمل البيانات", error);
+    if(requestSupervisor && !supervisorPreference) return Alert.alert("اختيار المشرف", "اختر مشرفًا أو مشرفة أولًا");
     setBusy(true);
     try {
       const occasion = selected.label;
@@ -117,6 +124,7 @@ export default function CreateEvent() {
           template: selectedTemplate.name,
           package: pkg.name,
           requestSupervisor,
+          supervisorPreference: requestSupervisor ? supervisorPreference : null,
           design: { occasionKey, activityKey, headline, accent: selectedTemplate.accent },
         }),
       }, auth.token);
@@ -236,14 +244,30 @@ export default function CreateEvent() {
             {PACKAGES.map(p => (
               <Pressable key={p.code} onPress={() => setPackageCode(p.code)} style={[styles.package, packageCode === p.code && styles.packageActive]}>
                 <View style={styles.packageCopy}><Text style={[styles.packageName, packageCode === p.code && styles.packageNameActive]}>{p.name}</Text><Text style={[styles.packageGuests, packageCode === p.code && styles.packageGuestsActive]}>{p.guests}</Text></View>
-                <Text style={[styles.price, packageCode === p.code && styles.priceActive]}>{p.price} ر.س</Text>
+                <Text style={[styles.price, packageCode === p.code && styles.priceActive]}>{packagePrice(p.code)} ر.س</Text>
               </Pressable>
             ))}
             <Pressable onPress={() => setRequestSupervisor(value => !value)} style={[styles.package, requestSupervisor && styles.packageActive]} accessibilityRole="checkbox" accessibilityState={{ checked: requestSupervisor }}>
-              <Text style={[styles.packageName, requestSupervisor && styles.packageNameActive]}>{requestSupervisor ? "☑" : "□"} إضافة مشرف للمناسبة</Text>
+              <Text style={[styles.packageName, requestSupervisor && styles.packageNameActive]}>{requestSupervisor ? "☑" : "□"} إضافة مشرف أو مشرفة للمناسبة</Text>
               <Text style={[styles.price, requestSupervisor && styles.priceActive]}>+{supervisorPrice} ر.س</Text>
             </Pressable>
-            <Text style={styles.trial}>الإجمالي: {PACKAGES.find(p => p.code === packageCode)!.price + (requestSupervisor ? supervisorPrice : 0)} ر.س</Text>
+            {requestSupervisor ? (
+               <View style={{ marginVertical: 12, gap: 8 }}>
+                 <Text style={styles.trial}>اختر نوع خدمة الاستقبال:</Text>
+                 <View style={{ flexDirection: "row-reverse", gap: 8 }}>
+                   {([{ key: "male", label: "مشرف" }, { key: "female", label: "مشرفة" }] as const).map(option => (
+                     <Pressable key={option.key} accessibilityRole="radio"
+                       accessibilityState={{ checked: supervisorPreference === option.key }}
+                       onPress={() => setSupervisorPreference(option.key)}
+                       style={[styles.package, { flex: 1 }, supervisorPreference === option.key && styles.packageActive]}>
+                       <Text style={[styles.packageName, supervisorPreference === option.key && styles.packageNameActive]}>{option.label}</Text>
+                     </Pressable>
+                   ))}
+                 </View>
+                 <Text style={styles.trial}>حسب توفر الكادر بمدينة المناسبة وموعدها.</Text>
+               </View>
+             ) : null}
+             <Text style={styles.trial}>الإجمالي: {packagePrice(packageCode) + (requestSupervisor ? supervisorPrice : 0)} ر.س</Text>
             <Text style={styles.trial}>قبل الدفع لديك إرسال تجريبي مجاني واحد للتأكد من شكل الدعوة ووصولها.</Text>
             <PrimaryButton label="إنشاء المناسبة والمتابعة للدفع" onPress={create} loading={busy} />
             <PrimaryButton label="رجوع للقالب" onPress={() => setStep(2)} secondary />
