@@ -1,8 +1,18 @@
+// New purchase codes; retain legacy plan limits separately for historic paid orders.
 export const PAYMENT_PACKAGES = {
-  start: { code: "start", name: "البداية", guestLimit: 50, amount: 2900, currency: "SAR" },
-  basic: { code: "basic", name: "الأساسية", guestLimit: 200, amount: 9900, currency: "SAR" },
-  royal: { code: "royal", name: "الملكية", guestLimit: 500, amount: 14900, currency: "SAR" },
+  hala_basic: { code: "hala_basic", name: "هلا الأساسية", guestLimit: 100, amount: 14900, currency: "SAR" },
+  hala_plus: { code: "hala_plus", name: "هلا بلس", guestLimit: 250, amount: 34900, currency: "SAR" },
+  hala_premium: { code: "hala_premium", name: "هلا بريميوم", guestLimit: 500, amount: 69900, currency: "SAR" },
 };
+const LEGACY_PAYMENT_PACKAGES = {
+  start: { code: "start", name: "البداية (سابقة)", guestLimit: 50, amount: 2900, currency: "SAR" },
+  basic: { code: "basic", name: "الأساسية (سابقة)", guestLimit: 200, amount: 9900, currency: "SAR" },
+  royal: { code: "royal", name: "الملكية (سابقة)", guestLimit: 500, amount: 14900, currency: "SAR" },
+};
+export function packageForPaidOrder(code) {
+  const raw = String(code || "");
+  return PAYMENT_PACKAGES[raw] || LEGACY_PAYMENT_PACKAGES[raw] || null;
+}
 
 export function packageFor(code) {
   const raw = String(code || "");
