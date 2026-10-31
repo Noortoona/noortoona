@@ -23,3 +23,7 @@ jobs:
         run: npm run test:e2e
       - name: Type-check Netlify functions
         run: npx tsc --noEmit --skipLibCheck --allowJs false --module nodenext --moduleResolution nodenext --target ES2022 --lib ES2022,DOM netlify/functions/*.mts
+      - name: Install mobile dependencies for PR verification
+        run: npm ci --prefix mobile
+      - name: Type-check Expo mobile on same pull request
+        run: npm run typecheck --prefix mobile
