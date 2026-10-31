@@ -134,6 +134,19 @@ function munasabatiPanel(event,guests){
   <div class="muna-services"><h3>خدمات مناسبة لك</h3><div>${services.map(s=>`<span>${esc(s)}</span>`).join('')}</div><p>هذه الاقتراحات تتغير حسب نوع المناسبة حتى لا تظهر خدمات غير منطقية للنشاط أو العزاء أو غيرها.</p></div></div>
  </section>`;
 }
+function insightsPanel(event, guests) {
+ const reporter=window.HALA_INSIGHTS;
+ if(!reporter?.summarize)return '';
+ const {items}=reporter.summarize(event,guests);
+ const cards=items.map(item=>{
+  const inner=`<span class="insight-level">${item.level==='urgent'?'يحتاج مراجعة':item.level==='attention'?'إجراء مقترح':'متابعة'}</span><strong>${esc(item.title)}</strong><small>${esc(item.detail)}</small>`;
+  const classes=`insight-card insight-${esc(item.level)}`;
+  return item.filterKey
+   ? `<button type="button" class="${classes} insight-action" data-insight-filter="${esc(item.filterKey)}" data-insight-value="${esc(item.filterValue)}" aria-label="عرض الضيوف: ${esc(item.title)}">${inner}<span class="insight-link">عرض الضيوف</span></button>`
+   : `<div class="${classes}">${inner}</div>`;
+ }).join('');
+ return `<section class="dash-panel insight-panel" aria-labelledby="halaInsightsHeading"><div class="panel-head"><div><h2 id="halaInsightsHeading">مساعد هلا للمناسبة</h2><p>تنبيهات من البيانات المتاحة فقط. لا يتم إجراء أي تغيير أو إرسال تلقائي.</p></div></div><div class="insights-grid">${cards}</div></section>`;
+}
 function render({event,guests}){
  const isActivity=event.occasion==='تجمع ونشاط';
  const viewed=guests.filter(g=>g.viewed_at).length;
@@ -166,6 +179,7 @@ function render({event,guests}){
   </section>`:'';
  root.innerHTML=`<div class="dash-title-row"><div><span class="eyebrow dark">${isActivity?'لوحة منظم النشاط':'لوحة صاحب المناسبة'}</span><h1>${esc(event.title)}</h1><p>${esc(event.location||'')}</p></div><div class="dash-title-actions"><button id="scanBtn" class="gold-btn scan-open-btn">▣ مسح QR</button><button id="refreshBtn" class="outline-btn dark-outline">↻ تحديث</button><button id="exportBtn" class="outline-btn dark-outline">↓ تصدير CSV</button></div></div>
  <div class="dash-stat-grid dash-stat-grid-8"><div><small>إجمالي الضيوف</small><strong>${guests.length}</strong></div><div><small>شاهدوا</small><strong>${viewed}</strong></div><div class="checked-stat"><small>وصلوا</small><strong>${checkedIn}</strong></div><div><small>أكدوا</small><strong>${accepted}</strong></div><div><small>ربما</small><strong>${maybe}</strong></div><div><small>بانتظار الرد</small><strong>${pending}</strong></div><div><small>اعتذروا</small><strong>${declined}</strong></div><div class="accent-stat"><small>${isActivity?'المشاركون الفعليون':'الحضور المتوقع'}</small><strong>${expected}</strong><em>مع المرافقين</em></div></div>
+ ${insightsPanel(event,guests)}
  ${munasabatiPanel(event,guests)}
  ${activityPanel}
  <section class="dash-panel"><div class="panel-head"><div><h2>إدارة الضيوف</h2><p>أضف يدويًا أو استورد قائمة كاملة من Excel / CSV.</p></div><div class="panel-actions"><button id="importBtn" class="outline-btn dark-outline small-gold">⇧ استيراد Excel / CSV</button><button id="remindBtn" class="gold-btn small-gold">تذكير غير المستجيبين</button></div></div>
@@ -189,6 +203,14 @@ function bind(event,guests){
  document.getElementById('statusFilter').onchange=e=>{filters.status=e.target.value;render(dashboardData)};
  document.getElementById('viewFilter').onchange=e=>{filters.view=e.target.value;render(dashboardData)};
  document.getElementById('arrivalFilter').onchange=e=>{filters.arrival=e.target.value;render(dashboardData)};
+ document.querySelectorAll('[data-insight-filter]').forEach(button=>button.onclick=()=>{
+  const key=button.dataset.insightFilter;
+  if(!['status','view'].includes(key))return;
+  filters={q:'',status:'all',view:'all',arrival:'all'};
+  filters[key]=button.dataset.insightValue;
+  render(dashboardData);
+  document.querySelector('.guest-tools')?.scrollIntoView({behavior:'smooth',block:'start'});
+ });
  document.querySelectorAll('.copy-link').forEach(b=>b.onclick=()=>copyInvite(b.dataset.code)); document.querySelectorAll('.wa-link').forEach(b=>b.onclick=()=>sendWhatsApp(b.dataset.phone,b.dataset.name,b.dataset.code,event,false,b.dataset.id));
  document.querySelectorAll('.delete-guest').forEach(b=>b.onclick=()=>deleteGuest(b.dataset.id,b.dataset.name));
  document.querySelectorAll('.payment-pill').forEach(b=>b.onclick=()=>setPaymentStatus(b.dataset.paymentId,b.dataset.paymentStatus)); document.querySelectorAll('[data-hala-task]').forEach(x=>x.onchange=()=>{setTask(x.dataset.halaTask,x.checked);render(dashboardData)});
