@@ -10,7 +10,7 @@ test("Hala packages have server-owned prices and guest limits", () => {
   ]);
   assert.equal(packageFor("hala_plus")?.currency, "SAR");
   assert.equal(packageFor("basic"), null, "legacy package codes cannot create newly priced orders");
-  assert.equal(packageFor("هلا بريميوم")?.amountSar, undefined);
+  assert.equal(packageFor("هلا بريميوم")?.amount, 69900);
   assert.equal(packageFor("unknown"), null);
 });
 
