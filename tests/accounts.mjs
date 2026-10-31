@@ -68,10 +68,10 @@ test('payment order uses server price plus 299 SAR supervisor addon and owner au
     packageFor,publicPackages,supervisorAddonHalalas:async()=>addon,normalizeReferralCode,
     activePartner:async()=>null,referralAmounts
   });
-  let res=await order(request('/api/payments/order',{eventId:'event',packageCode:'basic',amount:1}));
-  assert.equal(res.status,201);assert.equal((await res.json()).order.amount,39800);
+  let res=await order(request('/api/payments/order',{eventId:'event',packageCode:'hala_plus',amount:1}));
+  assert.equal(res.status,201);assert.equal((await res.json()).order.amount,64800);
   assert.equal(inserted[5],29900);
-  owner=false;res=await order(request('/api/payments/order',{eventId:'event',packageCode:'basic'}));assert.equal(res.status,403);
+  owner=false;res=await order(request('/api/payments/order',{eventId:'event',packageCode:'hala_plus'}));assert.equal(res.status,403);
 });
 
 test('admin overview guards metrics and reports payment revenue once',async()=>{
