@@ -12,7 +12,7 @@ type Guest = {
   whatsapp_status?: string; viewed_at?: string; companion_count?: number; children_count?: number;
 };
 type Dashboard = {
-  event: { id: string; title: string; occasion: string; event_date?: string; event_time?: string; location?: string; maps_url?: string; activity_type?: string };
+  event: { id: string; title: string; occasion: string; event_date?: string; event_time?: string; location?: string; maps_url?: string; activity_type?: string; package_name?: string };
   guests: Guest[];
 };
 type Billing = {
@@ -28,7 +28,10 @@ function waLabel(value?: string) {
   return ({ queued: "قيد الإرسال", sent: "أُرسلت", delivered: "وصلت", read: "قُرئت", failed: "فشل الإرسال" } as Record<string,string>)[value || ""] || "لم تُرسل";
 }
 function packageName(code?: string) {
-  return code === "start" ? "البداية" : code === "basic" ? "الأساسية" : code === "royal" ? "الملكية" : "هلا";
+  return ({ hala_basic: "هلا الأساسية", hala_plus: "هلا بلس", hala_premium: "هلا بريميوم", start: "البداية (سابقة)", basic: "الأساسية (سابقة)", royal: "الملكية (سابقة)" } as Record<string,string>)[code || ""] || "هلا";
+}
+function packageCodeForName(name?: string) {
+  return ({ "هلا الأساسية": "hala_basic", "هلا بلس": "hala_plus", "هلا بريميوم": "hala_premium" } as Record<string,string>)[name || ""] || "hala_plus";
 }
 
 export default function CustomerEvent() {
@@ -72,6 +75,7 @@ export default function CustomerEvent() {
 
   if (auth.loading || !auth.user) return null;
   const paid = billing?.payment?.status === "paid";
+  const selectedEventPackage = packageCodeForName(data?.event.package_name);
 
   async function openMap(url: string | null) {
     if (!url) return;
@@ -103,7 +107,7 @@ export default function CustomerEvent() {
       if (e instanceof ApiError && e.status === 402) {
         return Alert.alert("فعّل الباقة", "تم استخدام الدعوة التجريبية المجانية. أكمل الدفع لإرسال بقية الدعوات.", [
           { text: "لاحقًا", style: "cancel" },
-          { text: "عرض الباقات", onPress: () => router.push({ pathname: "/customer/payment" as never, params: { eventId: String(id) } }) },
+          { text: "عرض الباقات", onPress: () => router.push({ pathname: "/customer/payment" as never, params: { eventId: String(id), package: selectedEventPackage } }) },
         ]);
       }
       Alert.alert("تعذر الإرسال", e?.message || "راجع إعدادات واتساب وحالة الرقم.");
@@ -143,7 +147,7 @@ export default function CustomerEvent() {
             <>
               <Text style={styles.billingTitle}>{billing?.freeTestUsed ? "التجربة المجانية مستخدمة" : "لديك دعوة تجريبية مجانية"}</Text>
               <Text style={styles.billingHelp}>{billing?.freeTestUsed ? "أكمل الدفع لإرسال بقية الدعوات." : "أرسل دعوة واحدة للتأكد من الشكل والوصول، ثم فعّل الباقة."}</Text>
-              <PrimaryButton label="عرض الباقات" onPress={() => router.push({ pathname: "/customer/payment" as never, params: { eventId: String(id) } })} />
+              <PrimaryButton label="عرض الباقات" onPress={() => router.push({ pathname: "/customer/payment" as never, params: { eventId: String(id), package: selectedEventPackage } })} />
             </>
           )}
         </Card>

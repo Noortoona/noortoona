@@ -45,13 +45,13 @@ test('checkout ignores client prices, validates a code, and snapshots the discou
     packageFor,publicPackages,supervisorAddonHalalas:async()=>29900,normalizeReferralCode,referralAmounts,
     activePartner:async(_db,code)=>code==='STAR10'?{code,user_id:'star',kind:'influencer',discount_bps:1000,commission_bps:1000}:null
   });
-  const invalid=await order(request({eventId:'event',packageCode:'basic',referralCode:'invalid'}));
+  const invalid=await order(request({eventId:'event',packageCode:'hala_plus',referralCode:'invalid'}));
   assert.equal(invalid.status,400);
-  const res=await order(request({eventId:'event',packageCode:'basic',referralCode:'star10',amount:1,commissionAmount:1}));
+  const res=await order(request({eventId:'event',packageCode:'hala_plus',referralCode:'star10',amount:1,commissionAmount:1}));
   assert.equal(res.status,201);
-  assert.equal((await res.json()).order.amount,38810);
+  assert.equal((await res.json()).order.amount,61310);
   assert.equal(inserts[0][7],'STAR10');assert.equal(inserts[0][8],'star');
-  assert.equal(inserts[0][9],990);assert.equal(inserts[0][10],891);
+  assert.equal(inserts[0][9],3490);assert.equal(inserts[0][10],3141);
 });
 
 test('first paid acquisition records one commission, retries and later orders do not duplicate it',async()=>{

@@ -1,7 +1,7 @@
 import { getDatabase } from "@netlify/database";
 import type { Config } from "@netlify/functions";
 import { canManageEvent, getAuth, recordAudit } from "./_shared/auth.mjs";
-import { packageFor } from "./_shared/payments.mjs";
+import { packageForPaidOrder } from "./_shared/payments.mjs";
 import { isSameOriginRequest, ownerTokenFrom, secureJson } from "./_shared/domain.mjs";
 
 function makeCode() {
@@ -70,7 +70,7 @@ export default async (req: Request) => {
       // Check and consume package capacity under the same event lock as message sending.
       await client.query("SELECT id FROM events WHERE id=$1 FOR UPDATE", [eventId]);
       const paid = await client.query("SELECT package_code FROM payment_orders WHERE event_id=$1 AND status='paid' LIMIT 1", [eventId]);
-      const pkg = packageFor(paid.rows[0]?.package_code);
+      const pkg = packageForPaidOrder(paid.rows[0]?.package_code);
       if (pkg) {
         const existing = await client.query("SELECT COUNT(*)::int AS count FROM guests WHERE event_id=$1", [eventId]);
         if (Number(existing.rows[0]?.count || 0) + guests.length > pkg.guestLimit) {
