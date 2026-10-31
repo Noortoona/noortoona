@@ -19,8 +19,8 @@ const request = body => new Request('https://preview.example/api/payments/order'
 test('venue and influencer rates apply only to base package, never supervisor', () => {
   assert.equal(normalizeReferralCode('  hala_10  '),'HALA_10');
   assert.equal(normalizeReferralCode('<bad>'),'');
-  assert.deepEqual(referralAmounts(9900,29900,{kind:'venue',commission_bps:1000,discount_bps:0}),{discountAmount:0,commissionAmount:990,total:39800});
-  assert.deepEqual(referralAmounts(9900,29900,{kind:'influencer',commission_bps:1000,discount_bps:1000}),{discountAmount:990,commissionAmount:891,total:38810});
+  assert.deepEqual(referralAmounts(109900,59900,{kind:'venue',commission_bps:1000,discount_bps:0}),{discountAmount:0,commissionAmount:10990,total:169800});
+  assert.deepEqual(referralAmounts(109900,59900,{kind:'influencer',commission_bps:1000,discount_bps:1000}),{discountAmount:10990,commissionAmount:9891,total:158810});
   assert.throws(()=>referralAmounts(9900,0,{kind:'influencer',discount_bps:10001,commission_bps:1000}),/INVALID_PARTNER_RATE/);
 });
 
@@ -42,16 +42,16 @@ test('checkout ignores client prices, validates a code, and snapshots the discou
   const order=await handler('payment-order',{
     getDatabase:()=>db,canAccessEvent:async()=>true,requireRole:async()=>({ok:true,user:{id:'buyer',role:'customer'}}),
     isSameOriginRequest:()=>true,secureJson,moyasarFeatures:()=>({configured:true,publishableKey:'pk_test',applePay:{enabled:false},stcPay:{enabled:false}}),
-    packageFor,publicPackages,supervisorAddonHalalas:async()=>29900,normalizeReferralCode,referralAmounts,
+    packageFor,publicPackages,supervisorAddonHalalas:async()=>59900,normalizeReferralCode,referralAmounts,
     activePartner:async(_db,code)=>code==='STAR10'?{code,user_id:'star',kind:'influencer',discount_bps:1000,commission_bps:1000}:null
   });
   const invalid=await order(request({eventId:'event',packageCode:'hala_plus',referralCode:'invalid'}));
   assert.equal(invalid.status,400);
   const res=await order(request({eventId:'event',packageCode:'hala_plus',referralCode:'star10',amount:1,commissionAmount:1}));
   assert.equal(res.status,201);
-  assert.equal((await res.json()).order.amount,61310);
+  assert.equal((await res.json()).order.amount,158810);
   assert.equal(inserts[0][7],'STAR10');assert.equal(inserts[0][8],'star');
-  assert.equal(inserts[0][9],3490);assert.equal(inserts[0][10],3141);
+  assert.equal(inserts[0][9],10990);assert.equal(inserts[0][10],9891);
 });
 
 test('first paid acquisition records one commission, retries and later orders do not duplicate it',async()=>{

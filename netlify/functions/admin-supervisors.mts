@@ -7,7 +7,7 @@ export default async(req:Request)=>{
  const db=getDatabase();
  if(req.method==="GET"){
    const requests=await db.sql`
-    SELECT sr.*,e.title,e.occasion,e.event_date,e.city,cu.name customer_name,cu.phone customer_phone,
+    SELECT sr.*,e.title,e.occasion,e.event_date,e.city,e.design_json->>'supervisorPreference' AS supervisor_preference,cu.name customer_name,cu.phone customer_phone,
            su.name supervisor_name,su.phone supervisor_phone
     FROM supervisor_requests sr
     JOIN events e ON e.id=sr.event_id

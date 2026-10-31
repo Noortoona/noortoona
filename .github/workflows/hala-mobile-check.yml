@@ -10,6 +10,15 @@ on:
       - "netlify/database/**"
       - "tests/**"
       - ".github/workflows/hala-mobile-check.yml"
+  pull_request:
+    branches:
+      - main
+    paths:
+      - "mobile/**"
+      - "netlify/functions/**"
+      - "netlify/database/**"
+      - "tests/**"
+      - ".github/workflows/hala-mobile-check.yml"
   workflow_dispatch:
 
 jobs:

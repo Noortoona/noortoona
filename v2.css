@@ -213,3 +213,31 @@ body.journey-open{overflow:hidden}
 .muna-grid{display:grid;grid-template-columns:1fr .85fr;gap:18px}.muna-tasks,.muna-services{background:#fff;border:1px solid #eee2d2;border-radius:20px;padding:18px}.muna-grid h3{margin:0 0 12px;color:#4b0a20}.muna-task{display:flex;align-items:center;gap:10px;padding:11px 0;border-bottom:1px solid #f0e8dd;cursor:pointer}.muna-task:last-child{border:0}.muna-task input{accent-color:#6e1730}.muna-task span{display:flex;align-items:center;gap:8px;color:#594f4b}.muna-task span b{width:22px;height:22px;display:grid;place-items:center;border-radius:50%;background:#f6ecdc;color:#8d6727}.muna-task.done span{color:#877c75;text-decoration:line-through}.muna-task.done span b{background:#e7f4ea;color:#39734e;text-decoration:none}
 .muna-services>div{display:flex;gap:8px;flex-wrap:wrap}.muna-services>div span{padding:8px 10px;border-radius:999px;background:#f7eddf;color:#5b1730;border:1px solid #e6d1b5;font-size:12px}.muna-services p{font-size:12px;line-height:1.7;color:#867970;margin:14px 0 0}
 @media(max-width:760px){.muna-head{align-items:flex-start}.muna-score{min-width:76px;height:76px}.muna-head h2{font-size:28px}.muna-grid{grid-template-columns:1fr}.muna-panel{padding:18px}}
+
+/* Premium pricing, genuine promotion references and supervisor preference */
+.price-previous { margin-top: 12px; font-size: 13px; color: #d6c7c7; }
+.price-previous del { text-decoration-thickness: 1.5px; margin-inline-start: 7px; }
+.verified-promo { display: block; font-size: 11px; letter-spacing: .01em; color: #d8b770; margin-top: 6px; }
+.supervisor-gender-choice { border: 1px solid rgba(169,129,60,.5); border-radius: 16px;
+  padding: 14px; margin: 10px 0 18px; display: flex; align-items: center; flex-wrap: wrap; gap: 14px;
+  background: rgba(255,249,238,.8); }
+.supervisor-gender-choice legend { font-size: 15px; font-weight: 800; color: #4b0a20; padding: 0 8px; }
+.supervisor-gender-choice label { display: flex; align-items: center; gap: 7px; cursor: pointer; font-weight: 700; }
+.supervisor-gender-choice input[type=radio] { accent-color: #6e1934; width: 17px; height: 17px; }
+.supervisor-gender-choice small { width: 100%; color: #756d70; font-size: 12px; }
+
+/* HALA read-only event insights */
+.insight-panel .panel-head { margin-bottom: 14px; }
+.insights-grid { display: grid; grid-template-columns: repeat(auto-fit,minmax(220px,1fr)); gap: 12px; }
+.insight-card { display: flex; flex-direction: column; align-items: flex-start; gap: 8px;
+  min-height: 142px; padding: 15px; border: 1px solid #e5dae0; border-radius: 14px;
+  background: #fffdfc; color: #351528; font: inherit; text-align: right; line-height: 1.55; }
+button.insight-card { width: 100%; cursor: pointer; }
+button.insight-card:hover, button.insight-card:focus-visible { border-color: #a97c52; box-shadow: 0 0 0 2px rgba(169,124,82,.13); }
+.insight-card .insight-level { font-size: 11px; font-weight: 700; color: #806c74; }
+.insight-card strong { font-size: 15px; }
+.insight-card small { color: #615861; font-size: 12px; }
+.insight-card.insight-urgent { border-inline-start: 4px solid #ad3b49; }
+.insight-card.insight-attention { border-inline-start: 4px solid #bb8d47; }
+.insight-link { margin-top: auto; color: #7b173c; font-size: 12px; font-weight: 800; }
+@media(max-width:520px) { .insights-grid { grid-template-columns: 1fr; } .insight-card { min-height: 0; } }
