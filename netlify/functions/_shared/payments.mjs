@@ -23,6 +23,7 @@ export function packageFor(code) {
 // until the actual prior sales and a valid promotional license have been verified.
 const REFERENCE_PRICES = { hala_basic: 89900, hala_plus: 219900, hala_premium: 359900 };
 function verifiedPromotion() {
+  if (typeof Netlify === "undefined" || !Netlify.env) return false;
   return Boolean(
     Netlify.env.get("HALA_PROMO_LICENSE_ID") &&
     String(Netlify.env.get("HALA_PROMO_PRIOR_PRICES_VERIFIED")).toLowerCase() === "true"
