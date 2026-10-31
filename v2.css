@@ -216,3 +216,19 @@ body.journey-open{overflow:hidden}
 
 /* Respect the font selected by the invitation owner. */
 .invite-copy h1,.invite-headline{font-family:var(--invite-font,'Aref Ruqaa')}
+
+/* HALA read-only event insights */
+.insight-panel .panel-head { margin-bottom: 14px; }
+.insights-grid { display: grid; grid-template-columns: repeat(auto-fit,minmax(220px,1fr)); gap: 12px; }
+.insight-card { display: flex; flex-direction: column; align-items: flex-start; gap: 8px;
+  min-height: 142px; padding: 15px; border: 1px solid #e5dae0; border-radius: 14px;
+  background: #fffdfc; color: #351528; font: inherit; text-align: right; line-height: 1.55; }
+button.insight-card { width: 100%; cursor: pointer; }
+button.insight-card:hover, button.insight-card:focus-visible { border-color: #a97c52; box-shadow: 0 0 0 2px rgba(169,124,82,.13); }
+.insight-card .insight-level { font-size: 11px; font-weight: 700; color: #806c74; }
+.insight-card strong { font-size: 15px; }
+.insight-card small { color: #615861; font-size: 12px; }
+.insight-card.insight-urgent { border-inline-start: 4px solid #ad3b49; }
+.insight-card.insight-attention { border-inline-start: 4px solid #bb8d47; }
+.insight-link { margin-top: auto; color: #7b173c; font-size: 12px; font-weight: 800; }
+@media(max-width:520px) { .insights-grid { grid-template-columns: 1fr; } .insight-card { min-height: 0; } }
