@@ -55,7 +55,7 @@ export default function PaymentScreen() {
     try {
       const data = await api<Billing>(`/api/payments/order?eventId=${encodeURIComponent(eventId)}`, {}, auth.token);
       setBilling(data);
-      if (data.payment?.package_code && data.payment.status !== "paid") setSelected(data.payment.package_code);
+      if (data.payment?.package_code && data.payment.status !== "paid" && data.packages.some(pkg => pkg.code === data.payment?.package_code)) setSelected(data.payment.package_code);
       if (data.payment?.status === "paid") setCheckout(null);
       if (data.referralCode && data.payment?.status !== "paid" && !referralCode) {
         const code = data.referralCode;
