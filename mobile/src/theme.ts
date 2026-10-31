@@ -1,8 +1,8 @@
 export const theme = {
   colors: {
-    burgundy: "#111726",
-    burgundyDeep: "#090E18",
-    burgundySoft: "#1F2C44",
+    burgundy: "#651D32",
+    burgundyDeep: "#2E0D1B",
+    burgundySoft: "#8A354D",
     gold: "#C8A45D",
     goldSoft: "#E8D8B5",
     cream: "#FBF6EE",

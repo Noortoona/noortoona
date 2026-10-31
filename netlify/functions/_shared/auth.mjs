@@ -76,7 +76,16 @@ export async function linkEventMember(eventId,userId,memberRole="owner"){
 }
 export async function canAccessEvent(user,eventId){
   if(!user)return false;if(user.role==="admin")return true;
-  const db=getDatabase();const rows=await db.sql`SELECT 1 FROM event_members WHERE event_id=${eventId} AND user_id=${user.id} LIMIT 1`;
+  const memberRole=user.role==="customer"?"owner":user.role==="supervisor"?"supervisor":null;
+  if(!memberRole)return false;
+  const db=getDatabase();const rows=await db.sql`SELECT 1 FROM event_members WHERE event_id=${eventId} AND user_id=${user.id} AND member_role=${memberRole} LIMIT 1`;
+  return Boolean(rows[0]);
+}
+// Supervisors may inspect attendance and check in guests, never change the guest list or send messages.
+export async function canManageEvent(user,eventId){
+  if(!user)return false;if(user.role==="admin")return true;
+  if(user.role!=="customer")return false;
+  const rows=await getDatabase().sql`SELECT 1 FROM event_members WHERE event_id=${eventId} AND user_id=${user.id} AND member_role='owner' LIMIT 1`;
   return Boolean(rows[0]);
 }
 export async function recordAudit(actorUserId,action,entityType="",entityId="",metadata={}){

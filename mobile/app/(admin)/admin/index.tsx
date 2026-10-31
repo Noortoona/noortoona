@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useState } from "react";
-import { Pressable, RefreshControl, ScrollView, StyleSheet, Text, View } from "react-native";
+import { Alert, Pressable, RefreshControl, ScrollView, StyleSheet, Text, View } from "react-native";
 import { useRouter } from "expo-router";
 import { api } from "@/api";
 import { useRequireRole } from "@/roleGate";
@@ -13,7 +13,7 @@ export default function AdminHome() {
   const router = useRouter();
   const [data, setData] = useState<Home | null>(null);
   const [refreshing, setRefreshing] = useState(false);
-  const load = useCallback(async () => { if (!auth.token) return; try { setData(await api<Home>("/api/mobile/home", {}, auth.token)); } finally { setRefreshing(false); } }, [auth.token]);
+  const load = useCallback(async () => { if (!auth.token) return; try { setData(await api<Home>("/api/mobile/home", {}, auth.token)); } catch (error) { Alert.alert("تعذر تحميل البيانات", error instanceof Error ? error.message : "حاول مرة أخرى"); } finally { setRefreshing(false); } }, [auth.token]);
   useEffect(() => { load(); }, [load]);
   if (auth.loading || !auth.user) return null;
 
@@ -25,7 +25,7 @@ export default function AdminHome() {
           <Stat label="المناسبات" value={data?.stats.events ?? "—"} accent />
           <Stat label="العملاء" value={data?.stats.customers ?? "—"} />
           <Stat label="المشرفون" value={data?.stats.supervisors ?? "—"} />
-          <Stat label="حالة المنصة" value="نشطة" />
+          <Stat label="حالة البيانات" value={data ? "تم التحميل" : "بانتظار"} />
         </View>
         <Card>
           <Pressable style={styles.management} onPress={() => router.push("/admin/users" as never)}>

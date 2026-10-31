@@ -9,12 +9,18 @@
     "android": "expo run:android",
     "web": "expo start --web",
     "typecheck": "tsc --noEmit",
-    "ios:credentials": "npx eas-cli@24.10.0 credentials --platform ios"
+    "ios:credentials": "npx eas-cli@24.10.0 credentials --platform ios",
+    "test": "node --experimental-strip-types --test tests/flows.mjs",
+    "sync:preview": "node scripts/sync-invitation-preview.mjs",
+    "pretest": "node scripts/sync-invitation-preview.mjs --check"
   },
   "dependencies": {
     "expo": "~57.0.10",
     "expo-camera": "~57.0.6",
     "expo-constants": "~57.0.9",
+    "expo-document-picker": "~57.0.3",
+    "expo-file-system": "~57.0.7",
+    "expo-image-picker": "~57.0.20",
     "expo-linking": "~57.0.5",
     "expo-router": "~57.0.10",
     "expo-secure-store": "~57.0.4",

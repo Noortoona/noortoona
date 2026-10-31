@@ -17,8 +17,8 @@ async function snapshot(db: any, userId: string, eventId: string) {
   const [guestCount] = await db.sql`SELECT COUNT(*)::int AS count FROM guests WHERE event_id=${eventId}`;
   const [sentCount] = await db.sql`
     SELECT COUNT(*)::int AS count
-    FROM whatsapp_messages
-    WHERE event_id=${eventId} AND status IN ('queued','sent','delivered','read')
+    FROM customer_free_trials
+    WHERE user_id=${userId}
   `;
   const features = moyasarFeatures();
   const request = await db.sql`SELECT status FROM supervisor_requests WHERE event_id=${eventId} AND user_id=${userId} LIMIT 1`;
@@ -29,12 +29,13 @@ async function snapshot(db: any, userId: string, eventId: string) {
     guestCount: guestCount?.count || 0,
     freeTestUsed: Number(sentCount?.count || 0) > 0,
     paymentConfigured: features.configured,
+    paymentMode: features.mode,
     referralCode: (await db.sql`SELECT referral_code FROM events WHERE id=${eventId} LIMIT 1`)[0]?.referral_code || null,
     supervisorAddonAmount,
     features: {
       applePay: { enabled: features.applePay.enabled, merchantId: features.applePay.merchantId || null },
       stcPay: { enabled: features.stcPay.enabled },
-      card: { enabled: true },
+      card: { enabled: features.configured },
     },
   };
 }
@@ -63,7 +64,7 @@ export default async (req: Request) => {
     if (!member[0]) return secureJson({ error: "الدفع متاح لصاحب المناسبة فقط" }, 403);
 
     const features = moyasarFeatures();
-    if (!features.configured) return secureJson({ error: "إعدادات الدفع غير مكتملة بعد", code: "PAYMENT_NOT_CONFIGURED" }, 503);
+    if (!features.configured) return secureJson({ error: "الدفع معطّل في النسخة التجريبية أو لم تكتمل إعداداته", code: "PAYMENT_NOT_CONFIGURED" }, 503);
 
     const [guestCount] = await db.sql`SELECT COUNT(*)::int AS count FROM guests WHERE event_id=${eventId}`;
     if (Number(guestCount?.count || 0) > selected.guestLimit) {

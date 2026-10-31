@@ -5,7 +5,14 @@
   },
   "build": {
     "preview": {
-      "distribution": "internal"
+      "distribution": "internal",
+      "environment": "preview",
+      "android": {
+        "buildType": "apk"
+      },
+      "env": {
+        "EXPO_PUBLIC_PAYMENTS_ENABLED": "false"
+      }
     },
     "testflight": {
       "distribution": "store",
@@ -20,6 +27,12 @@
     "production": {
       "distribution": "store",
       "autoIncrement": true
+    },
+    "simulator": {
+      "extends": "preview",
+      "ios": {
+        "simulator": true
+      }
     }
   },
   "submit": {

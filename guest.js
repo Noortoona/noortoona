@@ -71,11 +71,11 @@ async function loadInvite(){
     if(!res.ok) throw new Error(data.error||'تعذر فتح الدعوة');
     const i=data.invite; currentInvite=i; const isActivity=i.occasion==='تجمع ونشاط'; const shareAmount=Number(i.share_amount||0); currentShareAmount=shareAmount;
     const design=normalizeDesign(i.design_json);
-    const mapsUrl=safeExternalUrl(i.maps_url), videoUrl=safeExternalUrl(i.video_url), pdfUrl=safeExternalUrl(i.pdf_url);
+    const maps=window.NOORTOONA.mapsLinks(i.maps_url,i.location),mapsUrl=maps.map, videoUrl=safeExternalUrl(i.video_url), pdfUrl=safeExternalUrl(i.pdf_url);
     const [templateBg,templateFg,tone]=themeFor(i.template);
     const bg=designBackgrounds[design.background]||templateBg, fg=design.accent||templateFg;
     card.style.setProperty('--invite-bg',bg); card.style.setProperty('--invite-fg',fg); card.style.setProperty('--invite-font',designFonts[design.font]||'Aref Ruqaa');
-    if(design.image){card.style.setProperty('--invite-image',`url(\"${design.image}\")`);card.classList.add('has-custom-image')}
+    const image=window.NOORTOONA.safeImageUrl(design.image);if(image){card.style.setProperty('--invite-image',`url(\"${image}\")`);card.classList.add('has-custom-image')}
     card.dataset.tone=tone; card.dataset.layout=design.layout||'classic'; card.dataset.effect=design.effect||'sweep'; card.dataset.frame=design.frame||'fine';
     const occasionKey=design.occasionKey||(isActivity?'activity':activityArtKey(i)==='wedding'?'wedding':activityArtKey(i)==='graduation'?'graduation':activityArtKey(i)==='baby'?'newborn':activityArtKey(i)==='birthday'?'birthday':activityArtKey(i)==='condolence'?'condolence':'custom');
     const activityKey=design.activityKey||(/بادل/i.test(i.activity_type||'')?'padel':/كشت/i.test(i.activity_type||'')?'camp':/استراحة|شاليه/i.test(i.activity_type||'')?'chalet':/رحلة/i.test(i.activity_type||'')?'trip':/عشاء/i.test(i.activity_type||'')?'dinner':'football');
@@ -107,9 +107,10 @@ async function loadInvite(){
       </div>
       ${design.showCountdown!==false&&experience.showCountdown!==false&&i.event_date?`<div class="guest-countdown" data-event-date="${esc(i.event_date)}" data-event-time="${esc(String(i.event_time||'00:00').slice(0,5))}"><small>متبقي على المناسبة</small><div><span><b data-days>0</b><i>يوم</i></span><span><b data-hours>0</b><i>ساعة</i></span><span><b data-minutes>0</b><i>دقيقة</i></span></div></div>`:''}
       ${i.description?`<p class="guest-description">${esc(i.description)}</p>`:''}
-      ${design.showMap!==false&&mapsUrl?`<a class="outline-btn guest-map" target="_blank" rel="noopener" href="${esc(mapsUrl)}">⌖ فتح الموقع على الخريطة</a>`:''}
+      ${design.showMap!==false&&mapsUrl?`<div class="guest-media-links"><a class="outline-btn guest-map" target="_blank" rel="noopener noreferrer" href="${esc(mapsUrl)}">⌖ عرض موقع المناسبة</a><a class="outline-btn" target="_blank" rel="noopener noreferrer" href="${esc(maps.directions)}">الاتجاهات عبر Google Maps</a></div>`:''}
       ${(videoUrl||pdfUrl)?`<div class="guest-media-links">${videoUrl?`<a class="outline-btn" target="_blank" rel="noopener" href="${esc(videoUrl)}">▶ مشاهدة الفيديو</a>`:''}${pdfUrl?`<a class="outline-btn" target="_blank" rel="noopener" href="${esc(pdfUrl)}">PDF تفاصيل المناسبة</a>`:''}</div>`:''}
-      ${design.showQr!==false&&experience.showQr!==false?`<div class="guest-qr"><div><img alt="QR الدخول" src="https://api.qrserver.com/v1/create-qr-code/?size=180x180&data=${encodeURIComponent(location.href)}"><span>⌁</span></div><small>QR الخاص بالدعوة للدخول</small></div>`:''}
+      ${design.showQr!==false&&experience.showQr!==false?`<div class="guest-qr"><div><img alt="QR الدخول" src="${esc(window.HALA_QR.dataUrl(code))}"><span>⌁</span></div><small>QR الخاص بالدعوة للدخول</small></div>`:''}
+      ${window.NOORTOONA.safeAudioUrl(design.audio)?`<div class="guest-music"><label>موسيقى الدعوة</label><audio controls preload="none" src="${esc(window.NOORTOONA.safeAudioUrl(design.audio))}" aria-label="موسيقى الدعوة"></audio></div>`:""}
       ${rsvpBlock}
       ${design.photographyPermission?'<div class="guest-photo-permission">📷 حضورك يعني موافقتك على سياسة التصوير الخاصة بالمناسبة.</div>':''}`;
     if(i.rsvp_status !== 'pending') showResult(i.rsvp_status, i.companion_count, i.children_count);
@@ -160,7 +161,7 @@ loadInvite();
 
 function startCountdown(){
   const box=document.querySelector('.guest-countdown'); if(!box)return;
-  const target=new Date(`${box.dataset.eventDate}T${box.dataset.eventTime||'00:00'}:00`);
+  const target=new Date(`${String(box.dataset.eventDate).slice(0,10)}T${box.dataset.eventTime||'00:00'}:00+03:00`);
   const tick=()=>{
     const diff=target-Date.now();
     if(!Number.isFinite(diff)||diff<=0){box.innerHTML='<strong>بدأت المناسبة ✨</strong>';return false}

@@ -39,11 +39,27 @@
     {key:'activityCustom',label:'نشاط مخصص',icon:'•••'}
   ];
   const esc=s=>String(s??'').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
-  const templateByName=name=>Object.values(catalog).flat().find(t=>t.name===name)||catalog.custom[0];
+  function safeImageUrl(value){
+    const text=String(value||'').trim();
+    if(/^data:image\/(?:png|jpeg|webp|gif);base64,[A-Za-z0-9+/=]+$/.test(text))return text;
+    if(/^\/assets\/[A-Za-z0-9_./-]+$/.test(text)&&!text.includes('..'))return text;
+    try{const url=new URL(text);return url.protocol==='https:'&&!url.username&&!url.password?url.href:''}catch{return ''}
+  }
+  function mapsLinks(value,location=''){
+    let place='';
+    try{const url=new URL(String(value||''));const host=url.hostname.toLowerCase();if(url.protocol==='https:'&&!url.username&&!url.password&&(host==='maps.app.goo.gl'||host==='goo.gl'||host==='maps.google.com'||/^(?:www\.)?google\.(?:com|com\.sa|co\.uk)$/.test(host)))place=url.href}catch{}
+    const query=String(location||'').trim();
+    const map=place||(query?'https://www.google.com/maps/search/?api=1&query='+encodeURIComponent(query):'');
+    return {map,directions:query?'https://www.google.com/maps/dir/?api=1&destination='+encodeURIComponent(query):map};
+  }
+  const safeAudioUrl=value=>/^data:audio\/(?:mpeg|mp3|ogg|wav|x-wav|mp4|aac);base64,[A-Za-z0-9+/=]+$/.test(String(value||''))?String(value):'';
+  const templateByName=(name,group)=>((catalog[group]||[]).find(t=>t.name===name))||Object.values(catalog).flat().find(t=>t.name===name)||catalog.custom[0];
   const typeLabel=(occasionKey,activityKey)=>occasionKey==='activity'?(activities.find(x=>x.key===activityKey)?.label||'تجمع ونشاط'):(occasions.find(x=>x.key===occasionKey)?.label||'مناسبة خاصة');
   const styleFor=t=>`--invite-art:url('${t.atlas}');--invite-position:${t.position};--invite-accent:${t.accent}`;
   function canvas(data={},opts={}){
-    const t=templateByName(data.template),design=data.design||{},activity=data.occasionKey==='activity'||data.occasion==='تجمع ونشاط';
+    const design=data.design||{},activity=data.occasionKey==='activity'||data.occasion==='تجمع ونشاط';
+    const group=activity?(data.activityKey||design.activityKey):(data.occasionKey||data.occasion_key||design.occasionKey);
+    const t=templateByName(data.template,group);
     const fallbackLabel=typeLabel(data.occasionKey||data.occasion_key,data.activityKey||data.activity_key||data.activityType);
     const label=activity?(data.customActivity||data.activityType||data.activity_type||fallbackLabel):(data.customOccasion||data.occasion||fallbackLabel);
     const key=data.occasionKey||data.occasion_key||'custom';
@@ -54,9 +70,10 @@
     const accent=design.accent||t.accent;
     const showRsvp=design.showRsvp!==false;
     const fonts={ruqaa:'Aref Ruqaa',tajawal:'Tajawal',serif:'Georgia'};
-    const custom=design.image?`background-image:url('${String(design.image).replaceAll("'",'%27')}');background-size:cover;background-position:center;`:'';
+    const image=safeImageUrl(design.image);
+    const custom=image?`background-image:url('${image.replaceAll("'",'%27')}');background-size:cover;background-position:center;`:'';
     return `<article class="invite-canvas" data-layout="${esc(design.layout||'classic')}" style="${styleFor(t)};--invite-accent:${esc(accent)};--invite-font:${fonts[design.font]||'Aref Ruqaa'}">
-      <div class="invite-art-layer" ${custom?`style="${custom}"`:''}></div><div class="invite-shade"></div>
+      <div class="invite-art-layer" ${custom?`style="${esc(custom)}"`:''}></div><div class="invite-shade"></div>
       <header class="invite-brand"><b>✦ هلا</b><small>HALA</small></header>
       <div class="invite-copy">
         <span class="invite-type">${esc(label)}</span>
@@ -70,5 +87,5 @@
       ${showRsvp?'<div class="invite-actions-demo"><button type="button">سأحضر</button><button type="button">أعتذر</button></div>':''}
     </article>`;
   }
-  window.NOORTOONA={catalog,occasions,activities,templateByName,typeLabel,styleFor,canvas,esc};
+  window.NOORTOONA={catalog,occasions,activities,templateByName,typeLabel,styleFor,canvas,esc,safeImageUrl,mapsLinks,safeAudioUrl};
 })();

@@ -3,16 +3,19 @@ import assert from 'node:assert/strict';
 import { readFile, stat } from 'node:fs/promises';
 import ts from 'typescript';
 import { packageFor, publicPackages } from '../netlify/functions/_shared/payments.mjs';
+import { normalizeDigits, normalizePhone } from '../netlify/functions/_shared/domain.mjs';
 import { normalizeReferralCode, referralAmounts } from '../netlify/functions/_shared/partners.mjs';
 
 async function handler(name, bindings) {
+  bindings={normalizeDigits,...bindings};
   let source = await readFile(new URL(`../netlify/functions/${name}.mts`, import.meta.url), 'utf8');
   source = source.replace(/^import .*;\s*$/gm, '');
   const prefix = Object.entries(bindings).map(([key, value]) => `const ${key}=globalThis.__testBindings.${key};`).join('\n');
   globalThis.__testBindings = bindings;
   const code = ts.transpileModule(prefix+'\n'+source, { compilerOptions: { module: ts.ModuleKind.ESNext, target: ts.ScriptTarget.ES2022 } }).outputText;
-  return (await import(`data:text/javascript;base64,${Buffer.from(code).toString('base64')}`)).default;
+  return (await import(`data:text/javascript;base64,${Buffer.from(code).toString('base64')}#${crypto.randomUUID()}`)).default;
 }
+globalThis.__testNormalizeDigits=normalizeDigits;
 const secureJson = (body, status=200) => Response.json(body, {status});
 const isSameOriginRequest = () => true;
 const request = (path, body) => new Request(`https://preview.example${path}`, {method:'POST', headers:{'content-type':'application/json'}, body:JSON.stringify(body)});
@@ -24,9 +27,10 @@ test('OTP routes the two configured admin numbers, creates customer accounts, an
   const db={sql:async(parts,...args)=>{
     const sql=parts.join('?');
     if(sql.includes('SELECT * FROM otp_codes')){currentPhone=args[0];return consumed?[]:[{id:'otp',code_hash:'good',attempts:0}];}
-    if(sql.includes('SET attempts=')){wrongAttempts++;return [];}
+    if(sql.includes('SET attempts=')){wrongAttempts++;return [{id:'otp'}];}
     if(sql.includes('SET consumed_at=')){if(consumed)return [];consumed=true;return [{id:'otp'}];}
     if(sql.includes('FROM users WHERE phone='))return [];
+    if(sql.includes('DELETE FROM sessions'))return [];
     if(sql.includes('INSERT INTO users'))return [{id:'user',phone:args[2],name:args[1],role:args[3],status:'active'}];
     throw Error(`Unexpected SQL: ${sql}`);
   }};
@@ -44,7 +48,7 @@ test('OTP routes the two configured admin numbers, creates customer accounts, an
   }
   consumed=false;
   assert.equal((await verify(request('/api/auth/otp/verify',{phone:'966501112233',code:'000000'}))).status,401);
-  assert.equal(wrongAttempts,1);
+  assert.equal(wrongAttempts,4);
 });
 
 test('payment order uses server price plus 299 SAR supervisor addon and owner authorization',async()=>{
@@ -115,4 +119,79 @@ test('supervisor assignment requires a paid request and active supervisor',async
 
 test('temporary admin bootstrap endpoint is absent from deployment sources',async()=>{
   await assert.rejects(stat(new URL('../netlify/functions/auth-bootstrap-admin.mts',import.meta.url)),{code:'ENOENT'});
+});
+
+test('parallel OTP guesses cannot exceed the five reserved attempts',async()=>{
+  let attempts=0,hashed=0;
+  const db={sql:async(parts)=>{
+    const sql=parts.join('?');
+    if(sql.includes('SELECT * FROM otp_codes'))return [{id:'otp',code_hash:'correct-hash',attempts:0}];
+    if(sql.includes('SET attempts='))return attempts++<5?[{id:'otp'}]:[];
+    throw Error(`Unexpected SQL: ${sql}`);
+  }};
+  const verify=await handler('auth-otp-verify',{
+    getDatabase:()=>db,createSession:async()=>{throw Error('No session for wrong code');},publicUser:u=>u,recordAudit:async()=>{},
+    isSameOriginRequest,normalizePhone:p=>p,secureJson,normalizeLoginPhone:p=>p,
+    hashOtp:async()=>{hashed++;await Promise.resolve();return 'wrong-hash';}
+  });
+  const responses=await Promise.all(Array.from({length:20},()=>verify(request('/api/auth/otp/verify',{phone:'966501112233',code:'000000'}))));
+  assert.equal(responses.filter(r=>r.status===401).length,5);
+  assert.equal(responses.filter(r=>r.status===429).length,15);
+  assert.equal(hashed,5);
+});
+
+test('legacy password registration and login cannot claim a phone identity or issue sessions',async()=>{
+  for(const endpoint of ['auth-register','auth-login']){
+    const legacy=await handler(endpoint,{secureJson});
+    const response=await legacy(request('/api/auth/register',{name:'Attacker',email:'synthetic@example.test',phone:'966501112234',password:'not-a-real-password'}));
+    assert.equal(response.status,410);
+    assert.equal((await response.json()).code,'PHONE_OTP_REQUIRED');
+  }
+});
+
+test('admin OTP retires preexisting sessions and password credentials before issuing new session',async()=>{
+  globalThis.Netlify={env:{get:key=>key==='HALA_ADMIN_PHONES'?'966501112234':undefined}};
+  const calls=[];
+  const db={sql:async(parts)=>{
+    const sql=parts.join('?');calls.push(sql);
+    if(sql.includes('SELECT * FROM otp_codes'))return [{id:'otp',code_hash:'hash',attempts:0}];
+    if(sql.includes('SET attempts=')||sql.includes('SET consumed_at='))return [{id:'otp'}];
+    if(sql.includes('FROM users WHERE phone='))return [{id:'preclaimed',role:'customer',status:'active'}];
+    if(sql.includes('UPDATE users'))return [{id:'preclaimed',role:'admin',status:'active'}];
+    if(sql.includes('DELETE FROM sessions'))return [];
+    throw Error(`Unexpected SQL: ${sql}`);
+  }};
+  const verify=await handler('auth-otp-verify',{
+    getDatabase:()=>db,createSession:async()=>{calls.push('NEW_SESSION');return {token:'synthetic'};},publicUser:u=>u,recordAudit:async()=>{},
+    isSameOriginRequest,normalizePhone:p=>p,secureJson,normalizeLoginPhone:p=>p,hashOtp:async()=>'hash'
+  });
+  assert.equal((await verify(request('/api/auth/otp/verify',{phone:'966501112234',code:'123456'}))).status,200);
+  assert.ok(calls.find(sql=>sql.includes('UPDATE users')).includes('password_hash=NULL,password_salt=NULL'));
+  assert.ok(calls.findIndex(sql=>sql.includes('DELETE FROM sessions'))<calls.indexOf('NEW_SESSION'));
+});
+
+test('simultaneous OTP requests share one phone cooldown reservation',async()=>{
+  let source=await readFile(new URL('../netlify/functions/_shared/otp.mjs',import.meta.url),'utf8');
+  source=source.replace('import { getDatabase } from "@netlify/database";', 'const getDatabase=()=>globalThis.__otpIssueDb;');
+  for(const part of ['domain','whatsapp','auth'])source=source.replace(`"./${part}.mjs"`,JSON.stringify(new URL(`../netlify/functions/_shared/${part}.mjs`,import.meta.url).href));
+  globalThis.Netlify={env:{get:key=>key==='HALA_OTP_SECRET'?'synthetic-secret-with-more-than-24-characters':undefined}};
+  let lock=Promise.resolve(),sentAt=null,inserts=0;
+  globalThis.__otpIssueDb={pool:{connect:async()=>{
+    let unlock;
+    return {query:async(sql)=>{
+      if(sql.includes('pg_advisory_xact_lock')){
+        const prior=lock;lock=new Promise(resolve=>{unlock=resolve;});await prior;
+      }
+      if(sql.startsWith('SELECT sent_at'))return {rows:sentAt?[{sent_at:sentAt}]:[]};
+      if(sql.includes('COUNT(*)'))return {rows:[{count:inserts}]};
+      if(sql.startsWith('INSERT')){inserts++;sentAt=new Date().toISOString();}
+      if(sql==='COMMIT'||sql==='ROLLBACK'){unlock?.();unlock=null;}
+      return {rows:[]};
+    },release:()=>unlock?.()};
+  }}};
+  const {issueOtp}=await import(`data:text/javascript;base64,${Buffer.from(source).toString('base64')}#${crypto.randomUUID()}`);
+  const results=await Promise.all(Array.from({length:12},()=>issueOtp('966501112233')));
+  assert.equal(results.filter(r=>r.ok).length,1);
+  assert.equal(results.filter(r=>r.status===429).length,11);
+  assert.equal(inserts,1);
 });

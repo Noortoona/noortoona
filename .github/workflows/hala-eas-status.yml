@@ -1,0 +1,46 @@
+name: Hala EAS status (read only)
+
+on:
+  push:
+    branches: ["hala-stabilization-*"]
+    paths: [".github/workflows/hala-eas-status.yml"]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  inspect:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    env:
+      EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
+    defaults:
+      run:
+        working-directory: mobile
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v6
+        with:
+          node-version: "24.19.0"
+      - name: Check existing token without showing credentials
+        run: |
+          if [ -z "$EXPO_TOKEN" ]; then
+            echo "::error::The existing EXPO_TOKEN secret is missing. No build or account change was attempted."
+            exit 1
+          fi
+      - run: npm ci
+      - name: Read current project and recent builds without creating a build
+        run: |
+          npx --yes eas-cli@24.10.0 project:info --json > project-info.json
+          npx --yes eas-cli@24.10.0 build:list --platform all --limit 10 --json --non-interactive > build-history.json
+          node --input-type=module <<'NODE'
+          import { readFileSync, appendFileSync, rmSync } from 'node:fs';
+          const project = JSON.parse(readFileSync('project-info.json','utf8'));
+          const builds = JSON.parse(readFileSync('build-history.json','utf8'));
+          const safe = { projectId: project.id || project.projectId || null, builds: builds.map(b => ({id:b.id,platform:b.platform,status:b.status,createdAt:b.createdAt,gitCommitHash:b.gitCommitHash})) };
+          // Never expose artifact URLs, tokens, account secrets or signing material.
+          console.log(JSON.stringify(safe,null,2));
+          appendFileSync(process.env.GITHUB_STEP_SUMMARY, 'Read-only EAS inspection. No build, submission, credentials or account settings changed.\n\n```json\n'+JSON.stringify(safe,null,2)+'\n```\n');
+          rmSync('project-info.json'); rmSync('build-history.json');
+          NODE

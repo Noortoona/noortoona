@@ -213,3 +213,6 @@ body.journey-open{overflow:hidden}
 .muna-grid{display:grid;grid-template-columns:1fr .85fr;gap:18px}.muna-tasks,.muna-services{background:#fff;border:1px solid #eee2d2;border-radius:20px;padding:18px}.muna-grid h3{margin:0 0 12px;color:#4b0a20}.muna-task{display:flex;align-items:center;gap:10px;padding:11px 0;border-bottom:1px solid #f0e8dd;cursor:pointer}.muna-task:last-child{border:0}.muna-task input{accent-color:#6e1730}.muna-task span{display:flex;align-items:center;gap:8px;color:#594f4b}.muna-task span b{width:22px;height:22px;display:grid;place-items:center;border-radius:50%;background:#f6ecdc;color:#8d6727}.muna-task.done span{color:#877c75;text-decoration:line-through}.muna-task.done span b{background:#e7f4ea;color:#39734e;text-decoration:none}
 .muna-services>div{display:flex;gap:8px;flex-wrap:wrap}.muna-services>div span{padding:8px 10px;border-radius:999px;background:#f7eddf;color:#5b1730;border:1px solid #e6d1b5;font-size:12px}.muna-services p{font-size:12px;line-height:1.7;color:#867970;margin:14px 0 0}
 @media(max-width:760px){.muna-head{align-items:flex-start}.muna-score{min-width:76px;height:76px}.muna-head h2{font-size:28px}.muna-grid{grid-template-columns:1fr}.muna-panel{padding:18px}}
+
+/* Respect the font selected by the invitation owner. */
+.invite-copy h1,.invite-headline{font-family:var(--invite-font,'Aref Ruqaa')}

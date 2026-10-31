@@ -41,6 +41,7 @@ export default async (req: Request) => {
       const seconds = Number(s.timestamp);
       const at = Number.isFinite(seconds) && seconds > 0 && seconds <= Date.now()/1000 + 300 ? new Date(seconds*1000) : new Date();
       const error = next === 'failed' ? JSON.stringify(providerError({ errors: s.errors })) : null;
+      if (next === 'failed') await client.query("DELETE FROM customer_free_trials WHERE message_attempt_id=$1", [found.id]);
       await client.query(`UPDATE whatsapp_messages SET status=$1, error=$2, updated_at=NOW(),
         sent_at=CASE WHEN $1 IN ('sent','delivered','read') THEN COALESCE(sent_at,$3) ELSE sent_at END,
         delivered_at=CASE WHEN $1 IN ('delivered','read') THEN COALESCE(delivered_at,$3) ELSE delivered_at END,

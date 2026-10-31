@@ -25,8 +25,12 @@ export function decideAttendance({ used = 0, capacity = 0, requested = 1, waitli
   return waitlistEnabled ? "waitlist" : "full";
 }
 
+export function normalizeDigits(input) {
+  return String(input || "").replace(/[٠-٩]/g, digit => String(digit.charCodeAt(0)-0x660)).replace(/[۰-۹]/g, digit => String(digit.charCodeAt(0)-0x6f0));
+}
+
 export function normalizePhone(phone) {
-  let value = String(phone || "").replace(/\D/g, "");
+  let value = normalizeDigits(phone).replace(/\D/g, "");
   if (value.startsWith("00")) value = value.slice(2);
   if (value.startsWith("0") && value.length === 10) value = `966${value.slice(1)}`;
   if (value.length === 9 && value.startsWith("5")) value = `966${value}`;

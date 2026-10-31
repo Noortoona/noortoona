@@ -2,7 +2,7 @@ const root=document.getElementById('partnerRoot');
 const session=JSON.parse(localStorage.getItem('halaSession')||'null');
 const esc=x=>String(x??'').replace(/[&<>'"]/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'}[m]));
 const money=x=>(Number(x||0)/100).toLocaleString('ar-SA',{maximumFractionDigits:2})+' ر.س';
-document.getElementById('logoutBtn').onclick=()=>{localStorage.removeItem('halaSession');location.href='/'};
+document.getElementById('logoutBtn').onclick=async()=>{try{if(session?.token)await fetch('/api/auth/logout',{method:'POST',headers:{authorization:`Bearer ${session.token}`}})}catch{}finally{localStorage.removeItem('halaSession');localStorage.removeItem('noortoonaOwner');location.href='/'}};
 if(!session?.token||session.user?.role!=='partner')location.href='/';
 else fetch('/api/partner/home',{headers:{authorization:`Bearer ${session.token}`}}).then(async r=>{const d=await r.json();if(!r.ok)throw Error(d.error||'تعذر تحميل الشراكة');return d}).then(d=>{
   const link=`${location.origin}/?ref=${encodeURIComponent(d.profile.code)}`;

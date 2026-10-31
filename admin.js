@@ -1,9 +1,9 @@
 const root=document.getElementById("adminRoot");
-let s=null;
+let s=null,eventQuery="",eventPage=1;
 const esc=x=>String(x??"").replace(/[&<>'"]/g,m=>({"&":"&amp;","<":"&lt;",">":"&gt;","'":"&#39;",'"':"&quot;"}[m]));
 const n=x=>Number(x||0).toLocaleString("ar-SA");
 const money=x=>(Number(x||0)/100).toLocaleString("ar-SA",{maximumFractionDigits:2})+" ر.س";
-document.getElementById("logoutBtn").onclick=()=>{localStorage.removeItem("halaSession");location.href="/"};
+document.getElementById("logoutBtn").onclick=async()=>{try{const session=JSON.parse(localStorage.getItem("halaSession")||"null");if(session?.token)await fetch("/api/auth/logout",{method:"POST",headers:{authorization:`Bearer ${session.token}`}})}catch{}finally{localStorage.removeItem("halaSession");localStorage.removeItem("noortoonaOwner");location.href="/"}};
 
 async function boot(){
   const authScript=document.createElement("script");
@@ -46,13 +46,13 @@ async function api(url,opt={}){
 function card(label,value,sub=""){return `<article class="metric-card"><span>${label}</span><strong>${value}</strong><small>${sub}</small></article>`}
 async function load(){
   try{
-    const [overview,usersData,supData,settings,partners]=await Promise.all([api("/api/admin/overview"),api("/api/admin/users"),api("/api/admin/supervisors"),api("/api/admin/settings"),api("/api/admin/partners")]);
-    render(overview,usersData.users||[],supData,settings,partners);
+    const [overview,usersData,supData,settings,partners,eventsData]=await Promise.all([api("/api/admin/overview"),api("/api/admin/users"),api("/api/admin/supervisors"),api("/api/admin/settings"),api("/api/admin/partners"),api(`/api/admin/events?page=${eventPage}&q=${encodeURIComponent(eventQuery)}`)]);
+    render(overview,usersData.users||[],supData,settings,partners,eventsData);
   }catch(e){
     root.innerHTML=`<div class="portal-empty"><h2>تعذر فتح لوحة الإدارة</h2><p>${esc(e.message)}</p></div>`;
   }
 }
-function render(d,users,supData,settings,partners){
+function render(d,users,supData,settings,partners,eventsData){
   const x=d.stats,w=x.whatsapp||{},sr=x.supervisorRequests||{};
   const supervisors=supData.supervisors||[],requests=supData.requests||[];
   root.className="";
@@ -115,8 +115,15 @@ function render(d,users,supData,settings,partners){
       </article>
       <article class="portal-panel">
         <h2>الحسابات</h2>
-        <div class="portal-list users-list">${users.slice(0,20).map(u=>`<div><b>${esc(u.name||"بدون اسم")}</b><span>${esc(u.role)} • ${esc(u.phone||u.email||"")}</span><small>${esc(u.status||"")}</small></div>`).join("")||"<p>لا توجد حسابات بعد</p>"}</div>
+        <div class="portal-list users-list">${users.map(u=>`<div><b>${esc(u.name||"بدون اسم")}</b><span>${esc(u.role)} • ${esc(u.phone||u.email||"")}</span><small>${esc(u.status||"")}</small>${u.role!=="admin"?`<button class="outline-btn dark-outline" data-user-status="${esc(u.id)}" data-next-status="${u.status==="active"?"suspended":"active"}">${u.status==="active"?"إيقاف الحساب":"تفعيل الحساب"}</button>`:""}</div>`).join("")||"<p>لا توجد حسابات بعد</p>"}</div>
       </article>
+    </section>
+
+    <section class="portal-panel">
+      <h2>إدارة المناسبات</h2>
+      <form id="eventSearch" class="inline-admin-form"><input name="q" value="${esc(eventQuery)}" placeholder="ابحث باسم المناسبة أو المدينة" aria-label="البحث في المناسبات"><button class="gold-btn" type="submit">بحث</button></form>
+      <div class="portal-list">${(eventsData.events||[]).map(e=>`<div><b>${esc(e.title)}</b><span>${esc(e.occasion)} • ${esc(e.city||"")} • ${esc(e.owner_name||"")}</span><small>${n(e.guest_count)} ضيف • ${n(e.accepted)} مؤكد • ${n(e.checked_in)} حضر</small><a class="gold-btn" href="/dashboard?event=${encodeURIComponent(e.id)}">إدارة الدعوات والحضور</a></div>`).join("")||"<p>لا توجد مناسبات مطابقة</p>"}</div>
+      <div class="event-actions"><button class="outline-btn dark-outline" id="previousEvents" ${eventPage<=1?"disabled":""}>السابق</button><span>صفحة ${n(eventPage)}</span><button class="outline-btn dark-outline" id="nextEvents" ${eventsData.hasMore?"":"disabled"}>التالي</button></div>
     </section>
 
     <section class="portal-panel">
@@ -124,6 +131,10 @@ function render(d,users,supData,settings,partners){
       <div class="ops-table">${d.recentOps.map(o=>`<div><b>${esc(o.action)}</b><span>${esc(o.actor_name||"النظام")}</span><span>${esc(o.entity_type||"")} ${esc(o.entity_id||"")}</span><small>${new Date(o.created_at).toLocaleString("ar-SA")}</small></div>`).join("")||"<p>لا توجد عمليات بعد</p>"}</div>
     </section>`;
 
+  document.getElementById("eventSearch")?.addEventListener("submit",e=>{e.preventDefault();eventQuery=String(new FormData(e.currentTarget).get("q")||"");eventPage=1;load()});
+  document.getElementById("previousEvents").onclick=()=>{eventPage=Math.max(1,eventPage-1);load()};
+  document.getElementById("nextEvents").onclick=()=>{eventPage++;load()};
+  document.querySelectorAll('[data-user-status]').forEach(b=>b.onclick=async()=>{const status=b.dataset.nextStatus;if(!confirm(status==='suspended'?'إيقاف الحساب وإنهاء جلساته الحالية؟':'إعادة تفعيل الحساب؟'))return;b.disabled=true;try{await api('/api/admin/users',{method:'PATCH',body:JSON.stringify({userId:b.dataset.userStatus,status})});await load()}catch(e){alert(e.message);b.disabled=false}});
   document.getElementById("supervisorPriceForm")?.addEventListener("submit",saveSupervisorPrice);
   document.getElementById("createSupervisorForm")?.addEventListener("submit",createSupervisor);
   document.getElementById("createPartnerForm")?.addEventListener("submit",createPartner);

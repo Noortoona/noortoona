@@ -1,7 +1,7 @@
 import { getDatabase } from "@netlify/database";
 import type { Config } from "@netlify/functions";
 import { isSameOriginRequest, ownerTokenFrom, secureJson } from "./_shared/domain.mjs";
-import { canAccessEvent, getAuth, recordAudit } from "./_shared/auth.mjs";
+import { canManageEvent, getAuth, recordAudit } from "./_shared/auth.mjs";
 import { providerConfig, providerError } from "./_shared/whatsapp.mjs";
 
 function normalizePhone(phone: string) {
@@ -59,7 +59,7 @@ export default async (req: Request) => {
 
   const db = getDatabase();
   const auth = await getAuth(req);
-  const accountAccess = auth ? await canAccessEvent(auth.user, String(eventId)) : false;
+  const accountAccess = auth ? await canManageEvent(auth.user, String(eventId)) : false;
   let rows: any[];
   if (accountAccess) {
     rows = await db.sql`
@@ -68,7 +68,7 @@ export default async (req: Request) => {
       JOIN events e ON e.id = g.event_id
       WHERE g.id = ${guestId} AND g.event_id = ${eventId}
     `;
-  } else if (ownerToken) {
+  } else if (ownerToken && !auth) {
     rows = await db.sql`
       SELECT g.*, e.title, e.event_date, e.event_time, e.location, e.owner_token
       FROM guests g
@@ -95,18 +95,26 @@ export default async (req: Request) => {
   let log: any;
   try {
     await client.query("BEGIN");
+    // Serialize free trials across all events owned by one customer.
+    if (auth?.user?.role === "customer") await client.query("SELECT id FROM users WHERE id=$1 FOR UPDATE", [auth.user.id]);
     await client.query("SELECT id FROM events WHERE id=$1 FOR UPDATE", [eventId]);
     await client.query("SELECT id FROM guests WHERE id=$1 FOR UPDATE", [guestId]);
 
-    if (accountAccess && auth?.user?.role === "customer") {
+    let trialUserId: string | null = null;
+    if (auth?.user?.role !== "admin") {
       const paid = await client.query(
-        "SELECT package_code FROM payment_orders WHERE event_id=$1 AND user_id=$2 AND status='paid' LIMIT 1",
-        [eventId, auth.user.id]
+        "SELECT package_code FROM payment_orders WHERE event_id=$1 AND status='paid' LIMIT 1",
+        [eventId]
       );
       if (!paid.rows.length) {
+        if (!auth || auth.user.role !== "customer") {
+          await client.query("ROLLBACK");
+          return json({ error: "سجل دخولك برقم الجوال لاستخدام التجربة المجانية", code: "PHONE_OTP_REQUIRED" }, 401);
+        }
+        trialUserId = auth.user.id;
         const trial = await client.query(
-          "SELECT COUNT(*)::int AS count FROM whatsapp_messages WHERE event_id=$1 AND status IN ('queued','sent','delivered','read')",
-          [eventId]
+          "SELECT COUNT(*)::int AS count FROM customer_free_trials WHERE user_id=$1",
+          [trialUserId]
         );
         if (reminder || Number(trial.rows[0]?.count || 0) >= 1) {
           await client.query("ROLLBACK");
@@ -122,8 +130,9 @@ export default async (req: Request) => {
       await client.query("ROLLBACK");
       return json({ error: "توجد محاولة قائمة؛ راجع حالتها قبل إعادة الإرسال", code: "D360_DUPLICATE", messageId: previous.rows[0].message_id, status: previous.rows[0].status }, 409);
     }
-    log = (await client.query(`INSERT INTO whatsapp_messages (event_id,guest_id,kind,status)
-      VALUES ($1,$2,$3,'queued') RETURNING id`, [eventId, guestId, kind])).rows[0];
+    log = (await client.query(`INSERT INTO whatsapp_messages (event_id,guest_id,kind,status,trial_user_id)
+      VALUES ($1,$2,$3,'queued',$4) RETURNING id`, [eventId, guestId, kind, trialUserId])).rows[0];
+    if (trialUserId) await client.query("INSERT INTO customer_free_trials(user_id,message_attempt_id) VALUES($1,$2)", [trialUserId,log.id]);
     await client.query(`UPDATE guests SET whatsapp_status='queued', whatsapp_message_id=NULL,
       whatsapp_sent_at=NULL, whatsapp_delivered_at=NULL, whatsapp_read_at=NULL,
       whatsapp_failed_at=NULL, whatsapp_error=NULL WHERE id=$1`, [guestId]);
@@ -185,6 +194,7 @@ export default async (req: Request) => {
     const diagnostic = providerError(data);
     const error = JSON.stringify(diagnostic);
     await db.sql`UPDATE whatsapp_messages SET status='failed', error=${error}, failed_at=NOW(), updated_at=NOW() WHERE id=${log.id}`;
+    await db.sql`DELETE FROM customer_free_trials WHERE message_attempt_id=${log.id}`;
     await db.sql`UPDATE guests SET whatsapp_status='failed', whatsapp_failed_at=NOW(), whatsapp_error=${error} WHERE id=${guestId}`;
     const code = mode === "sandbox" && response.status === 403
       ? "D360_SANDBOX_RECIPIENT_ONLY"

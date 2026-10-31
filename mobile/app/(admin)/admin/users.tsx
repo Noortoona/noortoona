@@ -4,6 +4,7 @@ import { api } from "@/api";
 import { useRequireRole } from "@/roleGate";
 import { BrandHeader, Card, PrimaryButton, Screen } from "@/ui";
 import { theme } from "@/theme";
+import { normalizeSaudiPhone } from "@/input";
 
 type User = { id: string; name: string; email: string; phone?: string; role: "admin" | "supervisor" | "customer" | "partner"; status: string };
 
@@ -14,13 +15,26 @@ export default function AdminUsers() {
   const [phone, setPhone] = useState("");
   const [busy, setBusy] = useState(false);
   const load = useCallback(async () => { if (!auth.token) return; const data = await api<{ users: User[] }>("/api/admin/users", {}, auth.token); setUsers(data.users); }, [auth.token]);
-  useEffect(() => { load(); }, [load]);
+  useEffect(() => { load().catch(error => Alert.alert("تعذر التحميل", error?.message || "حاول مرة أخرى")); }, [load]);
   if (auth.loading || !auth.user) return null;
+
+  function toggleStatus(user: User) {
+    const status = user.status === "active" ? "suspended" : "active";
+    Alert.alert(status === "suspended" ? "تعليق الحساب" : "تفعيل الحساب", `هل تريد ${status === "suspended" ? "تعليق" : "تفعيل"} حساب ${user.name}؟`, [
+      { text: "إلغاء", style: "cancel" },
+      { text: "تأكيد", onPress: async () => {
+        setBusy(true);
+        try { await api("/api/admin/users", { method: "PATCH", body: JSON.stringify({ userId: user.id, status }) }, auth.token); await load(); }
+        catch (error) { Alert.alert("تعذر تحديث الحساب", error instanceof Error ? error.message : "حاول مرة أخرى"); }
+        finally { setBusy(false); }
+      } },
+    ]);
+  }
 
   async function createSupervisor() {
     setBusy(true);
     try {
-      await api("/api/admin/users", { method: "POST", body: JSON.stringify({ name, phone, role: "supervisor" }) }, auth.token);
+      await api("/api/admin/users", { method: "POST", body: JSON.stringify({ name, phone: normalizeSaudiPhone(phone), role: "supervisor" }) }, auth.token);
       setName(""); setPhone("");
       await load();
       Alert.alert("تم", "تم إنشاء حساب المشرف.");
@@ -37,10 +51,10 @@ export default function AdminUsers() {
           <Text style={styles.help}>المشرف لا يستطيع التسجيل بنفسه؛ ينشئه الأدمن ثم يتم تعيينه على المناسبات المطلوبة.</Text>
           <TextInput value={name} onChangeText={setName} placeholder="اسم المشرف" style={styles.input} textAlign="right" />
           <TextInput value={phone} onChangeText={setPhone} placeholder="رقم الجوال" style={styles.input} textAlign="right" keyboardType="phone-pad" />
-          <PrimaryButton label="إنشاء حساب المشرف" onPress={createSupervisor} loading={busy} disabled={!name || phone.replace(/\D/g, "").length < 9} />
+          <PrimaryButton label="إنشاء حساب المشرف" onPress={createSupervisor} loading={busy} disabled={!name || !normalizeSaudiPhone(phone)} />
         </Card>
         <Text style={styles.section}>الحسابات</Text>
-        {users.map(u => <Card key={u.id}><View style={styles.user}><View style={styles.copy}><Text style={styles.name}>{u.name}</Text><Text style={styles.email}>{u.phone || u.email}</Text></View><View style={[styles.badge, u.role === "admin" && styles.adminBadge]}><Text style={styles.badgeText}>{u.role === "admin" ? "Admin" : u.role === "supervisor" ? "مشرف" : u.role === "partner" ? "شريك" : "عميل"}</Text></View></View></Card>)}
+        {users.map(u => <Card key={u.id}><View style={styles.user}><View style={styles.copy}><Text style={styles.name}>{u.name}</Text><Text style={styles.email}>{u.phone || u.email}</Text></View><View style={[styles.badge, u.role === "admin" && styles.adminBadge]}><Text style={styles.badgeText}>{u.role === "admin" ? "Admin" : u.role === "supervisor" ? "مشرف" : u.role === "partner" ? "شريك" : "عميل"}</Text></View></View><Text style={styles.help}>{u.status === "active" ? "حساب نشط" : "حساب معلّق"}</Text>{u.role !== "admin" ? <PrimaryButton label={u.status === "active" ? "تعليق الحساب" : "تفعيل الحساب"} onPress={() => toggleStatus(u)} loading={busy} secondary /> : null}</Card>)}
       </ScrollView>
     </Screen>
   );

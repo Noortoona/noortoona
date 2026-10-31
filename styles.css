@@ -173,3 +173,5 @@ footer{background:#06080C}
 /* Keep sign-in visible in the mobile header; the main CTA stays at the bottom. */
 .nav-actions .mobile-login-btn{display:none}
 @media(max-width:640px){.nav-actions .mobile-login-btn{display:inline-flex;align-items:center;justify-content:center;min-height:40px;padding:8px 14px;white-space:nowrap}.nav-actions>.gold-btn{display:none}}
+
+.guest-music{display:grid;gap:10px;text-align:center;margin:20px auto;max-width:100%}.guest-music audio,.design-controls audio{width:100%;max-width:320px}.footer-grid nav{display:flex;gap:12px;flex-wrap:wrap}.footer-grid nav a{color:inherit}

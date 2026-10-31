@@ -1,5 +1,5 @@
 import React from "react";
-import { ActivityIndicator, Pressable, SafeAreaView as RNSafeAreaView, StyleSheet, Text, View, ViewStyle } from "react-native";
+import { ActivityIndicator, Pressable, StyleSheet, Text, View, ViewStyle } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { theme } from "./theme";
 
@@ -22,7 +22,7 @@ export function BrandHeader({ title, subtitle, onLogout }: { title?: string; sub
 
 export function PrimaryButton({ label, onPress, loading, disabled, secondary }: { label: string; onPress: () => void; loading?: boolean; disabled?: boolean; secondary?: boolean }) {
   return (
-    <Pressable disabled={disabled || loading} onPress={onPress} style={[styles.button, secondary && styles.buttonSecondary, (disabled || loading) && styles.buttonDisabled]}>
+    <Pressable accessibilityRole="button" accessibilityLabel={label} accessibilityState={{ disabled: Boolean(disabled || loading), busy: Boolean(loading) }} disabled={disabled || loading} onPress={onPress} style={[styles.button, secondary && styles.buttonSecondary, (disabled || loading) && styles.buttonDisabled]}>
       {loading ? <ActivityIndicator color={secondary ? theme.colors.burgundy : theme.colors.white} /> : <Text style={[styles.buttonText, secondary && styles.buttonTextSecondary]}>{label}</Text>}
     </Pressable>
   );

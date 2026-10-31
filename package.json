@@ -3,14 +3,19 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "test": "node tests/smoke.mjs && node --test tests/whatsapp.mjs tests/payments.mjs tests/moyasar.mjs tests/accounts.mjs tests/partners.mjs",
-    "test:e2e": "playwright test"
+    "test": "node tests/smoke.mjs && node --test tests/whatsapp.mjs tests/payments.mjs tests/moyasar.mjs tests/accounts.mjs tests/partners.mjs && npm run test:build && npm run test:web && npm run test:database",
+    "test:e2e": "playwright test",
+    "build": "node scripts/build-static.mjs",
+    "test:build": "node --test tests/build-static.mjs",
+    "test:web": "node --test tests/web-safety.mjs",
+    "test:database": "node --test tests/database.mjs"
   },
   "dependencies": {
     "@netlify/database": "latest",
     "@netlify/functions": "latest"
   },
   "devDependencies": {
+    "@electric-sql/pglite": "0.2.17",
     "@playwright/test": "^1.55.0",
     "typescript": "^5.9.2"
   }

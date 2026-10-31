@@ -10,3 +10,12 @@ mobile/dist-ios/
 mobile/dist-android/
 mobile/ios/
 mobile/android/
+
+# Local dependency links, generated assets and preview configuration
+node_modules
+mobile/node_modules
+dist/
+.openai/
+.env
+.env.*
+!.env.example

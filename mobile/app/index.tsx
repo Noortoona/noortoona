@@ -16,7 +16,7 @@ export default function EntryScreen() {
 
   return (
     <View style={styles.wrap}>
-      <View style={styles.mark}><Text style={styles.logo}>هلا</Text><Text style={styles.tag}>لحظتك تبدأ بهلا</Text></View>
+      <View style={styles.mark}><Text style={styles.logo}>هلا</Text><Text style={styles.tag}>لحظتك .. تبدأ بهلا</Text></View>
       <ActivityIndicator color={theme.colors.gold} size="large" />
     </View>
   );

@@ -7,11 +7,16 @@ on:
         description: "Existing successful EAS iOS build to submit (leave empty to build)"
         required: false
         type: string
-  push:
-    branches:
-      - hala-mobile
-    paths:
-      - ".github/testflight-trigger"
+      credentials_ready:
+        description: "Apple membership and remote distribution credentials have been verified interactively"
+        required: true
+        type: boolean
+        default: false
+      submit:
+        description: "Submit the successful build to TestFlight after review"
+        required: true
+        type: boolean
+        default: false
 
 permissions:
   contents: read
@@ -22,8 +27,8 @@ concurrency:
 
 jobs:
   ios-testflight:
-    if: github.ref == 'refs/heads/hala-mobile'
-    name: Build and submit Hala iOS
+    if: github.event_name == 'workflow_dispatch'
+    name: Build Hala iOS; optionally submit
     runs-on: ubuntu-latest
     timeout-minutes: 120
 
@@ -36,7 +41,7 @@ jobs:
         working-directory: mobile
 
     steps:
-      - name: Checkout requested hala-mobile commit
+      - name: Checkout the explicitly selected branch commit
         uses: actions/checkout@v5
         with:
           ref: ${{ github.sha }}
@@ -47,6 +52,12 @@ jobs:
           node-version: "24.19.0"
           cache: npm
           cache-dependency-path: mobile/package-lock.json
+
+      - name: Check signing readiness
+        if: inputs.build_id == '' && !inputs.credentials_ready
+        run: |
+          echo "::error::Verify the Apple Developer membership and remote iOS credentials interactively before a signed build. No build was started."
+          exit 1
 
       - name: Validate Expo token
         shell: bash
@@ -103,6 +114,7 @@ jobs:
           NODE
 
       - name: Submit the exact successful build to TestFlight
+        if: inputs.submit
         env:
           BUILD_ID: ${{ steps.build.outputs.id || inputs.build_id }}
         run: |
