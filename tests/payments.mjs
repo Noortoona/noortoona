@@ -4,11 +4,13 @@ import { packageFor, publicPackages } from "../netlify/functions/_shared/payment
 
 test("Hala packages have server-owned prices and guest limits", () => {
   assert.deepEqual(publicPackages().map(p => [p.code, p.amount, p.guestLimit]), [
-    ["start", 2900, 50],
-    ["basic", 9900, 200],
-    ["royal", 14900, 500],
+    ["hala_basic", 14900, 100],
+    ["hala_plus", 34900, 250],
+    ["hala_premium", 69900, 500],
   ]);
-  assert.equal(packageFor("basic")?.currency, "SAR");
+  assert.equal(packageFor("hala_plus")?.currency, "SAR");
+  assert.equal(packageFor("basic"), null, "legacy package codes cannot create newly priced orders");
+  assert.equal(packageFor("هلا بريميوم")?.amountSar, undefined);
   assert.equal(packageFor("unknown"), null);
 });
 
