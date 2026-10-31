@@ -101,7 +101,7 @@ await test('embedded PostgreSQL migrations and real HALA handlers',async t=>{
     assert.equal(response.status,402);
   });
   await t.test('payment remains disabled without producing an order or provider request',async()=>{
-    const response=await handlers['payment-order'](request('/api/payments/order',{eventId:firstEvent.id,packageCode:'basic'},customerSession.token));
+    const response=await handlers['payment-order'](request('/api/payments/order',{eventId:firstEvent.id,packageCode:'hala_plus'},customerSession.token));
     assert.equal(response.status,503);
     assert.equal((await postgres.query('SELECT COUNT(*)::int count FROM payment_orders')).rows[0].count,0);
   });
