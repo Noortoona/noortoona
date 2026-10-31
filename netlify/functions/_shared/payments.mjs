@@ -1,7 +1,9 @@
+// New package codes deliberately differ from legacy start/basic/royal orders.
+// Previously paid order amounts and package identifiers remain unchanged in the database.
 export const PAYMENT_PACKAGES = {
-  start: { code: "start", name: "البداية", guestLimit: 50, amount: 2900, currency: "SAR" },
-  basic: { code: "basic", name: "الأساسية", guestLimit: 200, amount: 9900, currency: "SAR" },
-  royal: { code: "royal", name: "الملكية", guestLimit: 500, amount: 14900, currency: "SAR" },
+  hala_basic: { code: "hala_basic", name: "هلا الأساسية", guestLimit: 100, amount: 14900, currency: "SAR" },
+  hala_plus: { code: "hala_plus", name: "هلا بلس", guestLimit: 250, amount: 34900, currency: "SAR" },
+  hala_premium: { code: "hala_premium", name: "هلا بريميوم", guestLimit: 500, amount: 69900, currency: "SAR" },
 };
 
 export function packageFor(code) {
