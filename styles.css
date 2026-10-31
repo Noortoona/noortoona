@@ -175,3 +175,20 @@ footer{background:#06080C}
 @media(max-width:640px){.nav-actions .mobile-login-btn{display:inline-flex;align-items:center;justify-content:center;min-height:40px;padding:8px 14px;white-space:nowrap}.nav-actions>.gold-btn{display:none}}
 
 .guest-music{display:grid;gap:10px;text-align:center;margin:20px auto;max-width:100%}.guest-music audio,.design-controls audio{width:100%;max-width:320px}.footer-grid nav{display:flex;gap:12px;flex-wrap:wrap}.footer-grid nav a{color:inherit}
+
+/* HALA investment-deck pricing: B2B plans are informational until contracts are enabled. */
+.business-pricing{max-width:980px;margin:42px auto 0;color:#fff}
+.business-pricing-head{text-align:center;margin-bottom:20px}
+.business-pricing-head h3{margin:0 0 10px;font-size:25px;color:#e9c586}
+.business-pricing-head p,.pricing-disclaimer{color:#d1c0b8;font-size:14px;line-height:1.8}
+.business-price-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:18px}
+.business-price-card{border:1px solid rgba(234,206,160,.28);border-radius:22px;background:rgba(255,255,255,.035);padding:22px;min-width:0}
+.business-price-card h4{font-size:22px;margin:8px 0 10px;color:#f5e7d7}
+.business-price-card p{color:#e4d6ce;line-height:1.8;min-height:56px}
+.business-price-card strong{display:block;color:#edc887;font-size:26px}
+.business-price-card strong small{font-size:14px;color:#f4dfc4}
+.business-status{font-size:12px;color:#e7c98e;border:1px solid rgba(231,201,142,.5);border-radius:999px;padding:4px 10px}
+.pricing-extras{margin-top:22px;color:#f2e6d9;line-height:2;text-align:center}
+.pricing-extras b{color:#e9c586}
+.pricing-disclaimer{text-align:center}
+@media(max-width:640px){.business-price-grid{grid-template-columns:1fr}.business-pricing{margin-top:32px}.business-price-card p{min-height:0}}
