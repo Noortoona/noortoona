@@ -4,7 +4,7 @@
   if(referral&&/^[A-Z0-9_-]{4,24}$/i.test(referral))localStorage.setItem('halaReferralCode',referral.toUpperCase());
   const session=()=>{try{return JSON.parse(localStorage.getItem(KEY)||"null")}catch{return null}};
   const save=s=>localStorage.setItem(KEY,JSON.stringify(s));
-  let resolver=null, purpose="login", supervisorPrice=299;
+  let resolver=null, purpose="login", supervisorPrice=599;
 
   function ensureVisitor(){
     let id=localStorage.getItem(SID);
