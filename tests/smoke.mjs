@@ -81,9 +81,9 @@ assert.ok(guestHtml.indexOf('invitation-renderer.js') < guestHtml.indexOf('guest
 assert.ok(guestHtml.indexOf('invitation-schemas.js') < guestHtml.indexOf('guest.js'), 'type schema must load before guest app');
 assert.match(indexHtml, /https:\/\/noortoona\.com\//, 'official domain metadata');
 assert.match(indexHtml, /هلا \| لحظتك تبدأ بهلا/, 'HALA public brand metadata');
-assert.match(indexHtml, /<h4>هلا أعمال<\\/h4>[\\s\\S]*?تبدأ من 2,999/, 'Hala Business indicative price is 2,999 SAR per event');
-assert.match(indexHtml, /<h4>هلا المؤسسات<\\/h4>[\\s\\S]*?يبدأ من 8,999/, 'Hala Enterprise indicative price is 8,999 SAR monthly');
-assert.match(indexHtml, /<span class="business-status">قريبًا<\\/span>/, 'B2B packages remain coming-soon and not activated as payment plans');
+assert.match(indexHtml, /<h4>هلا أعمال<\/h4>[\s\S]*?تبدأ من 2,999/, 'Hala Business indicative price is 2,999 SAR per event');
+assert.match(indexHtml, /<h4>هلا المؤسسات<\/h4>[\s\S]*?يبدأ من 8,999/, 'Hala Enterprise indicative price is 8,999 SAR monthly');
+assert.match(indexHtml, /<span class="business-status">قريبًا<\/span>/, 'B2B packages remain coming-soon and not activated as payment plans');
 assert.match(indexHtml, /assets\/brand\/hala-icon\.svg/, 'HALA logo asset');
 assert.match(guestJs, /✦ هلا/, 'guest invitation uses HALA branding');
 assert.doesNotMatch(indexHtml, /قيد التجهيز|التحديث القادم|قالب جاهز أو محرر مرن أو AI/, 'no visible unfinished feature copy');
