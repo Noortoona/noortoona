@@ -6,7 +6,7 @@ module.exports = ({ config }) => {
   }
   if (apiUrl) {
     const url = new URL(apiUrl);
-    if (["preview", "simulator", "testflight"].includes(profile) && ["noortoona.com", "www.noortoona.com", "noortoona.netlify.app", "main--noortoona.netlify.app", "noortoona.vercel.app"].includes(url.hostname)) {
+    if (["preview", "simulator", "testflight"].includes(profile) && ["halainvites.com", "www.halainvites.com", "noortoona.com", "www.noortoona.com", "noortoona.netlify.app", "main--noortoona.netlify.app", "noortoona.vercel.app"].includes(url.hostname)) {
       throw new Error("Trial builds must use an isolated staging backend, not a production domain.");
     }
     if (url.protocol !== "https:" && !(url.protocol === "http:" && ["localhost", "127.0.0.1"].includes(url.hostname) && !profile)) {

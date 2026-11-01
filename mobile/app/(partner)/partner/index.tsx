@@ -13,7 +13,7 @@ export default function PartnerHome() {
   useEffect(() => { if (auth.token) api<Home>("/api/partner/home", {}, auth.token).then(setData).catch(e => Alert.alert("شركاء هلا", e?.message || "تعذر التحميل")); }, [auth.token]);
   if (auth.loading || !auth.user) return null;
   return <Screen><BrandHeader title="شركاء هلا" subtitle="إحالاتك وعمولاتك" onLogout={auth.signOut} /><ScrollView contentContainerStyle={styles.body}>
-    <Card><Text style={styles.title}>{data?.profile.kind === "influencer" ? "شراكة المشاهير" : "شراكة القاعات"}</Text><Text style={styles.line}>الكود: {data?.profile.code || "—"}</Text><Text style={styles.line}>الرابط: https://noortoona.com/?ref={data?.profile.code || ""}</Text><Text style={styles.line}>خصم العميل: {Number(data?.profile.discount_bps || 0) / 100}%</Text></Card>
+    <Card><Text style={styles.title}>{data?.profile.kind === "influencer" ? "شراكة المشاهير" : "شراكة القاعات"}</Text><Text style={styles.line}>الكود: {data?.profile.code || "—"}</Text><Text style={styles.line}>الرابط: https://halainvites.com/?ref={data?.profile.code || ""}</Text><Text style={styles.line}>خصم العميل: {Number(data?.profile.discount_bps || 0) / 100}%</Text></Card>
     <Card><Text style={styles.title}>الأداء</Text><Text style={styles.line}>العملاء الجدد: {data?.summary.customers || 0}</Text><Text style={styles.line}>المستحق: {sar(data?.summary.due || 0)}</Text><Text style={styles.line}>المدفوع: {sar(data?.summary.paid || 0)}</Text></Card>
     {data?.commissions.map((c, i) => <Card key={i}><Text style={styles.line}>{sar(c.amount)} • {c.status} • {new Date(c.created_at).toLocaleDateString("ar-SA")}</Text></Card>)}
   </ScrollView></Screen>;

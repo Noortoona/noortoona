@@ -1,4 +1,4 @@
-const BASE_URL = (process.env.EXPO_PUBLIC_API_URL || "https://noortoona.com").replace(/\/$/, "");
+const BASE_URL = (process.env.EXPO_PUBLIC_API_URL || "https://halainvites.com").replace(/\/$/, "");
 
 export class ApiError extends Error {
   status: number;
