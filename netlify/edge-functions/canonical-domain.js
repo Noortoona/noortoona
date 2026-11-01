@@ -16,5 +16,4 @@ export const config = {
   path: ['/', '/index.html', '/i/*', '/guest.html', '/dashboard', '/dashboard.html',
     '/admin', '/admin.html', '/customer', '/customer.html', '/partner', '/partner.html',
     '/supervisor', '/supervisor.html'],
-  header: { host: '^(www\\.)?noortoona\\.com$' },
 };
