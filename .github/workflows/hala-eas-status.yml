@@ -32,15 +32,16 @@ jobs:
       - run: npm ci
       - name: Read current project and recent builds without creating a build
         run: |
-          npx --yes eas-cli@24.10.0 project:info --json > project-info.json
+          npx --yes eas-cli@24.10.0 project:info > project-info.txt
           npx --yes eas-cli@24.10.0 build:list --platform all --limit 10 --json --non-interactive > build-history.json
           node --input-type=module <<'NODE'
           import { readFileSync, appendFileSync, rmSync } from 'node:fs';
-          const project = JSON.parse(readFileSync('project-info.json','utf8'));
+          const projectId = JSON.parse(readFileSync('app.json','utf8')).expo.extra.eas.projectId;
+          if (!readFileSync('project-info.txt','utf8').includes(projectId)) throw new Error('The authenticated EAS project does not match app.json.');
           const builds = JSON.parse(readFileSync('build-history.json','utf8'));
-          const safe = { projectId: project.id || project.projectId || null, builds: builds.map(b => ({id:b.id,platform:b.platform,status:b.status,createdAt:b.createdAt,gitCommitHash:b.gitCommitHash})) };
+          const safe = { projectId, builds: builds.map(b => ({id:b.id,platform:b.platform,status:b.status,createdAt:b.createdAt,gitCommitHash:b.gitCommitHash})) };
           // Never expose artifact URLs, tokens, account secrets or signing material.
           console.log(JSON.stringify(safe,null,2));
           appendFileSync(process.env.GITHUB_STEP_SUMMARY, 'Read-only EAS inspection. No build, submission, credentials or account settings changed.\n\n```json\n'+JSON.stringify(safe,null,2)+'\n```\n');
-          rmSync('project-info.json'); rmSync('build-history.json');
+          rmSync('project-info.txt'); rmSync('build-history.json');
           NODE
