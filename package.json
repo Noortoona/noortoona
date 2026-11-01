@@ -8,7 +8,7 @@
     "build": "node scripts/build-static.mjs",
     "test:build": "node --test tests/build-static.mjs",
     "test:web": "node --test tests/web-safety.mjs tests/guest-insights.mjs",
-    "test:database": "node --test tests/database.mjs",
+    "test:database": "node --test tests/database.mjs tests/migrations.mjs",
     "test:catalog": "node --test tests/catalog.mjs"
   },
   "dependencies": {
