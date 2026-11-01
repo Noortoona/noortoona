@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { createRequire } from 'node:module';
+import { createRequire, registerHooks } from 'node:module';
 import { normalizeSaudiPhone, normalizeDigits } from '../src/input.ts';
 import { isGoogleMapsUrl, mapsLinks } from '../src/links.ts';
 import { api, ApiError, BASE_URL } from '../src/api.ts';
@@ -8,6 +8,8 @@ import { readFileSync } from 'node:fs';
 import vm from 'node:vm';
 import { templateCatalog, occasionForApi } from '../src/templateCatalog.ts';
 import { imageDataUri, audioDataUri, MAX_AUDIO_BYTES } from '../src/designMedia.ts';
+registerHooks({resolve(specifier,context,next){if(specifier==='./templateCatalog'&&context.parentURL.endsWith('/catalog.ts'))return {url:new URL('./templateCatalog.ts',context.parentURL).href,shortCircuit:true};return next(specifier,context)}});
+const { DEFAULT_PACKAGES, publicCatalog, availableTemplatesFor } = await import('../src/catalog.ts');
 
 test('Saudi OTP accepts local, international and Arabic input without accepting incomplete numbers', () => {
   for (const value of ['050 000 0001', '+966500000001', '00966500000001', '٥٠٠٠٠٠٠٠١', '۰۵۰۰۰۰۰۰۰۱']) {
@@ -100,4 +102,18 @@ test('custom image/audio use guest-compatible data URIs and enforce combined pay
   const image = imageDataUri('/9j/' + 'A'.repeat(599_940));
   const audio = audioDataUri('A'.repeat(MAX_AUDIO_BYTES / 3 * 4), 'audio/mpeg', 'clip.mp3');
   assert.ok(JSON.stringify({ design: { image, audio }, message: 'دعوة' }).length < 1_500_000);
+});
+
+test('mobile consumes admin catalog prices and hides only matching template groups', () => {
+  const response={version:1,packages:DEFAULT_PACKAGES.map(pkg=>({...pkg,amount:pkg.amount+1000})),hiddenTemplateKeys:['wedding:مخمل ملكي'],services:[{id:'service',name:'تنسيق',description:'خدمة المناسبة',enabled:true},{id:'hidden',name:'غير متاحة',description:'موقوفة',enabled:false}]};
+  const catalog=publicCatalog(response);
+  assert.equal(catalog.packages[0].amountSar,159);
+  assert.equal(catalog.services.length,1);
+  assert.equal(availableTemplatesFor('wedding','padel',catalog.hiddenTemplateKeys).some(item=>item.name==='مخمل ملكي'),false);
+  assert.equal(availableTemplatesFor('milkah','padel',catalog.hiddenTemplateKeys).some(item=>item.name==='مخمل ملكي'),true);
+  assert.equal(publicCatalog({...response,packages:[null,...DEFAULT_PACKAGES.slice(1)]}),null);
+  assert.equal(publicCatalog({...response,hiddenTemplateKeys:['unknown:template']}),null);
+  const context={window:{},URL};vm.runInNewContext(readFileSync(new URL('../../invitation-renderer.js',import.meta.url),'utf8'),context);
+  const web=context.window.NOORTOONA.catalogData(response);
+  assert.equal(JSON.stringify(web),JSON.stringify(catalog));
 });

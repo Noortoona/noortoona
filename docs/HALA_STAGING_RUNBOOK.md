@@ -20,7 +20,7 @@ After changing invitation-renderer.js or v2.css, run `node mobile/scripts/sync-i
 
 ## Backend isolation
 
-Confirm the Netlify Deploy Preview uses a separate database branch before applying migrations or creating fixtures. Registering a secret is not proof that the database is isolated. Apply all tracked migrations in order, including `20261031230000_customer-free-trial`. Verify the durable ledger and backfill before sender tests. Never run the migration against production as part of this task.
+Confirm the Netlify Deploy Preview uses a separate database branch before applying migrations or creating fixtures. Registering a secret is not proof that the database is isolated. Apply all tracked migrations in order, including `20261031230000_customer-free-trial` and `20261101010000_catalog-order-entitlements`. Verify the durable ledger and backfill before sender tests. Never run the migration against production as part of this task.
 
 The Vercel deployment serves the public dist frontend. It has no Netlify Functions runtime. Do not direct it to production APIs to make staging appear functional. Use a real staging Netlify backend for integrated review.
 
@@ -48,3 +48,5 @@ The TestFlight workflow is manual; do not select signing-ready until Apple membe
 - Verified payment sandbox callback, server amount/currency comparison, and one eligible partner commission if payment testing is enabled later.
 - Real iPhone camera, photo/audio selection, invitation opening and Maps directions.
 - Logs and device/build links associated with the exact commit, plus rollback and production approval.
+
+Catalog edits use an expected revision; reload on HTTP409. Test a paid order before and after changing current prices/limits and verify the saved guest_limit remains unchanged. Native review APK uses only generated debug signing and is not a Play Store release.

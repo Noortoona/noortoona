@@ -87,5 +87,16 @@
       ${showRsvp?'<div class="invite-actions-demo"><button type="button">سأحضر</button><button type="button">أعتذر</button></div>':''}
     </article>`;
   }
-  window.NOORTOONA={catalog,occasions,activities,templateByName,typeLabel,styleFor,canvas,esc,safeImageUrl,mapsLinks,safeAudioUrl};
+  function catalogData(value){
+    if(!value||value.version!==1||!Array.isArray(value.packages)||!Array.isArray(value.hiddenTemplateKeys)||!Array.isArray(value.services))return null;
+    const codes=['hala_basic','hala_plus','hala_premium'];
+    if(value.packages.length!==3||!codes.every(code=>value.packages.filter(p=>p&&p.code===code).length===1))return null;
+    if(value.packages.some(p=>!p||typeof p.name!=='string'||p.currency!=='SAR'||!Number.isInteger(p.amount)||p.amount<100||p.amount>10000000||!Number.isInteger(p.guestLimit)||p.guestLimit<1||p.guestLimit>5000))return null;
+    const keys=new Set(Object.entries(catalog).flatMap(([group,items])=>items.map(t=>group+':'+t.name)));
+    if(value.hiddenTemplateKeys.some(key=>!keys.has(key)))return null;
+    if(Object.entries(catalog).some(([group,items])=>items.every(item=>value.hiddenTemplateKeys.includes(group+':'+item.name))))return null;
+    return {packages:value.packages.map(p=>({...p,amountSar:p.amount/100})),hiddenTemplateKeys:[...new Set(value.hiddenTemplateKeys)],services:value.services.filter(s=>s&&s.enabled!==false&&typeof s.name==='string'&&typeof s.description==='string').map(s=>({id:String(s.id),name:s.name,description:s.description,enabled:true}))};
+  }
+  const templateChoices=(group,hidden=[])=>{const blocked=new Set(hidden);return(catalog[group]||catalog.custom).filter(t=>!blocked.has(group+':'+t.name))};
+  window.NOORTOONA={catalog,occasions,activities,templateByName,typeLabel,styleFor,canvas,esc,safeImageUrl,mapsLinks,safeAudioUrl,catalogData,templateChoices};
 })();

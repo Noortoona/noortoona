@@ -78,3 +78,41 @@ test('closing phone OTP resolves the pending create/login operation', async () =
   assert.match(html,/100% 75%/);
   assert.match(html,/أحمد و سارة/);
 });
+
+test('public builder replaces fallback prices, template visibility and service text from the actual catalog API response', async () => {
+  const prices={innerHTML:''}, templates={innerHTML:''}, services={innerHTML:''};
+  const elements={ '#builderModal':{classList:{contains:()=>false}}, '#builderBody':{}, '#nextBtn':{}, '#prevBtn':{}, '#priceGrid':prices, '#templateGrid':templates, '#services .service-grid':services };
+  const fixture={version:1,packages:[{code:'hala_basic',name:'هلا الأساسية',amount:16900,guestLimit:120,currency:'SAR'},{code:'hala_plus',name:'هلا بلس',amount:35900,guestLimit:260,currency:'SAR'},{code:'hala_premium',name:'هلا بريميوم',amount:70900,guestLimit:510,currency:'SAR'}],hiddenTemplateKeys:['wedding:ليلة كحلية'],services:[{id:'test',name:'خدمة خاصة',description:'<script>unsafe</script>',enabled:true}]};
+  const requested=[];
+  const context={window:{},URL,URLSearchParams,location:{search:''},localStorage:{getItem:()=>null,setItem(){},removeItem(){}},document:{querySelector:selector=>elements[selector]||null,querySelectorAll:()=>[],addEventListener(){}},fetch:async path=>{requested.push(path);return {ok:true,json:async()=>fixture}},setTimeout,clearTimeout};
+  vm.runInNewContext(renderer,context);
+  vm.runInNewContext(await readFile(new URL('../app.js',import.meta.url),'utf8'),context);
+  await new Promise(resolve=>setImmediate(resolve));
+  assert.deepEqual(requested,['/api/catalog']);
+  assert.match(prices.innerHTML,/>169<small>/);
+  assert.match(prices.innerHTML,/حتى 120 ضيف/);
+  assert.doesNotMatch(templates.innerHTML,/ليلة كحلية/);
+  assert.match(services.innerHTML,/خدمة خاصة/);
+  assert.match(services.innerHTML,/&lt;script&gt;/);
+  assert.doesNotMatch(services.innerHTML,/<script>/);
+});
+
+test('admin catalog submits its revision and reloads rather than overwriting a concurrent edit', async () => {
+  const notice={textContent:''},button={disabled:false},calls=[];
+  const elements={adminRoot:{innerHTML:''},logoutBtn:{},catalogResult:notice};
+  let conflicts=false,reloads=0;
+  const context={document:{getElementById:id=>elements[id]||null,createElement:()=>({}),body:{appendChild(){}}},fetch:async(path,options)=>{calls.push({path,body:JSON.parse(options.body)});return Response.json(conflicts?{error:'stale'}:{ok:true},{status:conflicts?409:200})},localStorage:{},window:{},location:{},alert(){}};
+  vm.runInNewContext(await readFile(new URL('../admin.js',import.meta.url),'utf8'),context);
+  vm.runInNewContext('s={token:"fixture-token"};catalogRevision=4;',context);
+  context.load=async()=>{reloads++};
+  await context.saveCatalog({packages:[{code:'hala_basic',amount:16900,guestLimit:120}]},{querySelector:()=>button});
+  assert.equal(calls[0].path,'/api/admin/catalog');
+  assert.equal(calls[0].body.expectedRevision,4);
+  assert.equal(calls[0].body.packages[0].amount,16900);
+  assert.match(notice.textContent,/تم حفظ/);
+  conflicts=true;
+  await context.saveCatalog({hiddenTemplateKeys:[]},{querySelector:()=>button});
+  assert.equal(calls.length,2);
+  assert.equal(reloads,2);
+  assert.match(notice.textContent,/تغيرت الإعدادات/);
+});

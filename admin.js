@@ -1,5 +1,5 @@
 const root=document.getElementById("adminRoot");
-let s=null,eventQuery="",eventPage=1;
+let s=null,eventQuery="",eventPage=1,catalogRevision=0;
 const esc=x=>String(x??"").replace(/[&<>'"]/g,m=>({"&":"&amp;","<":"&lt;",">":"&gt;","'":"&#39;",'"':"&quot;"}[m]));
 const n=x=>Number(x||0).toLocaleString("ar-SA");
 const money=x=>(Number(x||0)/100).toLocaleString("ar-SA",{maximumFractionDigits:2})+" ر.س";
@@ -40,19 +40,19 @@ boot();
 async function api(url,opt={}){
   const r=await fetch(url,{...opt,headers:{"content-type":"application/json",authorization:`Bearer ${s.token}`,...(opt.headers||{})}});
   const d=await r.json().catch(()=>({}));
-  if(!r.ok)throw new Error(d.error||"تعذر تنفيذ الطلب");
+  if(!r.ok)throw Object.assign(new Error(d.error||"تعذر تنفيذ الطلب"),{status:r.status});
   return d;
 }
 function card(label,value,sub=""){return `<article class="metric-card"><span>${label}</span><strong>${value}</strong><small>${sub}</small></article>`}
 async function load(){
   try{
-    const [overview,usersData,supData,settings,partners,eventsData]=await Promise.all([api("/api/admin/overview"),api("/api/admin/users"),api("/api/admin/supervisors"),api("/api/admin/settings"),api("/api/admin/partners"),api(`/api/admin/events?page=${eventPage}&q=${encodeURIComponent(eventQuery)}`)]);
-    render(overview,usersData.users||[],supData,settings,partners,eventsData);
+    const [overview,usersData,supData,settings,partners,eventsData,catalog]=await Promise.all([api("/api/admin/overview"),api("/api/admin/users"),api("/api/admin/supervisors"),api("/api/admin/settings"),api("/api/admin/partners"),api(`/api/admin/events?page=${eventPage}&q=${encodeURIComponent(eventQuery)}`),api("/api/admin/catalog")]);
+    render(overview,usersData.users||[],supData,settings,partners,eventsData,catalog);
   }catch(e){
     root.innerHTML=`<div class="portal-empty"><h2>تعذر فتح لوحة الإدارة</h2><p>${esc(e.message)}</p></div>`;
   }
 }
-function render(d,users,supData,settings,partners,eventsData){
+function render(d,users,supData,settings,partners,eventsData,catalog){
   const x=d.stats,w=x.whatsapp||{},sr=x.supervisorRequests||{};
   const supervisors=supData.supervisors||[],requests=supData.requests||[];
   root.className="";
@@ -93,6 +93,8 @@ function render(d,users,supData,settings,partners,eventsData){
       <form id="supervisorPriceForm" class="inline-admin-form"><input name="price" type="number" min="0" step="1" value="${Number(settings.supervisorAddonSar||0)}" required><button class="gold-btn" type="submit">حفظ السعر</button></form></div>
     </section>
 
+    ${catalogPanel(catalog)}
+
     <section class="portal-panel admin-supervisor-panel">
       <div class="panel-head"><div><span class="eyebrow dark">المشرفون</span><h2>طلبات مشرف المناسبة</h2></div>
       <form id="createSupervisorForm" class="inline-admin-form"><input name="name" placeholder="اسم المشرف" required><input name="phone" inputmode="tel" placeholder="05XXXXXXXX" required><button class="gold-btn" type="submit">إضافة مشرف</button></form></div>
@@ -131,6 +133,7 @@ function render(d,users,supData,settings,partners,eventsData){
       <div class="ops-table">${d.recentOps.map(o=>`<div><b>${esc(o.action)}</b><span>${esc(o.actor_name||"النظام")}</span><span>${esc(o.entity_type||"")} ${esc(o.entity_id||"")}</span><small>${new Date(o.created_at).toLocaleString("ar-SA")}</small></div>`).join("")||"<p>لا توجد عمليات بعد</p>"}</div>
     </section>`;
 
+  bindCatalogForms();
   document.getElementById("eventSearch")?.addEventListener("submit",e=>{e.preventDefault();eventQuery=String(new FormData(e.currentTarget).get("q")||"");eventPage=1;load()});
   document.getElementById("previousEvents").onclick=()=>{eventPage=Math.max(1,eventPage-1);load()};
   document.getElementById("nextEvents").onclick=()=>{eventPage++;load()};
@@ -174,3 +177,28 @@ async function saveSupervisorPrice(e){
   try{await api("/api/admin/settings",{method:"POST",body:JSON.stringify({supervisorAddonSar:Number(fd.get("price"))})});await load()}
   catch(err){alert(err.message);button.disabled=false}
 }
+
+function catalogPanel(catalog){
+  catalogRevision=Number(catalog.revision||0);
+  const labels={wedding:'الزواج',milkah:'الملكة',engagement:'الخطوبة',graduation:'التخرج',newborn:'المواليد',birthday:'أعياد الميلاد',meeting:'الاجتماعات',conference:'المؤتمرات',opening:'الافتتاح',honoring:'التكريم',formal:'الرسمية',national:'الوطنية',condolence:'العزاء',custom:'المخصصة',padel:'البادل',football:'كرة القدم',camp:'الكشتات',chalet:'الاستراحة',trip:'الرحلات',dinner:'العشاء',activityCustom:'أنشطة مخصصة'};
+  const hidden=new Set(catalog.hiddenTemplateKeys||[]),groups=(catalog.templateKeys||[]).reduce((groups,item)=>{(groups[item.group]||=[]).push(item);return groups},{});
+  return `<section class="portal-panel catalog-admin"><h2>الباقات والقوالب والخدمات</h2><p>تُستخدم هذه الإعدادات في منشئ الدعوة والتسعير. الطلبات المدفوعة سابقًا تحتفظ بحدودها الأصلية.</p>
+  <div class="catalog-package-grid">${catalog.packages.map(p=>`<form class="catalog-package-form" data-package-code="${esc(p.code)}"><h3>${esc(p.name)}</h3><label>السعر بالريال<input name="amountSar" type="number" min="1" max="100000" step="0.01" value="${Number(p.amount)/100}" required></label><label>حد المدعوين<input name="guestLimit" type="number" min="1" max="5000" step="1" value="${Number(p.guestLimit)}" required></label><button class="gold-btn" type="submit">حفظ الباقة</button></form>`).join('')}</div>
+  <form id="catalogTemplatesForm"><h3>القوالب المتاحة للإنشاء</h3><p>إخفاء القالب يمنع اختياره في دعوة جديدة، ويُبقي الدعوات السابقة كما هي. يجب إبقاء قالب واحد على الأقل لكل نوع.</p><div class="catalog-template-groups">${Object.entries(groups).map(([group,items])=>`<details><summary>${esc(labels[group]||group)}</summary>${items.map(item=>`<label class="catalog-toggle"><input type="checkbox" data-template-key="${esc(item.key)}" ${hidden.has(item.key)?'':'checked'}><span>${esc(item.name)}</span></label>`).join('')}</details>`).join('')}</div><button class="gold-btn" type="submit">حفظ إتاحة القوالب</button></form>
+  <form id="catalogServicesForm"><h3>الخدمات الإضافية المعروضة</h3><div id="catalogServiceRows">${(catalog.services||[]).map(serviceRow).join('')}</div><div class="event-actions"><button class="outline-btn dark-outline" id="addCatalogService" type="button">إضافة خدمة</button><button class="gold-btn" type="submit">حفظ الخدمات</button></div></form><p id="catalogResult" role="status" aria-live="polite"></p></section>`;
+}
+function serviceRow(service){return `<fieldset class="catalog-service-row" data-service-id="${esc(service.id)}"><label>اسم الخدمة<input data-service-name maxlength="80" value="${esc(service.name)}" required></label><label>الوصف<textarea data-service-description rows="2" maxlength="400" required>${esc(service.description)}</textarea></label><label class="catalog-toggle"><input data-service-enabled type="checkbox" ${service.enabled!==false?'checked':''}>عرض الخدمة للعملاء</label><button class="outline-btn dark-outline" data-remove-service type="button">إزالة من القائمة</button></fieldset>`}
+async function saveCatalog(body,form){
+  const button=form.querySelector('button[type="submit"]');button.disabled=true;
+  try{await api('/api/admin/catalog',{method:'PATCH',body:JSON.stringify({...body,expectedRevision:catalogRevision})});await load();catalogNotice('تم حفظ إعدادات الكتالوج.')}
+  catch(error){if(error.status===409){await load();catalogNotice('تغيرت الإعدادات في جلسة أخرى. راجع القيم الجديدة ثم احفظ.')}else{catalogNotice(error.message);button.disabled=false}}
+}
+function bindCatalogForms(){
+  document.querySelectorAll('.catalog-package-form').forEach(form=>form.onsubmit=e=>{e.preventDefault();const fields=new FormData(form);saveCatalog({packages:[{code:form.dataset.packageCode,amount:Math.round(Number(fields.get('amountSar'))*100),guestLimit:Number(fields.get('guestLimit'))}]},form)});
+  document.getElementById('catalogTemplatesForm').onsubmit=e=>{e.preventDefault();const hiddenTemplateKeys=[...e.currentTarget.querySelectorAll('[data-template-key]')].filter(input=>!input.checked).map(input=>input.dataset.templateKey);saveCatalog({hiddenTemplateKeys},e.currentTarget)};
+  document.getElementById('catalogServicesForm').onsubmit=e=>{e.preventDefault();const services=[...e.currentTarget.querySelectorAll('[data-service-id]')].map(row=>({id:row.dataset.serviceId,name:row.querySelector('[data-service-name]').value.trim(),description:row.querySelector('[data-service-description]').value.trim(),enabled:row.querySelector('[data-service-enabled]').checked}));saveCatalog({services},e.currentTarget)};
+  const rows=document.getElementById('catalogServiceRows');rows.onclick=e=>{if(e.target.matches('[data-remove-service]'))e.target.closest('[data-service-id]').remove()};
+  document.getElementById('addCatalogService').onclick=()=>rows.insertAdjacentHTML('beforeend',serviceRow({id:crypto.randomUUID(),name:'',description:'',enabled:true}));
+}
+
+function catalogNotice(message){const notice=document.getElementById("catalogResult");if(notice)notice.textContent=message;else alert(message)}

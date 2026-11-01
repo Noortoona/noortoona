@@ -122,3 +122,11 @@ npx eas-cli@24.10.0 credentials --platform ios
 Select `testflight`, set up the distribution certificate and provisioning
 profile, and configure the App Store Connect API key for EAS Submit. Apple
 login/2FA stays in Apple's authentication flow. No signing keys belong in Git.
+
+## Dependency security review (1 November 2026)
+
+The SDK57-compatible router uses `query-string@7.1.3`, which requires a callable CommonJS URI decoder. The vulnerable transitive decoder is replaced by an explicit local `@hala/decode-uri-component-cjs@0.5.1-hala.1` adaptation of the official patched upstream0.5.1 algorithm. The only adaptations are the CommonJS export and legacy plus-as-space behavior. See `vendor/decode-uri-component-cjs/PROVENANCE.md` and its unchanged upstream MIT license. This is not an unmodified upstream release or an audit suppression.
+
+`npm test` includes four dependency regressions: actual router resolution, normal/Arabic/repeated query parameters, malformed percent encodings, and a large malformed input inside a bounded worker. iOS and Android Metro/Hermes exports were checked after the repair.
+
+The recorded npm audit count decreased from17 alerts (5 high) to14 alerts (2 high; no critical). The remaining high entries are Zod and the propagated Expo CLI advisory. `npm ls zod` places it in the Expo CLI/build-tool dependency chain; HALA does not import it in application code. Build tools still need to be treated as affected: do not feed untrusted project/plugin configuration into these tools. Other low/moderate SDK tooling advisories also remain. This is not a claim that the entire dependency graph is vulnerability-free. A compatible upstream repair or a separately validated Expo SDK migration remains a release-hardening item; no `npm audit fix --force` or untested major Zod/Expo replacement was applied.

@@ -69,8 +69,9 @@ export default async (req: Request) => {
       await client.query("BEGIN");
       // Check and consume package capacity under the same event lock as message sending.
       await client.query("SELECT id FROM events WHERE id=$1 FOR UPDATE", [eventId]);
-      const paid = await client.query("SELECT package_code FROM payment_orders WHERE event_id=$1 AND status='paid' LIMIT 1", [eventId]);
-      const pkg = packageForPaidOrder(paid.rows[0]?.package_code);
+      const paid = await client.query("SELECT package_code,guest_limit FROM payment_orders WHERE event_id=$1 AND status='paid' LIMIT 1", [eventId]);
+      const basePackage = packageForPaidOrder(paid.rows[0]?.package_code);
+      const pkg = basePackage ? {...basePackage,guestLimit:Number(paid.rows[0]?.guest_limit)||basePackage.guestLimit} : null;
       if (pkg) {
         const existing = await client.query("SELECT COUNT(*)::int AS count FROM guests WHERE event_id=$1", [eventId]);
         if (Number(existing.rows[0]?.count || 0) + guests.length > pkg.guestLimit) {

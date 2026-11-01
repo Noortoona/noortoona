@@ -13,7 +13,8 @@ const saveDraft=()=>{try{localStorage.setItem('noortoonaDraftV55',JSON.stringify
 const occasion=()=>N.occasions.find(x=>x.key===state.occasionKey)||N.occasions[0];
 const activity=()=>N.activities.find(x=>x.key===state.activityKey)||N.activities[0];
 const groupKey=()=>state.occasionKey==='activity'?state.activityKey:state.occasionKey;
-const templates=()=>N.catalog[groupKey()]||N.catalog.custom;
+let catalogPackages=[{code:'hala_basic',name:'هلا الأساسية',amount:14900,amountSar:149,guestLimit:100},{code:'hala_plus',name:'هلا بلس',amount:34900,amountSar:349,guestLimit:250},{code:'hala_premium',name:'هلا بريميوم',amount:69900,amountSar:699,guestLimit:500}],hiddenTemplateKeys=[],catalogServices=null;
+const templates=()=>N.templateChoices(groupKey(),hiddenTemplateKeys);
 const eventLabel=()=>state.customOccasion||(state.occasionKey==='activity'?'تجمع ونشاط':occasion().label);
 const activityLabel=()=>state.occasionKey==='activity'?(state.activityKey==='activityCustom'&&state.customActivity.trim()?state.customActivity.trim():activity().label):'';
 const schemaKeys=()=>new Set((window.HALA_V6_SCHEMA?.schemaFor(state.occasionKey)?.fields||[]).map(f=>f.key));
@@ -82,10 +83,10 @@ function renderGuests(){const count=parseGuests().length;return `${heading('أض
 function renderReview(){const count=parseGuests().length;return `${heading('راجع دعوتك','هذه المعاينة تستخدم نفس الرسم الذي سيصل للضيف')}<div class="review-grid"><div>${invitePreview()}<button type="button" class="guest-preview-link" data-full-preview>معاينة كضيف</button></div><div class="review-summary"><h3>${N.esc(state.name1)}${state.name2?' و '+N.esc(state.name2):''}</h3>${state.hostName?`<p>${N.esc(state.hostName)}</p>`:''}<dl><div><dt>النوع</dt><dd>${N.esc(state.occasionKey==='activity'?activityLabel():occasion().label)}</dd></div><div><dt>التاريخ</dt><dd>${N.esc(state.date)}</dd></div><div><dt>الموقع</dt><dd>${N.esc(state.location)}</dd></div><div><dt>القالب</dt><dd>${N.esc(state.template)}</dd></div><div><dt>الضيوف</dt><dd>${count}</dd></div>${state.occasionKey==='activity'?`<div><dt>القطّة</dt><dd>${Number(state.shareAmount||0).toLocaleString('ar-SA')} ر.س للفرد</dd></div>`:''}</dl></div></div>`}
 function renderSend(){
   const sp=Number(window.HALA_AUTH?.supervisorPrice||299);
-  const packagePrices={'هلا الأساسية':149,'هلا بلس':349,'هلا بريميوم':699};
-  const packageLimits={'هلا الأساسية':100,'هلا بلس':250,'هلا بريميوم':500};
-  const base=packagePrices[state.package]||349,total=base+(state.requestSupervisor?sp:0);
-  return `${heading('جاهزة للإرسال','راجع الباقة والخدمات الإضافية قبل إنشاء المناسبة')}<div class="send-card"><span>✦</span><h3>كل شيء جاهز</h3><p>سيتم إنشاء روابط فريدة للضيوف وحفظ إعدادات الدعوة والقطّة وقائمة الانتظار.</p><div class="package-row">${['هلا الأساسية','هلا بلس','هلا بريميوم'].map(p=>`<button type="button" data-package="${p}" class="${state.package===p?'selected':''}">${p} <small>${packagePrices[p]} ر.س • حتى ${packageLimits[p]} ضيف</small></button>`).join('')}</div><label class="supervisor-addon"><input id="requestSupervisor" type="checkbox" ${state.requestSupervisor?'checked':''}><span><b>أضف مشرفًا لمناسبتك</b><small>يتابع الاستقبال والحضور والتنسيق يوم المناسبة</small></span><strong>+${sp.toLocaleString('ar-SA')} ر.س</strong></label><div class="checkout-summary"><span>الإجمالي الحالي</span><strong>${total.toLocaleString('ar-SA')} ر.س</strong><small>${state.requestSupervisor?'يشمل خدمة مشرف المناسبة':'بدون خدمة المشرف'}</small></div></div>`;
+  const packagePrices=Object.fromEntries(catalogPackages.map(p=>[p.name,p.amountSar]));
+  const packageLimits=Object.fromEntries(catalogPackages.map(p=>[p.name,p.guestLimit]));
+  const base=packagePrices[state.package]??catalogPackages[0].amountSar,total=base+(state.requestSupervisor?sp:0);
+  return `${heading('جاهزة للإرسال','راجع الباقة والخدمات الإضافية قبل إنشاء المناسبة')}<div class="send-card"><span>✦</span><h3>كل شيء جاهز</h3><p>سيتم إنشاء روابط فريدة للضيوف وحفظ إعدادات الدعوة والقطّة وقائمة الانتظار.</p><div class="package-row">${catalogPackages.map(pkg=>pkg.name).map(p=>`<button type="button" data-package="${p}" class="${state.package===p?'selected':''}">${p} <small>${packagePrices[p]} ر.س • حتى ${packageLimits[p]} ضيف</small></button>`).join('')}</div><label class="supervisor-addon"><input id="requestSupervisor" type="checkbox" ${state.requestSupervisor?'checked':''}><span><b>أضف مشرفًا لمناسبتك</b><small>يتابع الاستقبال والحضور والتنسيق يوم المناسبة</small></span><strong>+${sp.toLocaleString('ar-SA')} ر.س</strong></label><div class="checkout-summary"><span>الإجمالي الحالي</span><strong>${total.toLocaleString('ar-SA')} ر.س</strong><small>${state.requestSupervisor?'يشمل خدمة مشرف المناسبة':'بدون خدمة المشرف'}</small></div></div>`;
 }
 function render(){
   $('.builder-progress').style.display='none';let content='';
@@ -134,16 +135,15 @@ function renderLanding(){
   if(grid)grid.innerHTML=N.occasions.map(o=>`<button class="occasion-card" data-land-occasion="${o.key}"><span class="occasion-icon">${o.icon}</span><strong>${o.label}</strong><small>ابدأ الآن</small></button>`).join('');
   $$('[data-land-occasion]').forEach(b=>b.onclick=()=>openBuilder(b.dataset.landOccasion));
   const tg=$('#templateGrid');
-  if(tg)tg.innerHTML=N.catalog.wedding.map(t=>`<button class="template-card" data-land-template="${N.esc(t.name)}">${thumb(t)}<span class="template-name">${N.esc(t.name)}</span></button>`).join('');
+  if(tg)tg.innerHTML=N.templateChoices('wedding',hiddenTemplateKeys).map(t=>`<button class="template-card" data-land-template="${N.esc(t.name)}">${thumb(t)}<span class="template-name">${N.esc(t.name)}</span></button>`).join('');
   $$('[data-land-template]').forEach(b=>b.onclick=()=>{state.occasionKey='wedding';cleanTypeFields();applyTypeExperience();state.template=b.dataset.landTemplate;state.step=3;modal.classList.add('open');modal.setAttribute('aria-hidden','false');document.body.classList.add('journey-open');render()});
-  const prices=[
-    {name:'هلا الأساسية',guests:'حتى 100 ضيف',price:'149',items:['قوالب دعوات قابلة للتخصيص','رابط الدعوة وموقع المناسبة','إدارة التأكيد والاعتذار']},
-    {name:'هلا بلس',guests:'حتى 250 ضيفًا',price:'349',featured:true,items:['كل مزايا الأساسية','إرسال واتساب عند تفعيل الخدمة','QR لكل ضيف','لوحة متابعة المدعوين']},
-    {name:'هلا بريميوم',guests:'حتى 500 ضيف',price:'699',items:['كل مزايا بلس','تخصيصات متقدمة','قوائم انتظار وتقارير حضور','أولوية الدعم حسب التوفر']}
-  ];
+  const prices=catalogPackages.map(p=>({name:p.name,guests:`حتى ${p.guestLimit} ضيف`,price:p.amountSar,featured:p.code==='hala_plus',items:p.code==='hala_basic'?['قوالب دعوات قابلة للتخصيص','رابط الدعوة وموقع المناسبة','إدارة التأكيد والاعتذار']:p.code==='hala_plus'?['كل مزايا الأساسية','إرسال واتساب عند تفعيل الخدمة','QR لكل ضيف','لوحة متابعة المدعوين']:['كل مزايا بلس','تخصيصات متقدمة','قوائم انتظار وتقارير حضور','أولوية الدعم حسب التوفر']}));
   const pg=$('#priceGrid');
   if(pg)pg.innerHTML=prices.map(p=>`<article class="price-card ${p.featured?'featured':''}">${p.featured?'<span class="price-tag">الأكثر اختيارًا</span>':''}<h3>${p.name}</h3><p>${p.guests}</p><div class="price-number">${p.price}<small> ريال</small></div><ul>${p.items.map(i=>`<li>${i}</li>`).join('')}</ul><button type="button" class="gold-btn" data-land-package="${p.name}" style="width:100%">اختر الباقة</button></article>`).join('');
   $$('[data-land-package]').forEach(b=>b.onclick=()=>{state.package=b.dataset.landPackage;openBuilder(state.occasionKey)});
+  const services=$('#services .service-grid');
+  if(services&&catalogServices)services.innerHTML=catalogServices.map(service=>`<article><span>✦</span><h3>${N.esc(service.name)}</h3><p>${N.esc(service.description)}</p></article>`).join('')||'<p>لا توجد خدمات إضافية متاحة حاليًا.</p>';
+
 }
 function initHalaPlanner(){
   const form=$('#halaPlannerForm'),result=$('#plannerResult');if(!form||!result)return;
@@ -160,3 +160,13 @@ function initHalaPlanner(){
   form.onsubmit=e=>{e.preventDefault();const type=$('#plannerType').value,city=$('#plannerCity').value.trim()||'مدينتك',guests=Math.max(1,Number($('#plannerGuests').value)||1),budget=Math.max(0,Number($('#plannerBudget').value)||0),steps=plans[type]||plans.wedding;result.innerHTML=`<span class="planner-star">✦</span><h3>خطة مبدئية من هلا</h3><p><strong>${guests.toLocaleString('ar-SA')}</strong> ضيف في <strong>${N.esc(city)}</strong>${budget?` بميزانية ${budget.toLocaleString('ar-SA')} ر.س`:''}.</p><ul>${steps.map(s=>`<li>${s}</li>`).join('')}</ul>`;};
 }
 renderLanding();initHalaPlanner();const resumeDraft=$('#resumeDraft');if(resumeDraft&&hasSavedDraft()){resumeDraft.classList.remove('hidden');resumeDraft.onclick=()=>openBuilder(state.occasionKey,true)}const dashboardDemo=$('#dashboardDemoBtn');if(dashboardDemo)dashboardDemo.onclick=()=>{const o=JSON.parse(localStorage.getItem('noortoonaOwner')||'null');o?location.href=`/dashboard?event=${encodeURIComponent(o.eventId)}`:toast('أنشئ مناسبة أولًا لفتح لوحة المضيف')};const mobileBtn=$('#mobileMenuBtn'),mobile=$('#mobileMenu');if(mobileBtn&&mobile)mobileBtn.onclick=()=>{const open=mobile.classList.toggle('open');mobileBtn.setAttribute('aria-expanded',String(open));mobile.setAttribute('aria-hidden',String(!open))};function toast(message){const t=$('#toast');if(!t)return;t.textContent=message;t.classList.add('show');clearTimeout(window.__toast);window.__toast=setTimeout(()=>t.classList.remove('show'),3200)}
+
+// Read the same catalog used by server checkout; keep approved defaults when offline.
+fetch('/api/catalog',{headers:{accept:'application/json'}}).then(async response=>{if(!response.ok)throw Error('catalog unavailable');return response.json()}).then(value=>{
+  const catalog=N.catalogData(value);if(!catalog)return;
+  catalogPackages=catalog.packages;hiddenTemplateKeys=catalog.hiddenTemplateKeys;catalogServices=catalog.services;
+  if(!catalogPackages.some(p=>p.name===state.package))state.package=catalogPackages[0].name;
+  if(!templates().some(t=>t.name===state.template)&&templates()[0])state.template=templates()[0].name;
+  renderLanding();
+  if(modal.classList.contains('open')&&[3,4,7].includes(state.step)){saveInputs();render()}
+}).catch(()=>{});

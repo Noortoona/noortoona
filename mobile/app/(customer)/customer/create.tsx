@@ -10,6 +10,7 @@ import { BrandHeader, PrimaryButton, Screen } from "@/ui";
 import { theme } from "@/theme";
 import { isGoogleMapsUrl } from "@/links";
 import { occasionForApi } from "@/templateCatalog";
+import { DEFAULT_PACKAGES, availableTemplatesFor, publicCatalog, type PublicCatalog } from "@/catalog";
 import { audioDataUri, imageDataUri, MAX_AUDIO_BYTES } from "@/designMedia";
 import { InvitationPreview } from "@/InvitationPreview";
 import { ActivityKey, OccasionKey, TemplateArtwork, templatesFor } from "@/templates";
@@ -42,12 +43,6 @@ const ACTIVITIES: Array<{ key: ActivityKey; label: string }> = [
   { key: "activityCustom", label: "نشاط مخصص" },
 ];
 
-const PACKAGES = [
-  { code: "hala_basic", name: "هلا الأساسية", guests: "حتى 100 مدعو", price: 149 },
-  { code: "hala_plus", name: "هلا بلس", guests: "حتى 250 مدعو", price: 349 },
-  { code: "hala_premium", name: "هلا بريميوم", guests: "حتى 500 مدعو", price: 699 },
-] as const;
-
 export default function CreateEvent() {
   const auth = useRequireRole("customer");
   const router = useRouter();
@@ -73,16 +68,25 @@ export default function CreateEvent() {
   const [audioName, setAudioName] = useState("");
   const [mediaBusy, setMediaBusy] = useState(false);
   const [template, setTemplate] = useState("ليلة كحلية");
-  const [packageCode, setPackageCode] = useState<(typeof PACKAGES)[number]["code"]>("hala_plus");
+  const [packageCode, setPackageCode] = useState("hala_plus");
   const [requestSupervisor, setRequestSupervisor] = useState(false);
   const [supervisorPrice, setSupervisorPrice] = useState(299);
   const [busy, setBusy] = useState(false);
+  const [catalog, setCatalog] = useState<PublicCatalog>({ packages: DEFAULT_PACKAGES, hiddenTemplateKeys: [], services: [] });
 
   const selected = useMemo(() => OCCASIONS.find(o => o.key === occasionKey)!, [occasionKey]);
   const activity = useMemo(() => ACTIVITIES.find(a => a.key === activityKey)!, [activityKey]);
-  const currentTemplates = useMemo(() => templatesFor(occasionKey, activityKey), [occasionKey, activityKey]);
+  const currentTemplates = useMemo(() => availableTemplatesFor(occasionKey, activityKey, catalog.hiddenTemplateKeys), [occasionKey, activityKey, catalog.hiddenTemplateKeys]);
+  const packages = catalog.packages;
   const selectedTemplate = currentTemplates.find(t => t.name === template) || currentTemplates[0];
   useEffect(() => { api<{ supervisorAddonSar: number }>("/api/pricing/quote").then(result => setSupervisorPrice(result.supervisorAddonSar)).catch(() => undefined); }, []);
+
+  useEffect(() => {
+    let current = true;
+    api<unknown>("/api/catalog").then(value => { const next = publicCatalog(value); if (current && next) setCatalog(next); }).catch(() => undefined);
+    return () => { current = false; };
+  }, []);
+  useEffect(() => { if (currentTemplates[0] && !currentTemplates.some(item => item.name === template)) setTemplate(currentTemplates[0].name); }, [currentTemplates, template]);
 
   if (auth.loading || !auth.user) return null;
 
@@ -117,13 +121,13 @@ export default function CreateEvent() {
   function chooseOccasion(key: OccasionKey) {
     setOccasionKey(key);
     setName2("");
-    const first = templatesFor(key, activityKey)[0];
+    const first = availableTemplatesFor(key, activityKey, catalog.hiddenTemplateKeys)[0];
     if (first) setTemplate(first.name);
   }
 
   function chooseActivity(key: ActivityKey) {
     setActivityKey(key);
-    const first = templatesFor("activity", key)[0];
+    const first = availableTemplatesFor("activity", key, catalog.hiddenTemplateKeys)[0];
     if (first) setTemplate(first.name);
   }
 
@@ -139,12 +143,13 @@ export default function CreateEvent() {
 
   async function create() {
     const error = validateDetails();
+    if (!selectedTemplate) return Alert.alert("القوالب", "لا توجد قوالب متاحة لهذا النوع حاليًا.");
     if (error) return Alert.alert("أكمل البيانات", error);
     setBusy(true);
     try {
       const occasion = occasionForApi(occasionKey, selected.label);
       const activityType = occasionKey === "activity" ? (activityKey === "activityCustom" ? customActivity.trim() : activity.label) : "";
-      const pkg = PACKAGES.find(p => p.code === packageCode)!;
+      const pkg = packages.find(p => p.code === packageCode)!;
       const result = await api<{ event: { id: string } }>("/api/events", {
         method: "POST",
         body: JSON.stringify({
@@ -164,7 +169,7 @@ export default function CreateEvent() {
           requireShareConsent: occasionKey === "activity" && Number(shareAmount || 0) > 0,
           allowNamedCompanions: occasionKey === "activity",
           waitlistEnabled: occasionKey === "activity",
-          template: selectedTemplate.name,
+          template: selectedTemplate?.name || "",
           package: pkg.name,
           requestSupervisor,
           design: { occasionKey, activityKey, headline, accent, font, image, audio },
@@ -287,20 +292,21 @@ export default function CreateEvent() {
 
         {step === 3 ? (
           <>
-            <InvitationPreview data={{ occasionKey, activityKey, occasion: occasionForApi(occasionKey, selected.label), activityType: occasionKey === "activity" ? (activityKey === "activityCustom" ? customActivity : activity.label) : "", name1, name2, date, time, location, message, template: selectedTemplate.name, design: { headline, accent, font, image, audio } }} />
+            <InvitationPreview data={{ occasionKey, activityKey, occasion: occasionForApi(occasionKey, selected.label), activityType: occasionKey === "activity" ? (activityKey === "activityCustom" ? customActivity : activity.label) : "", name1, name2, date, time, location, message, template: selectedTemplate?.name || "", design: { headline, accent, font, image, audio } }} />
 
             <Text style={styles.sectionTitle}>اختر الباقة</Text>
-            {PACKAGES.map(p => (
+            {packages.map(p => (
               <Pressable key={p.code} onPress={() => setPackageCode(p.code)} style={[styles.package, packageCode === p.code && styles.packageActive]}>
-                <View style={styles.packageCopy}><Text style={[styles.packageName, packageCode === p.code && styles.packageNameActive]}>{p.name}</Text><Text style={[styles.packageGuests, packageCode === p.code && styles.packageGuestsActive]}>{p.guests}</Text></View>
-                <Text style={[styles.price, packageCode === p.code && styles.priceActive]}>{p.price} ر.س</Text>
+                <View style={styles.packageCopy}><Text style={[styles.packageName, packageCode === p.code && styles.packageNameActive]}>{p.name}</Text><Text style={[styles.packageGuests, packageCode === p.code && styles.packageGuestsActive]}>{`حتى ${p.guestLimit} مدعو`}</Text></View>
+                <Text style={[styles.price, packageCode === p.code && styles.priceActive]}>{p.amountSar} ر.س</Text>
               </Pressable>
             ))}
             <Pressable onPress={() => setRequestSupervisor(value => !value)} style={[styles.package, requestSupervisor && styles.packageActive]} accessibilityRole="checkbox" accessibilityState={{ checked: requestSupervisor }}>
               <Text style={[styles.packageName, requestSupervisor && styles.packageNameActive]}>{requestSupervisor ? "☑" : "□"} إضافة مشرف للمناسبة</Text>
               <Text style={[styles.price, requestSupervisor && styles.priceActive]}>+{supervisorPrice} ر.س</Text>
             </Pressable>
-            <Text style={styles.trial}>الإجمالي: {PACKAGES.find(p => p.code === packageCode)!.price + (requestSupervisor ? supervisorPrice : 0)} ر.س</Text>
+            <Text style={styles.trial}>الإجمالي: {packages.find(p => p.code === packageCode)!.amountSar + (requestSupervisor ? supervisorPrice : 0)} ر.س</Text>
+            {catalog.services.length ? <><Text style={styles.sectionTitle}>خدمات المناسبة</Text>{catalog.services.map(service => <View key={service.id} style={styles.previewCard}><Text style={styles.label}>{service.name}</Text><Text style={styles.help}>{service.description}</Text></View>)}</> : null}
             <Text style={styles.trial}>قبل الدفع لديك إرسال تجريبي مجاني واحد للتأكد من شكل الدعوة ووصولها.</Text>
             <PrimaryButton label="إنشاء المناسبة وتجربتها" onPress={create} loading={busy} disabled={mediaBusy} />
             <PrimaryButton label="رجوع للقالب" onPress={() => setStep(2)} secondary />
