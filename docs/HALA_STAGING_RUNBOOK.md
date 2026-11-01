@@ -20,7 +20,7 @@ After changing invitation-renderer.js or v2.css, run `node mobile/scripts/sync-i
 
 ## Backend isolation
 
-Confirm the Netlify Deploy Preview uses a separate database branch before applying migrations or creating fixtures. Registering a secret is not proof that the database is isolated. Apply all tracked migrations in order, including `20261031230000_customer-free-trial` and `20261101010000_catalog-order-entitlements`. Verify the durable ledger and backfill before sender tests. Never run the migration against production as part of this task.
+Confirm the Netlify Deploy Preview uses a separate database branch before applying migrations or creating fixtures. Registering a secret is not proof that the database is isolated. Apply all tracked migrations in order, including `20261031230000_customer-free-trial` and `20261101010000_catalog-order-entitlements`, `20261101023000_supervisor-price-pitch-deck`, and `20261101024000_supervisor-price-599`. New supervisor requests use the configured current price and require a male/female preference; previously agreed request amounts must remain unchanged. Verify the durable ledger and backfill before sender tests. Never run the migration against production as part of this task.
 
 The Vercel deployment serves the public dist frontend. It has no Netlify Functions runtime. Do not direct it to production APIs to make staging appear functional. Use a real staging Netlify backend for integrated review.
 

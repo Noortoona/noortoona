@@ -1,9 +1,9 @@
 // New package codes deliberately differ from legacy start/basic/royal orders.
 // Previously paid order amounts and package identifiers remain unchanged in the database.
 export const PAYMENT_PACKAGES = {
-  hala_basic: { code: "hala_basic", name: "هلا الأساسية", guestLimit: 100, amount: 14900, currency: "SAR" },
-  hala_plus: { code: "hala_plus", name: "هلا بلس", guestLimit: 250, amount: 34900, currency: "SAR" },
-  hala_premium: { code: "hala_premium", name: "هلا بريميوم", guestLimit: 500, amount: 69900, currency: "SAR" },
+  hala_basic: { code: "hala_basic", name: "هلا الأساسية", guestLimit: 100, amount: 44900, currency: "SAR" },
+  hala_plus: { code: "hala_plus", name: "هلا بلس", guestLimit: 250, amount: 109900, currency: "SAR" },
+  hala_premium: { code: "hala_premium", name: "هلا بريميوم", guestLimit: 500, amount: 179900, currency: "SAR" },
 };
 
 // Historical paid orders retain their original guest limits; never offer these codes for new purchases.
@@ -23,13 +23,24 @@ export function packageFor(code) {
   return PAYMENT_PACKAGES[raw] || Object.values(PAYMENT_PACKAGES).find(item => item.name === raw) || null;
 }
 
+// Reference prices are exposed only after actual prior sales and the license are verified.
+const REFERENCE_PRICES={hala_basic:89900,hala_plus:219900,hala_premium:359900};
+function verifiedPromotion(){
+  return typeof Netlify!=="undefined" && Netlify.env && String(Netlify.env.get("HALA_PROMO_LICENSE_ID")||"").trim() && String(Netlify.env.get("HALA_PROMO_PRIOR_PRICES_VERIFIED")).toLowerCase()==="true";
+}
 export function publicPackages() {
+  const promotionActive=verifiedPromotion();
   return Object.values(PAYMENT_PACKAGES).map((item) => ({
     code: item.code,
     name: item.name,
     guestLimit: item.guestLimit,
     amount: item.amount,
     amountSar: item.amount / 100,
+    ...(promotionActive&&REFERENCE_PRICES[item.code]>item.amount?{
+      referenceAmount:REFERENCE_PRICES[item.code],referenceAmountSar:REFERENCE_PRICES[item.code]/100,
+      savingsPercent:Math.round((1-item.amount/REFERENCE_PRICES[item.code])*100),
+      promoLicenseId:String(Netlify.env.get("HALA_PROMO_LICENSE_ID")).trim(),
+    }:{}),
     currency: item.currency,
   }));
 }

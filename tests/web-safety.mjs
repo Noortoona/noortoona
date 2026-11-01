@@ -89,7 +89,7 @@ test('public builder replaces fallback prices, template visibility and service t
   vm.runInNewContext(await readFile(new URL('../app.js',import.meta.url),'utf8'),context);
   await new Promise(resolve=>setImmediate(resolve));
   assert.deepEqual(requested,['/api/catalog']);
-  assert.match(prices.innerHTML,/>169<small>/);
+  assert.match(prices.innerHTML,/>(?:169|١٦٩)<small>/);
   assert.match(prices.innerHTML,/حتى 120 ضيف/);
   assert.doesNotMatch(templates.innerHTML,/ليلة كحلية/);
   assert.match(services.innerHTML,/خدمة خاصة/);
@@ -115,4 +115,27 @@ test('admin catalog submits its revision and reloads rather than overwriting a c
   assert.equal(calls.length,2);
   assert.equal(reloads,2);
   assert.match(notice.textContent,/تغيرت الإعدادات/);
+});
+
+test('premium fallback, required supervisor preference and promotional references preserve the server contract', async () => {
+  async function appFor(packages){
+    const priceGrid={innerHTML:''},elements={'#builderModal':{classList:{contains:()=>false}},'#builderBody':{},'#nextBtn':{},'#prevBtn':{},'#priceGrid':priceGrid};
+    const fixture={version:1,packages,hiddenTemplateKeys:[],services:[]};
+    const context={window:{},URL,URLSearchParams,location:{search:''},localStorage:{getItem:()=>null,setItem(){},removeItem(){}},document:{querySelector:selector=>elements[selector]||null,querySelectorAll:()=>[],addEventListener(){}},fetch:async()=>({ok:true,json:async()=>fixture}),setTimeout,clearTimeout};
+    vm.runInNewContext(renderer,context);vm.runInNewContext(await readFile(new URL('../app.js',import.meta.url),'utf8'),context);
+    await new Promise(resolve=>setImmediate(resolve));
+    return {context,priceGrid};
+  }
+  const packages=[{code:'hala_basic',name:'هلا الأساسية',amount:44900,amountSar:449,guestLimit:100,currency:'SAR',referenceAmountSar:999},{code:'hala_plus',name:'هلا بلس',amount:109900,guestLimit:250,currency:'SAR'},{code:'hala_premium',name:'هلا بريميوم',amount:179900,guestLimit:500,currency:'SAR'}];
+  const initial=await appFor(packages);
+  assert.doesNotMatch(initial.priceGrid.innerHTML,/<del>/);
+  assert.match(initial.priceGrid.innerHTML,/٤٤٩|449/);
+  assert.match(vm.runInNewContext('state.step=7;state.requestSupervisor=true;validate()',initial.context),/اختر مشرفًا أو مشرفة/);
+  assert.equal(vm.runInNewContext('state.supervisorPreference="female";validate()',initial.context),'');
+  const send=vm.runInNewContext('renderSend()',initial.context);
+  assert.match(send,/599|٥٩٩/);assert.match(send,/value="female" checked/);
+  const verified=await appFor(packages.map(p=>p.code==='hala_basic'?{...p,promoLicenseId:'fixture-verified-license'}:p));
+  assert.match(verified.priceGrid.innerHTML,/<del>/);
+  const noSaving=await appFor(packages.map(p=>p.code==='hala_basic'?{...p,referenceAmountSar:300,promoLicenseId:'fixture-verified-license'}:p));
+  assert.doesNotMatch(noSaving.priceGrid.innerHTML,/<del>/);
 });

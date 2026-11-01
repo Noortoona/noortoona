@@ -26,6 +26,10 @@ export function applyCatalogPatch(current, patch) {
       if(!target||seen.has(value.code))throw invalid('كود الباقة غير صالح أو مكرر');seen.add(value.code);
       if(!Number.isInteger(value.amount)||value.amount<100||value.amount>10_000_000||!Number.isInteger(value.guestLimit)||value.guestLimit<1||value.guestLimit>5000)throw invalid('سعر الباقة أو حد المدعوين غير صالح');
       target.amount=value.amount;target.amountSar=value.amount/100;target.guestLimit=value.guestLimit;
+      if(target.referenceAmount){
+        if(target.amount<target.referenceAmount)target.savingsPercent=Math.round((1-target.amount/target.referenceAmount)*100);
+        else for(const key of ['referenceAmount','referenceAmountSar','savingsPercent','promoLicenseId'])delete target[key];
+      }
     }
   }
   if(patch.hiddenTemplateKeys!==undefined){

@@ -1,12 +1,12 @@
 import { templateCatalog, templatesFor, type OccasionKey, type ActivityKey } from "./templateCatalog";
 
-export type CatalogPackage = { code: string; name: string; amount: number; amountSar: number; guestLimit: number; currency: string };
+export type CatalogPackage = { code: string; name: string; amount: number; amountSar: number; guestLimit: number; currency: string; referenceAmountSar?: number; promoLicenseId?: string; savingsPercent?: number };
 export type CatalogService = { id: string; name: string; description: string; enabled: boolean };
 export type PublicCatalog = { packages: CatalogPackage[]; hiddenTemplateKeys: string[]; services: CatalogService[] };
 export const DEFAULT_PACKAGES: CatalogPackage[] = [
-  { code: "hala_basic", name: "هلا الأساسية", amount: 14900, amountSar: 149, guestLimit: 100, currency: "SAR" },
-  { code: "hala_plus", name: "هلا بلس", amount: 34900, amountSar: 349, guestLimit: 250, currency: "SAR" },
-  { code: "hala_premium", name: "هلا بريميوم", amount: 69900, amountSar: 699, guestLimit: 500, currency: "SAR" },
+  { code: "hala_basic", name: "هلا الأساسية", amount: 44900, amountSar: 449, guestLimit: 100, currency: "SAR" },
+  { code: "hala_plus", name: "هلا بلس", amount: 109900, amountSar: 1099, guestLimit: 250, currency: "SAR" },
+  { code: "hala_premium", name: "هلا بريميوم", amount: 179900, amountSar: 1799, guestLimit: 500, currency: "SAR" },
 ];
 
 export function publicCatalog(value: unknown): PublicCatalog | null {

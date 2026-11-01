@@ -54,7 +54,7 @@ jobs:
           path: mobile/android/app/build/outputs/apk/release/app-release.apk
           if-no-files-found: error
           retention-days: 14
-      - name: Record exact build limits
+      - name: Record review build limits after synchronizing approved pricing and supervisor preferences
         run: |
           echo 'Review APK only: standard debug signature, arm64 Android devices, payments disabled, preview API. No Expo/Play credentials were created or changed.' >> "$GITHUB_STEP_SUMMARY"
           echo 'OTP/WhatsApp activation and isolated staging database verification remain required before customer-data tests.' >> "$GITHUB_STEP_SUMMARY"

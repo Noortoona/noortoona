@@ -107,7 +107,7 @@ test('custom image/audio use guest-compatible data URIs and enforce combined pay
 test('mobile consumes admin catalog prices and hides only matching template groups', () => {
   const response={version:1,packages:DEFAULT_PACKAGES.map(pkg=>({...pkg,amount:pkg.amount+1000})),hiddenTemplateKeys:['wedding:مخمل ملكي'],services:[{id:'service',name:'تنسيق',description:'خدمة المناسبة',enabled:true},{id:'hidden',name:'غير متاحة',description:'موقوفة',enabled:false}]};
   const catalog=publicCatalog(response);
-  assert.equal(catalog.packages[0].amountSar,159);
+  assert.equal(catalog.packages[0].amountSar,459);
   assert.equal(catalog.services.length,1);
   assert.equal(availableTemplatesFor('wedding','padel',catalog.hiddenTemplateKeys).some(item=>item.name==='مخمل ملكي'),false);
   assert.equal(availableTemplatesFor('milkah','padel',catalog.hiddenTemplateKeys).some(item=>item.name==='مخمل ملكي'),true);

@@ -70,7 +70,8 @@ export default function CreateEvent() {
   const [template, setTemplate] = useState("ليلة كحلية");
   const [packageCode, setPackageCode] = useState("hala_plus");
   const [requestSupervisor, setRequestSupervisor] = useState(false);
-  const [supervisorPrice, setSupervisorPrice] = useState(299);
+  const [supervisorPrice, setSupervisorPrice] = useState(599);
+  const [supervisorPreference, setSupervisorPreference] = useState<"male" | "female" | null>(null);
   const [busy, setBusy] = useState(false);
   const [catalog, setCatalog] = useState<PublicCatalog>({ packages: DEFAULT_PACKAGES, hiddenTemplateKeys: [], services: [] });
 
@@ -145,6 +146,7 @@ export default function CreateEvent() {
     const error = validateDetails();
     if (!selectedTemplate) return Alert.alert("القوالب", "لا توجد قوالب متاحة لهذا النوع حاليًا.");
     if (error) return Alert.alert("أكمل البيانات", error);
+    if (requestSupervisor && !supervisorPreference) return Alert.alert("اختيار المشرف", "اختر مشرفًا أو مشرفة أولًا");
     setBusy(true);
     try {
       const occasion = occasionForApi(occasionKey, selected.label);
@@ -172,6 +174,7 @@ export default function CreateEvent() {
           template: selectedTemplate?.name || "",
           package: pkg.name,
           requestSupervisor,
+          supervisorPreference: requestSupervisor ? supervisorPreference : null,
           design: { occasionKey, activityKey, headline, accent, font, image, audio },
         }),
       }, auth.token);
@@ -298,13 +301,14 @@ export default function CreateEvent() {
             {packages.map(p => (
               <Pressable key={p.code} onPress={() => setPackageCode(p.code)} style={[styles.package, packageCode === p.code && styles.packageActive]}>
                 <View style={styles.packageCopy}><Text style={[styles.packageName, packageCode === p.code && styles.packageNameActive]}>{p.name}</Text><Text style={[styles.packageGuests, packageCode === p.code && styles.packageGuestsActive]}>{`حتى ${p.guestLimit} مدعو`}</Text></View>
-                <Text style={[styles.price, packageCode === p.code && styles.priceActive]}>{p.amountSar} ر.س</Text>
+                <View>{p.promoLicenseId && Number.isFinite(p.referenceAmountSar) && p.referenceAmountSar! > p.amountSar ? <Text style={{ textDecorationLine: "line-through", color: theme.colors.muted, fontSize: 12 }}>{p.referenceAmountSar} ر.س</Text> : null}<Text style={[styles.price, packageCode === p.code && styles.priceActive]}>{p.amountSar} ر.س</Text></View>
               </Pressable>
             ))}
             <Pressable onPress={() => setRequestSupervisor(value => !value)} style={[styles.package, requestSupervisor && styles.packageActive]} accessibilityRole="checkbox" accessibilityState={{ checked: requestSupervisor }}>
-              <Text style={[styles.packageName, requestSupervisor && styles.packageNameActive]}>{requestSupervisor ? "☑" : "□"} إضافة مشرف للمناسبة</Text>
+              <Text style={[styles.packageName, requestSupervisor && styles.packageNameActive]}>{requestSupervisor ? "☑" : "□"} إضافة مشرف أو مشرفة للمناسبة</Text>
               <Text style={[styles.price, requestSupervisor && styles.priceActive]}>+{supervisorPrice} ر.س</Text>
             </Pressable>
+            {requestSupervisor ? <View style={{ gap: 8 }}><Text style={styles.label}>تفضيل خدمة الاستقبال</Text><View style={styles.activityChoices}>{([{ key: "male", label: "مشرف" }, { key: "female", label: "مشرفة" }] as const).map(option => <Pressable key={option.key} accessibilityRole="radio" accessibilityState={{ checked: supervisorPreference === option.key }} onPress={() => setSupervisorPreference(option.key)} style={[styles.activityChoice, supervisorPreference === option.key && styles.activityChoiceActive]}><Text style={[styles.activityChoiceText, supervisorPreference === option.key && styles.activityChoiceTextActive]}>{option.label}</Text></Pressable>)}</View><Text style={styles.help}>حسب توفر الكادر في مدينة المناسبة وموعدها.</Text></View> : null}
             <Text style={styles.trial}>الإجمالي: {packages.find(p => p.code === packageCode)!.amountSar + (requestSupervisor ? supervisorPrice : 0)} ر.س</Text>
             {catalog.services.length ? <><Text style={styles.sectionTitle}>خدمات المناسبة</Text>{catalog.services.map(service => <View key={service.id} style={styles.previewCard}><Text style={styles.label}>{service.name}</Text><Text style={styles.help}>{service.description}</Text></View>)}</> : null}
             <Text style={styles.trial}>قبل الدفع لديك إرسال تجريبي مجاني واحد للتأكد من شكل الدعوة ووصولها.</Text>

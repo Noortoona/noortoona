@@ -51,9 +51,9 @@ test('OTP routes the two configured admin numbers, creates customer accounts, an
   assert.equal(wrongAttempts,4);
 });
 
-test('payment order uses server price plus 299 SAR supervisor addon and owner authorization',async()=>{
+test('payment order uses server price plus 599 SAR supervisor addon and owner authorization',async()=>{
   globalThis.Netlify={env:{get:()=>undefined}};
-  let owner=true, addon=29900, inserted=[];
+  let owner=true, addon=59900, inserted=[];
   const db={sql:async(parts,...args)=>{
     const sql=parts.join('?');
     if(sql.includes('FROM event_members'))return owner?[{exists:true}]:[];
@@ -73,8 +73,8 @@ test('payment order uses server price plus 299 SAR supervisor addon and owner au
     activePartner:async()=>null,referralAmounts
   });
   let res=await order(request('/api/payments/order',{eventId:'event',packageCode:'hala_plus',amount:1}));
-  assert.equal(res.status,201);assert.equal((await res.json()).order.amount,64800);
-  assert.equal(inserted[5],29900);
+  assert.equal(res.status,201);assert.equal((await res.json()).order.amount,169800);
+  assert.equal(inserted[5],59900);
   owner=false;res=await order(request('/api/payments/order',{eventId:'event',packageCode:'hala_plus'}));assert.equal(res.status,403);
 });
 

@@ -19,7 +19,10 @@ export default async (req: Request) => {
     const title = String(data.title || `${data.occasion || "مناسبة"} ${data.name1 || ""}`).trim().slice(0, 220);
     const occasion = String(data.occasion || "أخرى").trim().slice(0, 80);
     const name1 = String(data.name1 || "").trim().slice(0, 180);
-    const designJson = JSON.stringify(data.design || {});
+    const preference=data.requestSupervisor?String(data.supervisorPreference||""):"";
+    if(data.requestSupervisor&&!["male","female"].includes(preference))return secureJson({error:"اختر مشرفًا أو مشرفة قبل إنشاء المناسبة"},400);
+    const design=data.design&&typeof data.design==='object'&&!Array.isArray(data.design)?data.design:{};
+    const designJson=JSON.stringify({...design,...(data.requestSupervisor?{supervisorPreference:preference}:{})});
     if (!title || !name1) return secureJson({ error: "اسم المناسبة مطلوب" }, 400);
     if (designJson.length > 1_500_000) return secureJson({ error: "صورة الخلفية أكبر من المسموح" }, 413);
     const db = getDatabase();
@@ -46,7 +49,7 @@ export default async (req: Request) => {
           VALUES (${crypto.randomUUID()},${event.id},${auth.user.id},${amount},'requested')
           ON CONFLICT(event_id) DO UPDATE SET user_id=EXCLUDED.user_id,amount=EXCLUDED.amount,status='requested',updated_at=NOW()
         `;
-        await recordAudit(auth.user.id, "supervisor.requested", "event", event.id, { amount });
+        await recordAudit(auth.user.id, "supervisor.requested", "event", event.id, { amount, preference });
       }
     }
     return secureJson({ event, ownerToken, accountLinked: Boolean(auth?.user), supervisorRequested: Boolean(data.requestSupervisor) });

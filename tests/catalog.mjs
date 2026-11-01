@@ -30,7 +30,7 @@ const db={sql:async(parts,...values)=>{const release=await acquire();try{return(
 globalThis.__HALA_CATALOG_DB__=db;
 const env={HALA_PAYMENT_MODE:'test',MOYASAR_PUBLISHABLE_KEY:'pk_test_catalog_fixture',MOYASAR_SECRET_KEY:'sk_test_catalog_fixture'};
 globalThis.Netlify={env:{get:key=>env[key]}};
-const handlers={};for(const name of ['catalog','admin-catalog','pricing-quote','referral-quote','payment-order','add-guest','create-event'])handlers[name]=(await import('../netlify/functions/'+name+'.mts')).default;
+const handlers={};for(const name of ['catalog','admin-catalog','pricing-quote','referral-quote','payment-order','add-guest','create-event','supervisor-addon','admin-supervisors'])handlers[name]=(await import('../netlify/functions/'+name+'.mts')).default;
 const {createSession}=await import('../netlify/functions/_shared/auth.mjs');
 const request=(path,body,token='',method=body?'PATCH':'GET')=>new Request('https://staging.example'+path,{method,headers:{origin:'https://staging.example','content-type':'application/json',...(token?{authorization:'Bearer '+token}:{})},...(body?{body:JSON.stringify(body)}:{})});
 
@@ -42,7 +42,7 @@ await test('catalog handlers persist real configuration and preserve order entit
   let firstOrder,event;
   await t.test('public defaults omit disabled services and admin mutation requires actual admin',async()=>{
     const response=await handlers.catalog(request('/api/catalog'));
-    assert.equal(response.status,200);const data=await response.json();assert.equal(data.packages[0].amount,14900);assert.equal(data.services.length,6);
+    assert.equal(response.status,200);const data=await response.json();assert.equal(data.packages[0].amount,44900);assert.equal(data.services.length,6);
     assert.equal((await handlers['admin-catalog'](request('/api/admin/catalog',{services:[]},customer))).status,403);
     assert.equal((await handlers['admin-catalog'](request('/api/admin/catalog',{services:[]}))).status,401);
     const adminView=await handlers['admin-catalog'](request('/api/admin/catalog',undefined,admin));assert.equal((await adminView.json()).templateKeys.length,84);
@@ -73,5 +73,25 @@ await test('catalog handlers persist real configuration and preserve order entit
     const added=await handlers['add-guest'](request('/api/guests',{eventId:event.id,guests:[{name:'الأول'},{name:'الثاني'},{name:'الثالث'}]},customer,'POST'));assert.equal(added.status,200);
     const extra=await handlers['add-guest'](request('/api/guests',{eventId:event.id,name:'الرابع'},customer,'POST'));assert.equal(extra.status,409);
     const order=(await pg.query('SELECT amount,guest_limit FROM payment_orders WHERE id=$1',[firstOrder.id])).rows[0];assert.equal(order.amount,19900);assert.equal(order.guest_limit,3);
+  });
+  await t.test('supervisor preference persists for male and female, prices599 and preserves prior299 requests',async()=>{
+    await pg.query("UPDATE platform_settings SET value='599' WHERE key='supervisor_addon_sar'");
+    const payload={name1:'المناسبة',occasion:'زواج',title:'اختبار مشرف',package:'hala_plus',template:'حديقة اللؤلؤ',design:{occasionKey:'wedding'},requestSupervisor:true};
+    for(const invalid of [undefined,'other'])assert.equal((await handlers['create-event'](request('/api/events',{...payload,supervisorPreference:invalid},customer,'POST'))).status,400);
+    for(const preference of ['male','female']){
+      const created=await handlers['create-event'](request('/api/events',{...payload,supervisorPreference:preference},customer,'POST'));
+      assert.equal(created.status,200);const ev=(await created.json()).event;assert.equal(ev.design_json.supervisorPreference,preference);
+      const requestView=await(await handlers['supervisor-addon'](request('/api/events/supervisor?eventId='+ev.id,undefined,customer))).json();assert.equal(requestView.preference,preference);assert.equal(requestView.request.amount,59900);
+      const adminView=await(await handlers['admin-supervisors'](request('/api/admin/supervisors',undefined,admin))).json();assert.equal(adminView.requests.find(r=>r.event_id===ev.id).supervisor_preference,preference);
+      await pg.query("UPDATE supervisor_requests SET amount=29900 WHERE event_id=$1",[ev.id]);
+      const response=await handlers['payment-order'](request('/api/payments/order',{eventId:ev.id,packageCode:'hala_plus'},customer,'POST'));
+      assert.equal(response.status,201);const order=(await response.json()).order;assert.equal(order.amount,139800);assert.equal(order.supervisor_addon_amount,29900);
+      assert.equal((await pg.query('SELECT amount FROM supervisor_requests WHERE event_id=$1',[ev.id])).rows[0].amount,29900);
+    }
+    const attachPayload={name1:'إضافة مشرف',occasion:'أخرى',package:'hala_plus'};
+    const ev=(await(await handlers['create-event'](request('/api/events',attachPayload,customer,'POST'))).json()).event;
+    assert.equal((await handlers['supervisor-addon'](request('/api/events/supervisor',{eventId:ev.id,requested:true},customer,'POST'))).status,400);
+    assert.equal((await handlers['supervisor-addon'](request('/api/events/supervisor',{eventId:ev.id,requested:true,supervisorPreference:'female'},customer,'POST'))).status,201);
+    const updated=await(await handlers['supervisor-addon'](request('/api/events/supervisor?eventId='+ev.id,undefined,customer))).json();assert.equal(updated.preference,'female');assert.equal(updated.request.amount,59900);
   });
 });

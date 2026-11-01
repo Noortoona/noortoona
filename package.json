@@ -7,7 +7,7 @@
     "test:e2e": "playwright test",
     "build": "node scripts/build-static.mjs",
     "test:build": "node --test tests/build-static.mjs",
-    "test:web": "node --test tests/web-safety.mjs",
+    "test:web": "node --test tests/web-safety.mjs tests/guest-insights.mjs",
     "test:database": "node --test tests/database.mjs",
     "test:catalog": "node --test tests/catalog.mjs"
   },

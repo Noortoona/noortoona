@@ -4,7 +4,7 @@
   if(referral&&/^[A-Z0-9_-]{4,24}$/i.test(referral))localStorage.setItem('halaReferralCode',referral.toUpperCase());
   const session=()=>{try{return JSON.parse(localStorage.getItem(KEY)||"null")}catch{return null}};
   const save=s=>localStorage.setItem(KEY,JSON.stringify(s));
-  let resolver=null, purpose="login", supervisorPrice=299;
+  let resolver=null, purpose="login", supervisorPrice=599;
 
   function ensureVisitor(){
     let id=localStorage.getItem(SID);
@@ -15,7 +15,7 @@
     try{await fetch("/api/analytics/track",{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({sessionId:ensureVisitor(),event,path:location.pathname,metadata}),keepalive:true})}catch{}
   }
   track("page_view",{referrer:document.referrer?new URL(document.referrer).hostname:"direct"});
-  fetch("/api/events/supervisor").then(r=>r.ok?r.json():null).then(x=>{if(x?.amountSar)supervisorPrice=x.amountSar}).catch(()=>{});
+  fetch("/api/events/supervisor").then(r=>r.ok?r.json():null).then(x=>{if(typeof x?.amountSar==="number"&&Number.isFinite(x.amountSar)&&x.amountSar>=0)supervisorPrice=x.amountSar}).catch(()=>{});
 
   function modal(){
     let el=document.getElementById("halaAuthModal");
