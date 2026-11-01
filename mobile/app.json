@@ -18,7 +18,7 @@
       "package": "com.noortoona.hala",
       "adaptiveIcon": {
         "foregroundImage": "./assets/hala-icon.png",
-        "backgroundColor": "#090E18"
+        "backgroundColor": "#2E0D1B"
       }
     },
     "plugins": [
@@ -33,7 +33,9 @@
       [
         "expo-camera",
         {
-          "cameraPermission": "نحتاج الكاميرا لمسح رمز QR والتحقق من دخول الضيوف."
+          "cameraPermission": "نحتاج الكاميرا لمسح رمز QR والتحقق من دخول الضيوف.",
+          "microphonePermission": false,
+          "recordAudioAndroid": false
         }
       ],
       [
@@ -42,7 +44,15 @@
           "image": "./assets/hala-icon.png",
           "imageWidth": 180,
           "resizeMode": "contain",
-          "backgroundColor": "#090E18"
+          "backgroundColor": "#2E0D1B"
+        }
+      ],
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "السماح لهلا باختيار صورة أو تصميم للدعوة.",
+          "cameraPermission": "السماح لهلا بالكاميرا لمسح QR عند الاستقبال.",
+          "microphonePermission": false
         }
       ]
     ],

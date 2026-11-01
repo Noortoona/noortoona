@@ -22,7 +22,8 @@ export function useRequireRole(role: Role) {
     if (auth.user.role !== role) router.replace(homeByRole[auth.user.role] as never);
   }, [auth.loading, auth.user, role, router]);
 
-  return auth;
+  const authorized = !auth.loading && auth.user?.role === role;
+  return { ...auth, user: authorized ? auth.user : null, token: authorized ? auth.token : null };
 }
 
 export { homeByRole };

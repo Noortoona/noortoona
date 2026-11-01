@@ -1,15 +1,23 @@
 import React, { useEffect, useMemo, useState } from "react";
-import { Alert, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from "react-native";
+import { Alert, Image, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from "react-native";
 import { useRouter } from "expo-router";
+import * as ImagePicker from "expo-image-picker";
+import * as DocumentPicker from "expo-document-picker";
+import { File } from "expo-file-system";
 import { api } from "@/api";
 import { useRequireRole } from "@/roleGate";
 import { BrandHeader, PrimaryButton, Screen } from "@/ui";
 import { theme } from "@/theme";
+import { isGoogleMapsUrl } from "@/links";
+import { occasionForApi } from "@/templateCatalog";
+import { DEFAULT_PACKAGES, availableTemplatesFor, publicCatalog, type PublicCatalog } from "@/catalog";
+import { audioDataUri, imageDataUri, MAX_AUDIO_BYTES } from "@/designMedia";
+import { InvitationPreview } from "@/InvitationPreview";
 import { ActivityKey, OccasionKey, TemplateArtwork, templatesFor } from "@/templates";
 
 const OCCASIONS: Array<{ key: OccasionKey; label: string; emoji: string; twoNames: boolean }> = [
   { key: "wedding", label: "زواج", emoji: "✦", twoNames: true },
-  { key: "marriage", label: "ملكة / عقد قران", emoji: "✧", twoNames: true },
+  { key: "milkah", label: "ملكة / عقد قران", emoji: "✧", twoNames: true },
   { key: "engagement", label: "خطوبة", emoji: "♢", twoNames: true },
   { key: "graduation", label: "تخرج", emoji: "⌁", twoNames: false },
   { key: "birthday", label: "عيد ميلاد", emoji: "◌", twoNames: false },
@@ -17,6 +25,10 @@ const OCCASIONS: Array<{ key: OccasionKey; label: string; emoji: string; twoName
   { key: "meeting", label: "اجتماع", emoji: "▣", twoNames: false },
   { key: "conference", label: "مؤتمر", emoji: "◇", twoNames: false },
   { key: "formal", label: "مناسبة رسمية", emoji: "▤", twoNames: false },
+  { key: "opening", label: "افتتاح", emoji: "✂", twoNames: false },
+  { key: "honoring", label: "تكريم", emoji: "♛", twoNames: false },
+  { key: "national", label: "مناسبة وطنية", emoji: "✦", twoNames: false },
+  { key: "condolence", label: "عزاء", emoji: "❧", twoNames: false },
   { key: "activity", label: "نشاط / تجمع", emoji: "⚡", twoNames: false },
   { key: "custom", label: "أخرى", emoji: "+", twoNames: false },
 ];
@@ -31,12 +43,6 @@ const ACTIVITIES: Array<{ key: ActivityKey; label: string }> = [
   { key: "activityCustom", label: "نشاط مخصص" },
 ];
 
-const PACKAGES = [
-  { code: "hala_basic", name: "هلا الأساسية", guests: "حتى 100 مدعو", price: 449 },
-  { code: "hala_plus", name: "هلا بلس", guests: "حتى 250 مدعو", price: 1099 },
-  { code: "hala_premium", name: "هلا بريميوم", guests: "حتى 500 مدعو", price: 1799 },
-] as const;
-
 export default function CreateEvent() {
   const auth = useRequireRole("customer");
   const router = useRouter();
@@ -49,46 +55,87 @@ export default function CreateEvent() {
   const [date, setDate] = useState("");
   const [time, setTime] = useState("");
   const [location, setLocation] = useState("");
+  const [mapsUrl, setMapsUrl] = useState("");
   const [occasionDetails, setOccasionDetails] = useState("");
   const [capacity, setCapacity] = useState("");
   const [shareAmount, setShareAmount] = useState("");
-  const [headline, setHeadline] = useState("لحظتك تبدأ بهلا");
+  const [headline, setHeadline] = useState("لحظتك .. تبدأ بهلا");
+  const [message, setMessage] = useState("وجودكم يكمل فرحتنا");
+  const [font, setFont] = useState("ruqaa");
+  const [accent, setAccent] = useState("#E3BD64");
+  const [image, setImage] = useState("");
+  const [audio, setAudio] = useState("");
+  const [audioName, setAudioName] = useState("");
+  const [mediaBusy, setMediaBusy] = useState(false);
   const [template, setTemplate] = useState("ليلة كحلية");
-  const [packageCode, setPackageCode] = useState<(typeof PACKAGES)[number]["code"]>("hala_plus");
+  const [packageCode, setPackageCode] = useState("hala_plus");
   const [requestSupervisor, setRequestSupervisor] = useState(false);
   const [supervisorPrice, setSupervisorPrice] = useState(599);
   const [supervisorPreference, setSupervisorPreference] = useState<"male" | "female" | null>(null);
-  const [serverPrices, setServerPrices] = useState<Record<string, number>>({});
   const [busy, setBusy] = useState(false);
+  const [catalog, setCatalog] = useState<PublicCatalog>({ packages: DEFAULT_PACKAGES, hiddenTemplateKeys: [], services: [] });
 
   const selected = useMemo(() => OCCASIONS.find(o => o.key === occasionKey)!, [occasionKey]);
   const activity = useMemo(() => ACTIVITIES.find(a => a.key === activityKey)!, [activityKey]);
-  const currentTemplates = useMemo(() => templatesFor(occasionKey, activityKey), [occasionKey, activityKey]);
+  const currentTemplates = useMemo(() => availableTemplatesFor(occasionKey, activityKey, catalog.hiddenTemplateKeys), [occasionKey, activityKey, catalog.hiddenTemplateKeys]);
+  const packages = catalog.packages;
   const selectedTemplate = currentTemplates.find(t => t.name === template) || currentTemplates[0];
-  useEffect(() => { api<{ supervisorAddonSar: number; packages?: Array<{code:string;amountSar:number}> }>("/api/pricing/quote").then(result => {
-    setSupervisorPrice(result.supervisorAddonSar);
-    if(Array.isArray(result.packages)) setServerPrices(Object.fromEntries(result.packages.map(p=>[p.code,p.amountSar])));
-  }).catch(() => undefined); }, []);
-  const packagePrice = (code: string) => serverPrices[code] ?? PACKAGES.find(p=>p.code===code)?.price ?? 1099;
+  useEffect(() => { api<{ supervisorAddonSar: number }>("/api/pricing/quote").then(result => setSupervisorPrice(result.supervisorAddonSar)).catch(() => undefined); }, []);
+
+  useEffect(() => {
+    let current = true;
+    api<unknown>("/api/catalog").then(value => { const next = publicCatalog(value); if (current && next) setCatalog(next); }).catch(() => undefined);
+    return () => { current = false; };
+  }, []);
+  useEffect(() => { if (currentTemplates[0] && !currentTemplates.some(item => item.name === template)) setTemplate(currentTemplates[0].name); }, [currentTemplates, template]);
 
   if (auth.loading || !auth.user) return null;
+
+  async function pickImage() {
+    setMediaBusy(true);
+    try {
+      const result = await ImagePicker.launchImageLibraryAsync({ mediaTypes: ["images"], allowsEditing: true, aspect: [3, 4], quality: 0.6, base64: true });
+      if (result.canceled) return;
+      const asset = result.assets[0];
+      if (!asset.base64) throw new Error("تعذر قراءة الصورة. اختر صورة أخرى.");
+      setImage(imageDataUri(asset.base64));
+    } catch (error) { Alert.alert("الصورة", error instanceof Error ? error.message : "تعذر فتح الصور."); }
+    finally { setMediaBusy(false); }
+  }
+
+  async function pickAudio() {
+    setMediaBusy(true);
+    try {
+      const result = await DocumentPicker.getDocumentAsync({ type: "audio/*", copyToCacheDirectory: true, multiple: false });
+      if (result.canceled) return;
+      const asset = result.assets[0];
+      const file = new File(asset.uri);
+      try {
+        if ((asset.size ?? file.size) > MAX_AUDIO_BYTES) throw new Error("اختر ملف صوت لا يتجاوز 600 كيلوبايت.");
+        setAudio(audioDataUri(await file.base64(), asset.mimeType, asset.name));
+        setAudioName(asset.name);
+      } finally { try { file.delete(); } catch {} }
+    } catch (error) { Alert.alert("موسيقى الدعوة", error instanceof Error ? error.message : "تعذر فتح الملف."); }
+    finally { setMediaBusy(false); }
+  }
 
   function chooseOccasion(key: OccasionKey) {
     setOccasionKey(key);
     setName2("");
-    const first = templatesFor(key, activityKey)[0];
+    const first = availableTemplatesFor(key, activityKey, catalog.hiddenTemplateKeys)[0];
     if (first) setTemplate(first.name);
   }
 
   function chooseActivity(key: ActivityKey) {
     setActivityKey(key);
-    const first = templatesFor("activity", key)[0];
+    const first = availableTemplatesFor("activity", key, catalog.hiddenTemplateKeys)[0];
     if (first) setTemplate(first.name);
   }
 
   function validateDetails() {
     if (!name1.trim()) return occasionKey === "activity" ? "اكتب اسم النشاط." : "اكتب الاسم.";
     if (selected.twoNames && !name2.trim()) return "هذا النوع يحتاج الاسمين.";
+    if (mapsUrl.trim() && !isGoogleMapsUrl(mapsUrl.trim())) return "أدخل رابط Google Maps صحيحًا يبدأ بـ https://.";
     if (!date.trim() || !time.trim() || !location.trim()) return "أكمل التاريخ والوقت والموقع.";
     if (occasionKey === "activity" && activityKey === "activityCustom" && !customActivity.trim()) return "اكتب نوع النشاط.";
     if (occasionKey === "activity" && Number(capacity || 0) < 1) return "أدخل عدد المشاركين.";
@@ -97,13 +144,14 @@ export default function CreateEvent() {
 
   async function create() {
     const error = validateDetails();
+    if (!selectedTemplate) return Alert.alert("القوالب", "لا توجد قوالب متاحة لهذا النوع حاليًا.");
     if (error) return Alert.alert("أكمل البيانات", error);
-    if(requestSupervisor && !supervisorPreference) return Alert.alert("اختيار المشرف", "اختر مشرفًا أو مشرفة أولًا");
+    if (requestSupervisor && !supervisorPreference) return Alert.alert("اختيار المشرف", "اختر مشرفًا أو مشرفة أولًا");
     setBusy(true);
     try {
-      const occasion = selected.label;
+      const occasion = occasionForApi(occasionKey, selected.label);
       const activityType = occasionKey === "activity" ? (activityKey === "activityCustom" ? customActivity.trim() : activity.label) : "";
-      const pkg = PACKAGES.find(p => p.code === packageCode)!;
+      const pkg = packages.find(p => p.code === packageCode)!;
       const result = await api<{ event: { id: string } }>("/api/events", {
         method: "POST",
         body: JSON.stringify({
@@ -115,23 +163,25 @@ export default function CreateEvent() {
           date: date.trim(),
           time: time.trim(),
           location: location.trim(),
+          mapsUrl: mapsUrl.trim(),
           description: occasionDetails.trim(),
+          message: message.trim(),
           capacity: occasionKey === "activity" ? Number(capacity || 0) : null,
           shareAmount: occasionKey === "activity" ? Number(shareAmount || 0) : 0,
           requireShareConsent: occasionKey === "activity" && Number(shareAmount || 0) > 0,
           allowNamedCompanions: occasionKey === "activity",
           waitlistEnabled: occasionKey === "activity",
-          template: selectedTemplate.name,
+          template: selectedTemplate?.name || "",
           package: pkg.name,
           requestSupervisor,
           supervisorPreference: requestSupervisor ? supervisorPreference : null,
-          design: { occasionKey, activityKey, headline, accent: selectedTemplate.accent },
+          design: { occasionKey, activityKey, headline, accent, font, image, audio },
         }),
       }, auth.token);
 
       router.replace({
-        pathname: "/customer/payment" as never,
-        params: { eventId: result.event.id, package: packageCode },
+        pathname: "/customer/event/[id]" as never,
+        params: { id: result.event.id },
       });
     } catch (e: any) {
       Alert.alert("تعذر إنشاء المناسبة", e?.message || "حاول مرة أخرى");
@@ -192,6 +242,7 @@ export default function CreateEvent() {
             </View>
             <Text style={styles.label}>الموقع</Text>
             <TextInput value={location} onChangeText={setLocation} style={styles.input} textAlign="right" placeholder="اسم القاعة أو الموقع" />
+            <TextInput value={mapsUrl} onChangeText={setMapsUrl} style={styles.input} textAlign="right" placeholder="رابط Google Maps (اختياري)" keyboardType="url" autoCapitalize="none" autoCorrect={false} />
             {(["meeting", "conference", "formal"] as OccasionKey[]).includes(occasionKey) ? <><Text style={styles.label}>{occasionKey === "meeting" ? "جدول الأعمال" : occasionKey === "conference" ? "محاور المؤتمر والمتحدثون" : "تفاصيل المناسبة الرسمية"}</Text><TextInput value={occasionDetails} onChangeText={setOccasionDetails} style={styles.input} textAlign="right" multiline placeholder="التفاصيل الخاصة بهذا النوع" /></> : null}
 
             {occasionKey === "activity" ? (
@@ -227,49 +278,41 @@ export default function CreateEvent() {
             </View>
             <Text style={styles.label}>العبارة الرئيسية</Text>
             <TextInput value={headline} onChangeText={setHeadline} style={styles.input} textAlign="right" maxLength={70} />
+            <Text style={styles.label}>نص الدعوة</Text>
+            <TextInput value={message} onChangeText={setMessage} style={styles.input} textAlign="right" multiline maxLength={1000} />
+            <Text style={styles.label}>الخط</Text>
+            <View style={styles.activityChoices}>{[{ key: "ruqaa", label: "رقعة" }, { key: "tajawal", label: "تجوال" }, { key: "serif", label: "كلاسيكي" }].map(option => <Pressable key={option.key} accessibilityRole="button" accessibilityState={{ selected: font === option.key }} onPress={() => setFont(option.key)} style={[styles.activityChoice, font === option.key && styles.activityChoiceActive]}><Text style={[styles.activityChoiceText, font === option.key && styles.activityChoiceTextActive]}>{option.label}</Text></Pressable>)}</View>
+            <Text style={styles.label}>اللون الرئيسي</Text>
+            <View style={styles.activityChoices}>{["#E3BD64", "#651D32", "#9A7434", "#246A4A", "#FFFFFF"].map(color => <Pressable key={color} accessibilityRole="button" accessibilityLabel={`اختيار اللون ${color}`} accessibilityState={{ selected: accent === color }} onPress={() => setAccent(color)} style={{ width: 42, height: 42, borderRadius: 21, backgroundColor: color, borderWidth: accent === color ? 4 : 1, borderColor: theme.colors.ink }} />)}</View>
+            <PrimaryButton label={image ? "تغيير الصورة / التصميم" : "رفع صورة أو تصميم خاص"} onPress={pickImage} loading={mediaBusy} secondary />
+            {image ? <><Image source={{ uri: image }} style={{ width: "100%", height: 220, borderRadius: 14 }} resizeMode="cover" /><PrimaryButton label="إزالة الصورة" onPress={() => setImage("")} secondary /></> : null}
+            <PrimaryButton label={audio ? "تغيير موسيقى الدعوة" : "إضافة موسيقى (حتى 600 كيلوبايت)"} onPress={pickAudio} loading={mediaBusy} secondary />
+            {audio ? <><Text style={styles.help}>{audioName} — يبدأ تشغيل الصوت باختيار الضيف.</Text><PrimaryButton label="إزالة الموسيقى" onPress={() => { setAudio(""); setAudioName(""); }} secondary /></> : null}
+            <Text style={styles.help}>تُحفظ الصورة والموسيقى ضمن تصميم الدعوة. استخدم ملفات تملك حق مشاركتها.</Text>
             <View style={styles.actions}><PrimaryButton label="التالي: الباقة" onPress={() => setStep(3)} /><PrimaryButton label="رجوع" onPress={() => setStep(1)} secondary /></View>
           </>
         ) : null}
 
         {step === 3 ? (
           <>
-            <View style={styles.previewCard}>
-              <TemplateArtwork template={selectedTemplate} label={occasionKey === "activity" ? activity.label : selected.label} selected />
-              <Text style={styles.previewTitle}>{headline}</Text>
-              <Text style={styles.previewNames}>{selected.twoNames ? `${name1} و ${name2}` : name1}</Text>
-              <Text style={styles.previewMeta}>{date} • {time} • {location}</Text>
-            </View>
+            <InvitationPreview data={{ occasionKey, activityKey, occasion: occasionForApi(occasionKey, selected.label), activityType: occasionKey === "activity" ? (activityKey === "activityCustom" ? customActivity : activity.label) : "", name1, name2, date, time, location, message, template: selectedTemplate?.name || "", design: { headline, accent, font, image, audio } }} />
 
             <Text style={styles.sectionTitle}>اختر الباقة</Text>
-            {PACKAGES.map(p => (
+            {packages.map(p => (
               <Pressable key={p.code} onPress={() => setPackageCode(p.code)} style={[styles.package, packageCode === p.code && styles.packageActive]}>
-                <View style={styles.packageCopy}><Text style={[styles.packageName, packageCode === p.code && styles.packageNameActive]}>{p.name}</Text><Text style={[styles.packageGuests, packageCode === p.code && styles.packageGuestsActive]}>{p.guests}</Text></View>
-                <Text style={[styles.price, packageCode === p.code && styles.priceActive]}>{packagePrice(p.code)} ر.س</Text>
+                <View style={styles.packageCopy}><Text style={[styles.packageName, packageCode === p.code && styles.packageNameActive]}>{p.name}</Text><Text style={[styles.packageGuests, packageCode === p.code && styles.packageGuestsActive]}>{`حتى ${p.guestLimit} مدعو`}</Text></View>
+                <View>{p.promoLicenseId && Number.isFinite(p.referenceAmountSar) && p.referenceAmountSar! > p.amountSar ? <Text style={{ textDecorationLine: "line-through", color: theme.colors.muted, fontSize: 12 }}>{p.referenceAmountSar} ر.س</Text> : null}<Text style={[styles.price, packageCode === p.code && styles.priceActive]}>{p.amountSar} ر.س</Text></View>
               </Pressable>
             ))}
             <Pressable onPress={() => setRequestSupervisor(value => !value)} style={[styles.package, requestSupervisor && styles.packageActive]} accessibilityRole="checkbox" accessibilityState={{ checked: requestSupervisor }}>
               <Text style={[styles.packageName, requestSupervisor && styles.packageNameActive]}>{requestSupervisor ? "☑" : "□"} إضافة مشرف أو مشرفة للمناسبة</Text>
               <Text style={[styles.price, requestSupervisor && styles.priceActive]}>+{supervisorPrice} ر.س</Text>
             </Pressable>
-            {requestSupervisor ? (
-               <View style={{ marginVertical: 12, gap: 8 }}>
-                 <Text style={styles.trial}>اختر نوع خدمة الاستقبال:</Text>
-                 <View style={{ flexDirection: "row-reverse", gap: 8 }}>
-                   {([{ key: "male", label: "مشرف" }, { key: "female", label: "مشرفة" }] as const).map(option => (
-                     <Pressable key={option.key} accessibilityRole="radio"
-                       accessibilityState={{ checked: supervisorPreference === option.key }}
-                       onPress={() => setSupervisorPreference(option.key)}
-                       style={[styles.package, { flex: 1 }, supervisorPreference === option.key && styles.packageActive]}>
-                       <Text style={[styles.packageName, supervisorPreference === option.key && styles.packageNameActive]}>{option.label}</Text>
-                     </Pressable>
-                   ))}
-                 </View>
-                 <Text style={styles.trial}>حسب توفر الكادر بمدينة المناسبة وموعدها.</Text>
-               </View>
-             ) : null}
-             <Text style={styles.trial}>الإجمالي: {packagePrice(packageCode) + (requestSupervisor ? supervisorPrice : 0)} ر.س</Text>
+            {requestSupervisor ? <View style={{ gap: 8 }}><Text style={styles.label}>تفضيل خدمة الاستقبال</Text><View style={styles.activityChoices}>{([{ key: "male", label: "مشرف" }, { key: "female", label: "مشرفة" }] as const).map(option => <Pressable key={option.key} accessibilityRole="radio" accessibilityState={{ checked: supervisorPreference === option.key }} onPress={() => setSupervisorPreference(option.key)} style={[styles.activityChoice, supervisorPreference === option.key && styles.activityChoiceActive]}><Text style={[styles.activityChoiceText, supervisorPreference === option.key && styles.activityChoiceTextActive]}>{option.label}</Text></Pressable>)}</View><Text style={styles.help}>حسب توفر الكادر في مدينة المناسبة وموعدها.</Text></View> : null}
+            <Text style={styles.trial}>الإجمالي: {packages.find(p => p.code === packageCode)!.amountSar + (requestSupervisor ? supervisorPrice : 0)} ر.س</Text>
+            {catalog.services.length ? <><Text style={styles.sectionTitle}>خدمات المناسبة</Text>{catalog.services.map(service => <View key={service.id} style={styles.previewCard}><Text style={styles.label}>{service.name}</Text><Text style={styles.help}>{service.description}</Text></View>)}</> : null}
             <Text style={styles.trial}>قبل الدفع لديك إرسال تجريبي مجاني واحد للتأكد من شكل الدعوة ووصولها.</Text>
-            <PrimaryButton label="إنشاء المناسبة والمتابعة للدفع" onPress={create} loading={busy} />
+            <PrimaryButton label="إنشاء المناسبة وتجربتها" onPress={create} loading={busy} disabled={mediaBusy} />
             <PrimaryButton label="رجوع للقالب" onPress={() => setStep(2)} secondary />
           </>
         ) : null}

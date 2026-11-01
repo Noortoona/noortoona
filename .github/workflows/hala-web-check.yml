@@ -1,9 +1,16 @@
 name: Hala Web Check
 on:
   push:
-    branches: [hala-admin-otp, main]
+    branches: [hala-admin-otp, main, "hala-stabilization-*"]
   pull_request:
     branches: [main]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: hala-web-check-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
 
 jobs:
   verify:
@@ -13,17 +20,15 @@ jobs:
       - uses: actions/checkout@v5
       - uses: actions/setup-node@v5
         with:
-          node-version: 22
+          node-version: "24.19.0"
           cache: npm
       - run: npm ci
       - run: npm test
+      - name: Build isolated public website
+        run: npm run build
       - name: Install browser for invitation journeys
         run: npx playwright install --with-deps chromium
-      - name: Verify seven invitation and guest journeys
+      - name: Verify mocked invitation and guest UI journeys
         run: npm run test:e2e
       - name: Type-check Netlify functions
         run: npx tsc --noEmit --skipLibCheck --allowJs false --module nodenext --moduleResolution nodenext --target ES2022 --lib ES2022,DOM netlify/functions/*.mts
-      - name: Install mobile dependencies for PR verification
-        run: npm ci --prefix mobile
-      - name: Type-check Expo mobile on same pull request
-        run: npm run typecheck --prefix mobile

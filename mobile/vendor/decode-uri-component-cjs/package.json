@@ -1,0 +1,14 @@
+{
+  "name": "@hala/decode-uri-component-cjs",
+  "version": "0.5.1-hala.1",
+  "private": true,
+  "description": "Explicit CommonJS compatibility adaptation of upstream decode-uri-component 0.5.1",
+  "license": "MIT",
+  "main": "index.cjs",
+  "sideEffects": false,
+  "files": [
+    "index.cjs",
+    "LICENSE",
+    "PROVENANCE.md"
+  ]
+}

@@ -1,6 +1,6 @@
-import React, { useCallback, useEffect, useState } from "react";
-import { Pressable, RefreshControl, ScrollView, StyleSheet, Text, View } from "react-native";
-import { useRouter } from "expo-router";
+import React, { useCallback, useState } from "react";
+import { Alert, Pressable, RefreshControl, ScrollView, StyleSheet, Text, View } from "react-native";
+import { useFocusEffect, useRouter } from "expo-router";
 import { api } from "@/api";
 import { useRequireRole } from "@/roleGate";
 import { BrandHeader, Card, Empty, Screen, Stat } from "@/ui";
@@ -13,8 +13,12 @@ export default function SupervisorHome() {
   const router = useRouter();
   const [data, setData] = useState<Home | null>(null);
   const [refreshing, setRefreshing] = useState(false);
-  const load = useCallback(async () => { if (!auth.token) return; try { setData(await api<Home>("/api/mobile/home", {}, auth.token)); } finally { setRefreshing(false); } }, [auth.token]);
-  useEffect(() => { load(); }, [load]);
+  const load = useCallback(async () => { if (!auth.token) return; try { setData(await api<Home>("/api/mobile/home", {}, auth.token)); } catch (error) { Alert.alert("تعذر تحميل البيانات", error instanceof Error ? error.message : "حاول مرة أخرى"); } finally { setRefreshing(false); } }, [auth.token]);
+  useFocusEffect(useCallback(() => {
+    load();
+    const timer = setInterval(load, 15_000);
+    return () => clearInterval(timer);
+  }, [load]));
   if (auth.loading || !auth.user) return null;
 
   return (

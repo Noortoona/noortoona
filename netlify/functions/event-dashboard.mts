@@ -12,7 +12,7 @@ export default async (req: Request) => {
   const db = getDatabase();
   const auth = await getAuth(req);
   let allowed = false;
-  if (token) { const rows=await db.sql`SELECT 1 FROM events WHERE id=${eventId} AND owner_token=${token} LIMIT 1`; allowed=Boolean(rows[0]); }
+  if (token && !auth) { const rows=await db.sql`SELECT 1 FROM events WHERE id=${eventId} AND owner_token=${token} LIMIT 1`; allowed=Boolean(rows[0]); }
   if (!allowed && auth) allowed = await canAccessEvent(auth.user,eventId);
   if (!allowed) return secureJson({ error: "غير مصرح" }, 403);
   const [event] = await db.sql`

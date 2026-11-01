@@ -19,16 +19,28 @@ export function createOtp(){
 }
 export async function issueOtp(phone){
   const db=getDatabase();
-  const recent=await db.sql`SELECT sent_at FROM otp_codes WHERE phone=${phone} ORDER BY sent_at DESC LIMIT 1`;
-  if(recent[0]&&Date.now()-new Date(recent[0].sent_at).getTime()<60_000){
-    return {ok:false,status:429,error:"انتظر دقيقة قبل طلب رمز جديد"};
-  }
-  const hour=await db.sql`SELECT COUNT(*)::int AS count FROM otp_codes WHERE phone=${phone} AND sent_at>NOW()-INTERVAL '1 hour'`;
-  if(Number(hour[0]?.count||0)>=5)return {ok:false,status:429,error:"تم تجاوز عدد المحاولات مؤقتًا"};
   const code=createOtp(),hash=await hashOtp(phone,code),id=crypto.randomUUID();
   const expiresAt=new Date(Date.now()+5*60_000).toISOString();
-  await db.sql`INSERT INTO otp_codes(id,phone,code_hash,expires_at) VALUES(${id},${phone},${hash},${expiresAt}::timestamptz)`;
-  return {ok:true,id,code,expiresAt};
+  const client=await db.pool.connect();
+  try{
+    await client.query("BEGIN");
+    // A phone-level transaction lock prevents concurrent requests bypassing cooldowns.
+    await client.query("SELECT pg_advisory_xact_lock(hashtextextended($1,0))",[phone]);
+    const recent=(await client.query("SELECT sent_at FROM otp_codes WHERE phone=$1 ORDER BY sent_at DESC LIMIT 1",[phone])).rows;
+    if(recent[0]&&Date.now()-new Date(recent[0].sent_at).getTime()<60_000){
+      await client.query("ROLLBACK");
+      return {ok:false,status:429,error:"انتظر دقيقة قبل طلب رمز جديد"};
+    }
+    const hour=(await client.query("SELECT COUNT(*)::int AS count FROM otp_codes WHERE phone=$1 AND sent_at>NOW()-INTERVAL '1 hour'",[phone])).rows;
+    if(Number(hour[0]?.count||0)>=5){
+      await client.query("ROLLBACK");
+      return {ok:false,status:429,error:"تم تجاوز عدد المحاولات مؤقتًا"};
+    }
+    await client.query("INSERT INTO otp_codes(id,phone,code_hash,expires_at) VALUES($1,$2,$3,$4::timestamptz)",[id,phone,hash,expiresAt]);
+    await client.query("COMMIT");
+    return {ok:true,id,code,expiresAt};
+  }catch(error){await client.query("ROLLBACK").catch(()=>undefined);throw error;}
+  finally{client.release();}
 }
 export async function sendOtp(phone,code){
   const apiKey=Netlify.env.get("D360_API_KEY");

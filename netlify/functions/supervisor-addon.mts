@@ -13,7 +13,7 @@ export default async(req:Request)=>{
  try{const b:any=await req.json(),eventId=String(b.eventId||""),requested=b.requested!==false;if(!eventId||!await canAccessEvent(auth.user,eventId))return secureJson({error:"غير مصرح"},403);
    const paid=await db.sql`SELECT 1 FROM payment_orders WHERE event_id=${eventId} AND status='paid' LIMIT 1`;
    if(paid[0])return secureJson({error:"لا يمكن تغيير خدمة المشرف بعد إتمام الدفع"},409);
-   if(requested && !["male","female"].includes(String(b.supervisorPreference||"")))return secureJson({error:"اختر مشرفًا أو مشرفة"},400);
+   if(requested&&!["male","female"].includes(String(b.supervisorPreference||"")))return secureJson({error:"اختر مشرفًا أو مشرفة"},400);
    if(!requested){const rows=await db.sql`UPDATE supervisor_requests SET status='canceled',assigned_supervisor_id=NULL,updated_at=NOW() WHERE event_id=${eventId} AND user_id=${auth.user.id} RETURNING *`;await recordAudit(auth.user.id,"supervisor.canceled","event",eventId,{});return secureJson({request:rows[0]||null})}
    const preference=String(b.supervisorPreference);
    await db.sql`UPDATE events SET design_json=jsonb_set(COALESCE(design_json, '{}'::jsonb), '{supervisorPreference}', to_jsonb(${preference}::text), true) WHERE id=${eventId}`;

@@ -1,6 +1,6 @@
 import * as SecureStore from "expo-secure-store";
 import React, { createContext, useContext, useEffect, useMemo, useState } from "react";
-import { api } from "./api";
+import { api, ApiError } from "./api";
 
 export type Role = "admin" | "supervisor" | "customer" | "partner";
 export type User = { id: string; name: string; email: string; phone?: string; role: Role; status: string };
@@ -30,8 +30,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         const result = await api<{ user: User }>("/api/auth/me", {}, saved);
         setToken(saved);
         setUser(result.user);
-      } catch {
-        await SecureStore.deleteItemAsync(TOKEN_KEY);
+      } catch (error) {
+        if (error instanceof ApiError && [401, 403].includes(error.status)) await SecureStore.deleteItemAsync(TOKEN_KEY);
       } finally {
         setLoading(false);
       }

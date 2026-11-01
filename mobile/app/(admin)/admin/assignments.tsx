@@ -23,7 +23,7 @@ export default function AssignmentsScreen() {
     if (!selected && next.supervisors[0]) setSelected(next.supervisors[0].id);
   }, [auth.token, selected]);
 
-  useEffect(() => { load(); }, [load]);
+  useEffect(() => { load().catch(error => Alert.alert("تعذر التحميل", error?.message || "حاول مرة أخرى")); }, [load]);
   const selectedName = useMemo(() => data.supervisors.find(s => s.id === selected)?.name || "", [data.supervisors, selected]);
   if (auth.loading || !auth.user) return null;
 

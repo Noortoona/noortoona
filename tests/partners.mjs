@@ -6,6 +6,7 @@ import { normalizeReferralCode, referralAmounts, recordAcquisition } from '../ne
 import { packageFor, publicPackages } from '../netlify/functions/_shared/payments.mjs';
 
 async function handler(name, bindings) {
+  bindings={readCatalog:async()=>({packages:publicPackages()}),catalogPackage:(catalog,code)=>catalog.packages.find(p=>p.code===code||p.name===code)||null,...bindings};
   let source = await readFile(new URL(`../netlify/functions/${name}.mts`, import.meta.url), 'utf8');
   source = source.replace(/^import .*;\s*$/gm, '');
   const globals = Object.entries(bindings).map(([key, value]) => `const ${key}=globalThis.__partnerTest.${key};`).join('\n');

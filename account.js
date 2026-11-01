@@ -15,7 +15,7 @@
     try{await fetch("/api/analytics/track",{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({sessionId:ensureVisitor(),event,path:location.pathname,metadata}),keepalive:true})}catch{}
   }
   track("page_view",{referrer:document.referrer?new URL(document.referrer).hostname:"direct"});
-  fetch("/api/events/supervisor").then(r=>r.ok?r.json():null).then(x=>{if(x?.amountSar)supervisorPrice=x.amountSar}).catch(()=>{});
+  fetch("/api/events/supervisor").then(r=>r.ok?r.json():null).then(x=>{if(typeof x?.amountSar==="number"&&Number.isFinite(x.amountSar)&&x.amountSar>=0)supervisorPrice=x.amountSar}).catch(()=>{});
 
   function modal(){
     let el=document.getElementById("halaAuthModal");
@@ -42,7 +42,7 @@
         <p id="authError" class="auth-error"></p>
       </section>`;
     document.body.appendChild(el);
-    el.querySelectorAll("[data-auth-close]").forEach(b=>b.onclick=()=>close(false));
+    el.querySelectorAll("[data-auth-close]").forEach(b=>b.onclick=()=>close(true));
     el.querySelector("#changePhoneBtn").onclick=()=>step("phone");
     el.querySelector("#sendOtpBtn").onclick=requestOtp;
     el.querySelector("#verifyOtpBtn").onclick=verifyOtp;
@@ -54,9 +54,10 @@
   }
   function open(){const m=modal();m.classList.add("open");step("phone")}
   function close(cancel=true){modal().classList.remove("open");if(cancel&&resolver){resolver(null);resolver=null}}
+  const digits=value=>String(value||'').replace(/[٠-٩]/g,c=>String(c.charCodeAt(0)-0x660)).replace(/[۰-۹]/g,c=>String(c.charCodeAt(0)-0x6f0));
   function normalizedPhone(){
-    let p=String(modal().querySelector("#authPhone").value||"").replace(/\D/g,"");
-    if(p.startsWith("966"))return p;if(p.startsWith("0"))p=p.slice(1);return "966"+p;
+    let p=digits(modal().querySelector("#authPhone").value).replace(/\D/g,"");
+    if(p.startsWith("00966"))p=p.slice(2);if(p.startsWith("966"))return p;if(p.startsWith("0"))p=p.slice(1);return "966"+p;
   }
   async function requestOtp(){
     const m=modal(),btn=m.querySelector("#sendOtpBtn"),phone=normalizedPhone();m.querySelector("#authError").textContent="";
@@ -67,7 +68,7 @@
     finally{btn.disabled=false;btn.textContent="إرسال رمز التحقق"}
   }
   async function verifyOtp(){
-    const m=modal(),btn=m.querySelector("#verifyOtpBtn"),phone=m.dataset.phone,code=String(m.querySelector("#authCode").value||"").replace(/\D/g,"");m.querySelector("#authError").textContent="";
+    const m=modal(),btn=m.querySelector("#verifyOtpBtn"),phone=m.dataset.phone,code=digits(m.querySelector("#authCode").value).replace(/\D/g,"");m.querySelector("#authError").textContent="";
     if(!/^\d{6}$/.test(code)){m.querySelector("#authError").textContent="أدخل الرمز المكوّن من 6 أرقام";return}
     btn.disabled=true;btn.textContent="جاري التحقق…";
     try{const r=await fetch("/api/auth/otp/verify",{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({phone,code})}),d=await r.json();if(!r.ok)throw new Error(d.error||"رمز غير صحيح");const s={token:d.token,expiresAt:d.expiresAt,user:d.user};save(s);close(false);track("login_verified",{role:d.user.role});if(resolver){resolver(s);resolver=null}else route(d.user)}
@@ -81,7 +82,7 @@
   }
   async function ensureLogin(reason="login"){
     const s=await validSession();if(s)return s;
-    purpose=reason;open();return new Promise(resolve=>{resolver=resolve});
+    purpose=reason;if(resolver)resolver(null);open();return new Promise(resolve=>{resolver=resolve});
   }
   window.HALA_AUTH={session,ensureLogin,track,get supervisorPrice(){return supervisorPrice}};
   document.querySelectorAll("#loginBtn, #mobileLoginBtn").forEach(login=>login.onclick=async()=>{const s=await ensureLogin("login");if(s)route(s.user)});

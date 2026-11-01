@@ -174,7 +174,9 @@ footer{background:#06080C}
 .nav-actions .mobile-login-btn{display:none}
 @media(max-width:640px){.nav-actions .mobile-login-btn{display:inline-flex;align-items:center;justify-content:center;min-height:40px;padding:8px 14px;white-space:nowrap}.nav-actions>.gold-btn{display:none}}
 
-/* Hala B2B informational plans — site-only pricing release. */
+.guest-music{display:grid;gap:10px;text-align:center;margin:20px auto;max-width:100%}.guest-music audio,.design-controls audio{width:100%;max-width:320px}.footer-grid nav{display:flex;gap:12px;flex-wrap:wrap}.footer-grid nav a{color:inherit}
+
+/* HALA investment-deck pricing: B2B plans are informational until contracts are enabled. */
 .business-pricing{max-width:980px;margin:42px auto 0;color:#fff}
 .business-pricing-head{text-align:center;margin-bottom:20px}
 .business-pricing-head h3{margin:0 0 10px;font-size:25px;color:#e9c586}
@@ -190,3 +192,5 @@ footer{background:#06080C}
 .pricing-extras b{color:#e9c586}
 .pricing-disclaimer{text-align:center}
 @media(max-width:640px){.business-price-grid{grid-template-columns:1fr}.business-pricing{margin-top:32px}.business-price-card p{min-height:0}}
+
+.catalog-admin{display:grid;gap:22px}.catalog-package-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:16px}.catalog-package-form,.catalog-service-row{display:grid;gap:12px;padding:18px;border:1px solid #e5dacb;border-radius:16px;min-width:0}.catalog-admin label:not(.catalog-toggle){display:grid;gap:6px}.catalog-admin input:not([type=checkbox]),.catalog-admin textarea{width:100%;box-sizing:border-box;min-height:42px;padding:8px;border:1px solid #d8c9b6;border-radius:9px;font:inherit}.catalog-template-groups{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;margin-block:16px}.catalog-template-groups details{border:1px solid #e5dacb;padding:12px;border-radius:12px}.catalog-template-groups summary{cursor:pointer;font-weight:700}.catalog-toggle{display:flex;gap:8px;align-items:center;margin-block:10px}#catalogServiceRows{display:grid;gap:12px;margin-bottom:14px}#catalogResult{color:#246a4a;min-height:1.5em}@media(max-width:700px){.catalog-package-grid,.catalog-template-groups{grid-template-columns:1fr}}

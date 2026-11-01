@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useRef, useState } from "react";
 import { Alert, StyleSheet, Text, View } from "react-native";
 import { CameraView, useCameraPermissions } from "expo-camera";
 import { useLocalSearchParams, useRouter } from "expo-router";
@@ -13,12 +13,15 @@ export default function ScannerScreen() {
   const params = useLocalSearchParams<{ eventId: string; title?: string }>();
   const [permission, requestPermission] = useCameraPermissions();
   const [locked, setLocked] = useState(false);
+  const scanning = useRef(false);
+  function unlock() { scanning.current = false; setLocked(false); }
   const [last, setLast] = useState<string>("");
 
   if (auth.loading || !auth.user) return null;
 
   async function scan(data: string) {
-    if (locked || !params.eventId) return;
+    if (scanning.current || !params.eventId || !auth.token) return;
+    scanning.current = true;
     setLocked(true);
     try {
       const result = await api<any>("/api/check-in", { method: "POST", body: JSON.stringify({ eventId: params.eventId, code: data }) }, auth.token);
@@ -26,10 +29,11 @@ export default function ScannerScreen() {
       Alert.alert(
         result.alreadyCheckedIn ? "تم تسجيله مسبقًا" : "تم الدخول ✓",
         [result.guest?.name, result.warning].filter(Boolean).join("\n"),
-        [{ text: "مسح التالي", onPress: () => setLocked(false) }]
+        [{ text: "مسح التالي", onPress: unlock }],
+        { cancelable: false }
       );
     } catch (e: any) {
-      Alert.alert("تعذر تسجيل الدخول", e?.message || "الرمز غير صالح", [{ text: "إعادة المحاولة", onPress: () => setLocked(false) }]);
+      Alert.alert("تعذر تسجيل الدخول", e?.message || "الرمز غير صالح", [{ text: "إعادة المحاولة", onPress: unlock }], { cancelable: false });
     }
   }
 
@@ -38,7 +42,7 @@ export default function ScannerScreen() {
 
   return (
     <Screen style={styles.screen}>
-      <BrandHeader title="مسح دخول الضيف" subtitle={params.title || "المناسبة"} />
+      <View style={{ backgroundColor: theme.colors.cream }}><BrandHeader title="مسح دخول الضيف" subtitle={params.title || "المناسبة"} /></View>
       <View style={styles.cameraWrap}>
         <CameraView style={StyleSheet.absoluteFill} facing="back" barcodeScannerSettings={{ barcodeTypes: ["qr"] }} onBarcodeScanned={locked ? undefined : ({ data }) => scan(data)} />
         <View style={styles.overlay}><View style={styles.finder} /></View>
@@ -46,7 +50,7 @@ export default function ScannerScreen() {
       <View style={styles.footer}>
         <Text style={styles.hint}>{locked ? "جارٍ التحقق من الرمز…" : "ضع رمز QR داخل الإطار"}</Text>
         {last ? <Text style={styles.last}>آخر ضيف: {last}</Text> : null}
-        {locked ? <PrimaryButton label="فتح الماسح" onPress={() => setLocked(false)} secondary /> : null}
+        <PrimaryButton label="رجوع للمناسبات" onPress={() => router.back()} secondary />
       </View>
     </Screen>
   );

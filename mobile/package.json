@@ -9,16 +9,22 @@
     "android": "expo run:android",
     "web": "expo start --web",
     "typecheck": "tsc --noEmit",
-    "ios:credentials": "npx eas-cli@24.10.0 credentials --platform ios"
+    "ios:credentials": "npx eas-cli@24.10.0 credentials --platform ios",
+    "test": "node --experimental-strip-types --test tests/flows.mjs tests/dependencies.mjs",
+    "sync:preview": "node scripts/sync-invitation-preview.mjs",
+    "pretest": "node scripts/sync-invitation-preview.mjs --check"
   },
   "dependencies": {
-    "expo": "~57.0.10",
+    "expo": "~57.0.31",
     "expo-camera": "~57.0.6",
-    "expo-constants": "~57.0.9",
-    "expo-linking": "~57.0.5",
-    "expo-router": "~57.0.10",
+    "expo-constants": "~57.0.22",
+    "expo-document-picker": "~57.0.3",
+    "expo-file-system": "~57.0.7",
+    "expo-image-picker": "~57.0.20",
+    "expo-linking": "~57.0.13",
+    "expo-router": "~57.0.29",
     "expo-secure-store": "~57.0.4",
-    "expo-splash-screen": "~57.0.5",
+    "expo-splash-screen": "~57.0.10",
     "expo-status-bar": "~57.0.1",
     "expo-system-ui": "~57.0.2",
     "react": "19.2.3",
@@ -31,10 +37,14 @@
     "react-native-screens": "~4.26.0",
     "react-native-svg": "15.15.4",
     "react-native-webview": "13.16.1",
-    "react-native-worklets": "0.10.1"
+    "react-native-worklets": "0.10.1",
+    "decode-uri-component": "file:vendor/decode-uri-component-cjs"
   },
   "devDependencies": {
     "@types/react": "~19.2.2",
     "typescript": "~6.0.3"
+  },
+  "overrides": {
+    "decode-uri-component": "$decode-uri-component"
   }
 }

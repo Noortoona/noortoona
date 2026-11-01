@@ -29,7 +29,7 @@ export default async (req: Request) => {
     const db = getDatabase();
     const auth = await getAuth(req);
     let authorized = auth ? await canAccessEvent(auth.user, eventId) : false;
-    if (!authorized && ownerToken) {
+    if (!authorized && ownerToken && !auth) {
       const [event] = await db.sql`SELECT id FROM events WHERE id=${eventId} AND owner_token=${ownerToken}`;
       authorized = Boolean(event);
     }

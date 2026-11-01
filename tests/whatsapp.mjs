@@ -8,14 +8,14 @@ import { providerConfig, nextStatus, extractStatuses } from '../netlify/function
 async function handler(file) {
   let source = await readFile(new URL('../netlify/functions/'+file, import.meta.url), 'utf8');
   source=source.replace('import { getDatabase } from "@netlify/database";','const getDatabase = () => globalThis.__waDb;');
-  source=source.replace('import { canAccessEvent, getAuth, recordAudit } from "./_shared/auth.mjs";','const getAuth=async()=>null; const canAccessEvent=async()=>false; const recordAudit=async()=>{};');
+  source=source.replace('import { canManageEvent, getAuth, recordAudit } from "./_shared/auth.mjs";','const getAuth=async()=>globalThis.__waAuth; const canManageEvent=async()=>globalThis.__waManage; const recordAudit=async()=>{};');
   for (const part of ['domain','whatsapp']) source=source.replace(`"./_shared/${part}.mjs"`, JSON.stringify(new URL(`../netlify/functions/_shared/${part}.mjs`,import.meta.url).href));
   return (await import('data:text/javascript;base64,'+Buffer.from(ts.transpileModule(source,{compilerOptions:{module:ts.ModuleKind.ESNext,target:ts.ScriptTarget.ES2022}}).outputText).toString('base64'))).default;
 }
 const send=await handler('whatsapp-send.mts'), webhook=await handler('whatsapp-webhook.mts');
-let calls, fetches, env, previous, providerReply, providerThrows, storedStatus, missingMessage, dbFails;
+let calls, fetches, env, previous, providerReply, providerThrows, storedStatus, missingMessage, dbFails, trialCount;
 function reset() {
-  calls=[];fetches=[];previous=[];providerThrows=false;storedStatus='queued';missingMessage=false;dbFails=false;
+  calls=[];fetches=[];previous=[];trialCount=0;globalThis.__waAuth={user:{id:'customer',role:'customer'}};globalThis.__waManage=true;providerThrows=false;storedStatus='queued';missingMessage=false;dbFails=false;
   env={D360_MODE:'production',D360_API_KEY:'test-only-key',D360_WEBHOOK_TOKEN:'test-only-token',D360_INVITE_TEMPLATE:'hala_invite',D360_REMINDER_TEMPLATE:'hala_reminder',D360_TEMPLATE_LANGUAGE:'ar'};
   globalThis.Netlify={env:{get:key=>env[key]}};
   providerReply={status:200,body:{messages:[{id:'wamid.test'}]}};
@@ -30,6 +30,7 @@ function reset() {
     pool:{connect:async()=>({
       query:async(sql,args=[])=>{
         calls.push({sql,args});if(dbFails&&sql.includes('UPDATE whatsapp_messages'))throw new Error('database unavailable');
+        if(sql.includes('COUNT(*)::int AS count FROM customer_free_trials'))return {rows:[{count:trialCount}]};
         if(sql.includes('SELECT id, message_id, status'))return {rows:previous};
         if(sql.includes('INSERT INTO whatsapp_messages'))return {rows:[{id:17}]};
         if(sql.includes('SELECT id, guest_id'))return {rows:missingMessage?[]:[{id:17,guest_id:'guest'}]};
@@ -98,4 +99,21 @@ test('nested Meta statuses are parsed',()=>{
 });
 test('temporary OTP provisioning function is absent from deployment sources',async()=>{
  await assert.rejects(stat(new URL('../netlify/functions/whatsapp-otp-template-setup.mts',import.meta.url)),{code:'ENOENT'});
+});
+
+test('one free trial is shared across customer events',async()=>{
+ reset();trialCount=1;
+ const res=await send(request());
+ assert.equal(res.status,402);assert.equal((await res.json()).code,'PAYMENT_REQUIRED');assert.equal(fetches.length,0);
+ assert.ok(calls.some(c=>c.sql.includes('SELECT id FROM users')&&c.sql.includes('FOR UPDATE')));
+ assert.ok(calls.some(c=>c.sql.includes('customer_free_trials WHERE user_id=$1')&&c.args[0]==='customer'));
+});
+test('unpaid legacy owner token cannot bypass customer trial allowance',async()=>{
+ reset();globalThis.__waAuth=null;globalThis.__waManage=false;
+ const res=await send(request());
+ assert.equal(res.status,401);assert.equal((await res.json()).code,'PHONE_OTP_REQUIRED');assert.equal(fetches.length,0);
+});
+test('supervisor cannot send invitations through an assigned event or owner-token fallback',async()=>{
+ reset();globalThis.__waAuth={user:{id:'supervisor',role:'supervisor'}};globalThis.__waManage=false;
+ assert.equal((await send(request())).status,403);assert.equal(fetches.length,0);
 });

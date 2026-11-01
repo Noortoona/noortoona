@@ -1,17 +1,18 @@
 import React, { useCallback, useEffect, useMemo, useState } from "react";
-import { Alert, Pressable, RefreshControl, ScrollView, StyleSheet, Text, TextInput, View } from "react-native";
+import { Alert, Linking, Pressable, RefreshControl, ScrollView, StyleSheet, Text, TextInput, View } from "react-native";
 import { useLocalSearchParams, useRouter } from "expo-router";
-import { api, ApiError } from "@/api";
+import { api, ApiError, BASE_URL } from "@/api";
 import { useRequireRole } from "@/roleGate";
 import { BrandHeader, Card, Empty, PrimaryButton, Screen, Stat } from "@/ui";
 import { theme } from "@/theme";
+import { mapsLinks } from "@/links";
 
 type Guest = {
-  id: string; name: string; phone?: string; rsvp_status?: string; checked_in_at?: string;
+  id: string; name: string; code?: string; phone?: string; rsvp_status?: string; checked_in_at?: string;
   whatsapp_status?: string; viewed_at?: string; companion_count?: number; children_count?: number;
 };
 type Dashboard = {
-  event: { id: string; title: string; occasion: string; event_date?: string; event_time?: string; location?: string; activity_type?: string; package_name?: string };
+  event: { id: string; title: string; occasion: string; event_date?: string; event_time?: string; location?: string; maps_url?: string; activity_type?: string; package_name?: string };
   guests: Guest[];
 };
 type Billing = {
@@ -76,6 +77,11 @@ export default function CustomerEvent() {
   const paid = billing?.payment?.status === "paid";
   const selectedEventPackage = packageCodeForName(data?.event.package_name);
 
+  async function openMap(url: string | null) {
+    if (!url) return;
+    try { await Linking.openURL(url); } catch { Alert.alert("تعذر فتح الرابط", "حاول مرة أخرى."); }
+  }
+
   async function addGuest() {
     if (!name.trim()) return;
     setBusy(true);
@@ -87,6 +93,7 @@ export default function CustomerEvent() {
   }
 
   async function sendInvite(guest: Guest) {
+    if (sending) return;
     if (!guest.phone) return Alert.alert("رقم الجوال مطلوب", "أضف رقم جوال للضيف قبل الإرسال.");
     setSending(guest.id);
     try {
@@ -100,7 +107,7 @@ export default function CustomerEvent() {
       if (e instanceof ApiError && e.status === 402) {
         return Alert.alert("فعّل الباقة", "تم استخدام الدعوة التجريبية المجانية. أكمل الدفع لإرسال بقية الدعوات.", [
           { text: "لاحقًا", style: "cancel" },
-          { text: "الدفع الآن", onPress: () => router.push({ pathname: "/customer/payment" as never, params: { eventId: String(id), package: selectedEventPackage } }) },
+          { text: "عرض الباقات", onPress: () => router.push({ pathname: "/customer/payment" as never, params: { eventId: String(id), package: selectedEventPackage } }) },
         ]);
       }
       Alert.alert("تعذر الإرسال", e?.message || "راجع إعدادات واتساب وحالة الرقم.");
@@ -128,6 +135,8 @@ export default function CustomerEvent() {
           <Stat label="دخلوا" value={stats.checked} />
         </View>
 
+        {data?.event.location || data?.event.maps_url ? <Card><Text style={styles.cardTitle}>موقع المناسبة</Text><Text style={styles.billingHelp}>{data.event.location}</Text><View style={{ gap: 8 }}><PrimaryButton label="عرض الموقع في Google Maps" onPress={() => openMap(mapsLinks(data.event.location, data.event.maps_url).view)} secondary /><PrimaryButton label="الاتجاهات إلى المناسبة" onPress={() => openMap(mapsLinks(data.event.location, data.event.maps_url).directions)} secondary /></View></Card> : null}
+
         <Card>
           {paid ? (
             <>
@@ -138,7 +147,7 @@ export default function CustomerEvent() {
             <>
               <Text style={styles.billingTitle}>{billing?.freeTestUsed ? "التجربة المجانية مستخدمة" : "لديك دعوة تجريبية مجانية"}</Text>
               <Text style={styles.billingHelp}>{billing?.freeTestUsed ? "أكمل الدفع لإرسال بقية الدعوات." : "أرسل دعوة واحدة للتأكد من الشكل والوصول، ثم فعّل الباقة."}</Text>
-              <PrimaryButton label="اختيار الباقة والدفع" onPress={() => router.push({ pathname: "/customer/payment" as never, params: { eventId: String(id), package: selectedEventPackage } })} />
+              <PrimaryButton label="عرض الباقات" onPress={() => router.push({ pathname: "/customer/payment" as never, params: { eventId: String(id), package: selectedEventPackage } })} />
             </>
           )}
         </Card>
@@ -165,9 +174,10 @@ export default function CustomerEvent() {
               <Text style={styles.meta}>{g.checked_in_at ? "✓ تم الدخول" : g.viewed_at ? "شاهد الدعوة" : "لم يفتح الدعوة"}</Text>
             </View>
             <View style={styles.actions}>
-              <Pressable disabled={sending === g.id} onPress={() => sendInvite(g)} style={styles.sendBtn}>
-                <Text style={styles.sendText}>{sending === g.id ? "جارٍ الإرسال…" : !paid && !billing?.freeTestUsed ? "إرسال تجربة مجانية" : "إرسال واتساب"}</Text>
+              <Pressable accessibilityRole="button" disabled={Boolean(sending) || ["queued", "sent", "delivered", "read"].includes(g.whatsapp_status || "")} onPress={() => sendInvite(g)} style={styles.sendBtn}>
+                <Text style={styles.sendText}>{sending === g.id ? "جارٍ الإرسال…" : ["queued", "sent", "delivered", "read"].includes(g.whatsapp_status || "") ? "تم طلب الإرسال" : !paid && !billing?.freeTestUsed ? "إرسال تجربة مجانية" : "إرسال واتساب"}</Text>
               </Pressable>
+              {g.code ? <Pressable accessibilityRole="button" onPress={() => openMap(`${BASE_URL}/i/${encodeURIComponent(g.code!)}`)} style={styles.deleteBtn}><Text style={styles.deleteText}>فتح الدعوة</Text></Pressable> : null}
               <Pressable onPress={() => removeGuest(g)} style={styles.deleteBtn}><Text style={styles.deleteText}>حذف</Text></Pressable>
             </View>
           </Card>

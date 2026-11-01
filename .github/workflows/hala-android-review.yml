@@ -1,0 +1,60 @@
+name: Hala Android review APK
+
+on:
+  push:
+    branches: ["hala-stabilization-*"]
+    paths: [".github/workflows/hala-android-review.yml"]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: hala-android-review-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  review-apk:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    env:
+      EXPO_PUBLIC_API_URL: https://deploy-preview-6--noortoona.netlify.app
+      EXPO_PUBLIC_PAYMENTS_ENABLED: "false"
+      CI: "1"
+    defaults:
+      run:
+        working-directory: mobile
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v6
+        with:
+          node-version: "24.19.0"
+          cache: npm
+          cache-dependency-path: mobile/package-lock.json
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+      - run: npm ci
+      - run: npm run typecheck
+      - run: npm test
+      - name: Generate existing Expo Android project
+        run: npx expo prebuild --platform android --no-install
+      - name: Compile a self-contained review APK using only the generated debug signature
+        working-directory: mobile/android
+        run: |
+          chmod +x gradlew
+          # Expo's generated review project signs Release with its template debug key.
+          # Refuse any checkout configured to reference a production keystore.
+          node -e 'const s=require("fs").readFileSync("app/build.gradle","utf8"); if(!/release\s*\{[\s\S]*?signingConfig signingConfigs\.debug/.test(s)) throw Error("Review APK must use only the generated debug signature")'
+          ./gradlew :app:assembleRelease -PreactNativeArchitectures=arm64-v8a --no-daemon
+      - uses: actions/upload-artifact@v4
+        with:
+          name: hala-android-review-${{ github.sha }}
+          path: mobile/android/app/build/outputs/apk/release/app-release.apk
+          if-no-files-found: error
+          retention-days: 14
+      - name: Record review build limits after synchronizing approved pricing and supervisor preferences
+        run: |
+          echo 'Review APK only: standard debug signature, arm64 Android devices, payments disabled, preview API. No Expo/Play credentials were created or changed.' >> "$GITHUB_STEP_SUMMARY"
+          echo 'OTP/WhatsApp activation and isolated staging database verification remain required before customer-data tests.' >> "$GITHUB_STEP_SUMMARY"

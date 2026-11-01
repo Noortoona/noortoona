@@ -1,6 +1,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import { packageFor, packageForPaidOrder, publicPackages } from "../netlify/functions/_shared/payments.mjs";
+import { normalizeCatalog, applyCatalogPatch } from "../netlify/functions/_shared/catalog.mjs";
 
 test("Hala packages have server-owned prices and guest limits", () => {
   assert.deepEqual(publicPackages().map(p => [p.code, p.amount, p.guestLimit]), [
@@ -9,17 +10,64 @@ test("Hala packages have server-owned prices and guest limits", () => {
     ["hala_premium", 179900, 500],
   ]);
   assert.equal(packageFor("hala_plus")?.currency, "SAR");
-  assert.equal(packageFor("basic"), null);
+  assert.equal(packageFor("basic"), null, "legacy package codes cannot create newly priced orders");
   assert.equal(packageForPaidOrder("start")?.guestLimit, 50);
   assert.equal(packageForPaidOrder("basic")?.guestLimit, 200);
   assert.equal(packageForPaidOrder("royal")?.guestLimit, 500);
   assert.equal(packageForPaidOrder("hala_plus")?.guestLimit, 250);
+  assert.equal(packageFor("هلا بريميوم")?.amount, 179900);
   assert.equal(packageFor("unknown"), null);
 });
 
-test("unverified reference prices stay hidden from customer-facing packages", () => {
-  for (const pkg of publicPackages()) {
-    assert.equal(pkg.referenceAmountSar, undefined);
-    assert.equal(pkg.promoLicenseId, undefined);
+test('reference prices require both verification gates and track configured current amounts',()=>{
+  const previous=globalThis.Netlify;
+  try{
+    for(const env of [{},{HALA_PROMO_LICENSE_ID:'synthetic-license'},{HALA_PROMO_PRIOR_PRICES_VERIFIED:'true'},{HALA_PROMO_LICENSE_ID:' ',HALA_PROMO_PRIOR_PRICES_VERIFIED:'true'}]){
+      globalThis.Netlify={env:{get:key=>env[key]}};
+      for(const pkg of publicPackages()){assert.equal(pkg.referenceAmount,undefined);assert.equal(pkg.promoLicenseId,undefined)}
+    }
+    globalThis.Netlify={env:{get:key=>({HALA_PROMO_LICENSE_ID:'synthetic-license',HALA_PROMO_PRIOR_PRICES_VERIFIED:'true'})[key]}};
+    const catalog=normalizeCatalog();assert.equal(catalog.packages[0].referenceAmount,89900);assert.equal(catalog.packages[0].promoLicenseId,'synthetic-license');
+    const updated=applyCatalogPatch(catalog,{packages:[{code:'hala_basic',amount:59900,guestLimit:100}]});
+    assert.equal(updated.packages[0].savingsPercent,33);
+    const noSaving=applyCatalogPatch(catalog,{packages:[{code:'hala_basic',amount:89900,guestLimit:100}]});
+    assert.equal(noSaving.packages[0].referenceAmount,undefined);assert.equal(noSaving.packages[0].promoLicenseId,undefined);
+  }finally{globalThis.Netlify=previous}
+});
+
+import { moyasarFeatures } from "../netlify/functions/_shared/payments.mjs";
+const features = env => moyasarFeatures(name => env[name]);
+const testCredentials = { MOYASAR_PUBLISHABLE_KEY: "pk_test_synthetic", MOYASAR_SECRET_KEY: "sk_test_synthetic" };
+const liveCredentials = { MOYASAR_PUBLISHABLE_KEY: "pk_live_synthetic", MOYASAR_SECRET_KEY: "sk_live_synthetic" };
+
+test("payment remains disabled by default even when credentials are present", () => {
+  for (const keys of [testCredentials, liveCredentials]) {
+    const result = features({ ...keys, MOYASAR_APPLE_MERCHANT_ID: "merchant.test", MOYASAR_STCPAY_ENABLED: "true" });
+    assert.equal(result.configured, false);
+    assert.equal(result.mode, "disabled");
+    assert.equal(result.publishableKey, "");
+    assert.equal(result.secretKey, "");
+    assert.equal(result.applePay.enabled, false);
+    assert.equal(result.stcPay.enabled, false);
   }
+});
+
+test("test mode refuses live or mismatched key pairs", () => {
+  assert.equal(features({ ...testCredentials, HALA_PAYMENT_MODE: "test" }).configured, true);
+  assert.equal(features({ ...liveCredentials, HALA_PAYMENT_MODE: "test" }).configured, false);
+  assert.equal(features({ ...testCredentials, MOYASAR_SECRET_KEY: "sk_live_synthetic", HALA_PAYMENT_MODE: "test" }).configured, false);
+});
+
+test("live mode requires separate explicit activation and production context", () => {
+  const env = { ...liveCredentials, HALA_PAYMENT_MODE: "live" };
+  assert.equal(features(env).configured, false);
+  assert.equal(features({ ...env, HALA_LIVE_PAYMENTS_ENABLED: "true", CONTEXT: "deploy-preview" }).configured, false);
+  assert.equal(features({ ...env, HALA_LIVE_PAYMENTS_ENABLED: "true", CONTEXT: "production" }).configured, true);
+});
+
+import { normalizeDigits, normalizePhone } from "../netlify/functions/_shared/domain.mjs";
+test("Arabic and Persian phone/OTP digits normalize consistently",()=>{
+  assert.equal(normalizePhone("٠٥٠١١١٢٢٣٣"),"966501112233");
+  assert.equal(normalizePhone("۰۵۰۱۱۱۲۲۳۳"),"966501112233");
+  assert.equal(normalizeDigits("١٢٣٤٥٦"),"123456");
 });

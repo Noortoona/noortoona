@@ -2,13 +2,14 @@ import { getDatabase } from "@netlify/database";
 import type { Config } from "@netlify/functions";
 import { canAccessEvent, requireRole } from "./_shared/auth.mjs";
 import { isSameOriginRequest, secureJson } from "./_shared/domain.mjs";
-import { moyasarFeatures, packageFor, publicPackages } from "./_shared/payments.mjs";
+import { moyasarFeatures } from "./_shared/payments.mjs";
+import { readCatalog, catalogPackage } from "./_shared/catalog.mjs";
 import { supervisorAddonHalalas } from "./_shared/settings.mjs";
 import { activePartner, normalizeReferralCode, referralAmounts } from "./_shared/partners.mjs";
 
 async function snapshot(db: any, userId: string, eventId: string) {
   const orders = await db.sql`
-    SELECT id, event_id, package_code, amount, currency, status, provider_payment_id, payment_method, referral_code, discount_amount, created_at, paid_at
+    SELECT id, event_id, package_code, guest_limit, amount, currency, status, provider_payment_id, payment_method, referral_code, discount_amount, created_at, paid_at
     FROM payment_orders
     WHERE event_id=${eventId} AND user_id=${userId}
     ORDER BY created_at DESC
@@ -17,24 +18,25 @@ async function snapshot(db: any, userId: string, eventId: string) {
   const [guestCount] = await db.sql`SELECT COUNT(*)::int AS count FROM guests WHERE event_id=${eventId}`;
   const [sentCount] = await db.sql`
     SELECT COUNT(*)::int AS count
-    FROM whatsapp_messages
-    WHERE event_id=${eventId} AND status IN ('queued','sent','delivered','read')
+    FROM customer_free_trials
+    WHERE user_id=${userId}
   `;
   const features = moyasarFeatures();
-  const request = await db.sql`SELECT status FROM supervisor_requests WHERE event_id=${eventId} AND user_id=${userId} LIMIT 1`;
-  const supervisorAddonAmount = request[0] && request[0].status !== "canceled" ? await supervisorAddonHalalas(db) : 0;
+  const request = await db.sql`SELECT status,amount FROM supervisor_requests WHERE event_id=${eventId} AND user_id=${userId} LIMIT 1`;
+  const supervisorAddonAmount = request[0] && request[0].status !== "canceled" ? (Number.isInteger(Number(request[0].amount))&&Number(request[0].amount)>=0?Number(request[0].amount):await supervisorAddonHalalas(db)) : 0;
   return {
-    packages: publicPackages(),
+    packages: (await readCatalog(db)).packages,
     payment: orders[0] || null,
     guestCount: guestCount?.count || 0,
     freeTestUsed: Number(sentCount?.count || 0) > 0,
     paymentConfigured: features.configured,
+    paymentMode: features.mode,
     referralCode: (await db.sql`SELECT referral_code FROM events WHERE id=${eventId} LIMIT 1`)[0]?.referral_code || null,
     supervisorAddonAmount,
     features: {
       applePay: { enabled: features.applePay.enabled, merchantId: features.applePay.merchantId || null },
       stcPay: { enabled: features.stcPay.enabled },
-      card: { enabled: true },
+      card: { enabled: features.configured },
     },
   };
 }
@@ -56,14 +58,14 @@ export default async (req: Request) => {
   try {
     const body: any = await req.json();
     const eventId = String(body.eventId || "");
-    const selected = packageFor(body.packageCode);
+    const selected = catalogPackage(await readCatalog(db),body.packageCode);
     if (!eventId || !selected) return secureJson({ error: "اختر باقة صحيحة" }, 400);
     if (!await canAccessEvent(auth.user, eventId)) return secureJson({ error: "غير مصرح" }, 403);
     const member = await db.sql`SELECT 1 FROM event_members WHERE event_id=${eventId} AND user_id=${auth.user.id} AND member_role='owner' LIMIT 1`;
     if (!member[0]) return secureJson({ error: "الدفع متاح لصاحب المناسبة فقط" }, 403);
 
     const features = moyasarFeatures();
-    if (!features.configured) return secureJson({ error: "إعدادات الدفع غير مكتملة بعد", code: "PAYMENT_NOT_CONFIGURED" }, 503);
+    if (!features.configured) return secureJson({ error: "الدفع معطّل في النسخة التجريبية أو لم تكتمل إعداداته", code: "PAYMENT_NOT_CONFIGURED" }, 503);
 
     const [guestCount] = await db.sql`SELECT COUNT(*)::int AS count FROM guests WHERE event_id=${eventId}`;
     if (Number(guestCount?.count || 0) > selected.guestLimit) {
@@ -71,14 +73,13 @@ export default async (req: Request) => {
     }
 
     const paid = await db.sql`
-      SELECT id, event_id, package_code, amount, currency, status, provider_payment_id, payment_method, created_at, paid_at
+      SELECT id, event_id, package_code, guest_limit, amount, currency, status, provider_payment_id, payment_method, created_at, paid_at
       FROM payment_orders WHERE event_id=${eventId} AND user_id=${auth.user.id} AND status='paid' LIMIT 1
     `;
     if (paid[0]) return secureJson({ order: paid[0], publishableKey: features.publishableKey, alreadyPaid: true, features: { applePay: features.applePay, stcPay: features.stcPay } });
 
-    const requests = await db.sql`SELECT status FROM supervisor_requests WHERE event_id=${eventId} AND user_id=${auth.user.id} LIMIT 1`;
-    const addon = requests[0] && requests[0].status !== 'canceled' ? await supervisorAddonHalalas(db) : 0;
-    if(addon)await db.sql`UPDATE supervisor_requests SET amount=${addon},updated_at=NOW() WHERE event_id=${eventId} AND user_id=${auth.user.id} AND status IN ('requested','assigned')`;
+    const requests = await db.sql`SELECT status,amount FROM supervisor_requests WHERE event_id=${eventId} AND user_id=${auth.user.id} LIMIT 1`;
+    const addon = requests[0] && requests[0].status !== 'canceled' ? (Number.isInteger(Number(requests[0].amount))&&Number(requests[0].amount)>=0?Number(requests[0].amount):await supervisorAddonHalalas(db)) : 0;
     const eventReferral = body.referralCode === undefined ? (await db.sql`SELECT referral_code FROM events WHERE id=${eventId} LIMIT 1`)[0]?.referral_code : null;
     const rawCode = body.referralCode === undefined ? eventReferral || '' : body.referralCode || '';
     const code = normalizeReferralCode(rawCode);
@@ -89,18 +90,18 @@ export default async (req: Request) => {
     if (total <= 0) return secureJson({ error: 'قيمة الطلب غير صالحة' }, 400);
 
     const pending = await db.sql`
-      SELECT id, event_id, package_code, amount, currency, status, provider_payment_id, payment_method, referral_code, discount_amount, created_at, paid_at
+      SELECT id, event_id, package_code, guest_limit, amount, currency, status, provider_payment_id, payment_method, referral_code, discount_amount, created_at, paid_at
       FROM payment_orders
-      WHERE event_id=${eventId} AND user_id=${auth.user.id} AND package_code=${selected.code} AND amount=${total} AND referral_code IS NOT DISTINCT FROM ${partner?.code || null} AND status='pending'
+      WHERE event_id=${eventId} AND user_id=${auth.user.id} AND package_code=${selected.code} AND amount=${total} AND guest_limit=${selected.guestLimit} AND referral_code IS NOT DISTINCT FROM ${partner?.code || null} AND status='pending'
       ORDER BY created_at DESC LIMIT 1
     `;
     let order = pending[0];
     if (!order || body.forceNew === true) {
       const id = crypto.randomUUID();
       const rows = await db.sql`
-        INSERT INTO payment_orders (id, event_id, user_id, package_code, amount, supervisor_addon_amount, currency, referral_code, referral_partner_id, discount_amount, commission_amount)
-        VALUES (${id}, ${eventId}, ${auth.user.id}, ${selected.code}, ${total}, ${addon}, ${selected.currency}, ${partner?.code || null}, ${partner?.user_id || null}, ${discountAmount}, ${commissionAmount})
-        RETURNING id, event_id, package_code, amount, supervisor_addon_amount, currency, status, referral_code, discount_amount, created_at
+        INSERT INTO payment_orders (id, event_id, user_id, package_code, amount, supervisor_addon_amount, currency, referral_code, referral_partner_id, discount_amount, commission_amount, guest_limit)
+        VALUES (${id}, ${eventId}, ${auth.user.id}, ${selected.code}, ${total}, ${addon}, ${selected.currency}, ${partner?.code || null}, ${partner?.user_id || null}, ${discountAmount}, ${commissionAmount}, ${selected.guestLimit})
+        RETURNING id, event_id, package_code, guest_limit, amount, supervisor_addon_amount, currency, status, referral_code, discount_amount, created_at
       `;
       order = rows[0];
     }
