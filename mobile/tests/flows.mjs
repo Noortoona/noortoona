@@ -57,8 +57,10 @@ test('trial build requires explicit staging origin and omits payment entitlement
     assert.throws(() => configure({ config: {} }), /staging/);
     process.env.EXPO_PUBLIC_API_URL = 'http://example.test';
     assert.throws(() => configure({ config: {} }), /HTTPS/);
-    process.env.EXPO_PUBLIC_API_URL = 'https://noortoona.com';
-    assert.throws(() => configure({ config: {} }), /production domain/);
+    for (const origin of ['https://noortoona.com', 'https://halainvites.com', 'https://www.halainvites.com']) {
+      process.env.EXPO_PUBLIC_API_URL = origin;
+      assert.throws(() => configure({ config: {} }), /production domain/);
+    }
     process.env.EXPO_PUBLIC_API_URL = 'https://staging.example.test';
     process.env.EXPO_PUBLIC_APPLE_MERCHANT_ID = 'merchant.example.hala';
     delete process.env.EXPO_PUBLIC_PAYMENTS_ENABLED;

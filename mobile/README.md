@@ -16,7 +16,7 @@ npm ci
 npx expo start
 ```
 
-Local development retains the existing default API origin `https://noortoona.com`. Use an isolated staging backend for testing:
+Local development defaults to the production API origin `https://halainvites.com`. Use an isolated staging backend for testing:
 
 ```bash
 EXPO_PUBLIC_API_URL=https://your-staging.example EXPO_PUBLIC_PAYMENTS_ENABLED=false npx expo start
