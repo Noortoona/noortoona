@@ -15,8 +15,8 @@ export default defineConfig({
   },
   projects: [{ name: 'iPhone', use: { ...devices['iPhone 13'], browserName: 'chromium' } }],
   webServer: {
-    command: `python3 -m http.server ${port} --bind 127.0.0.1`,
+    command: `npm run build && node --experimental-strip-types tests/prebooking-browser-server.mjs`,
     url: `http://127.0.0.1:${port}`,
-    reuseExistingServer: false,
+    reuseExistingServer: process.env.PLAYWRIGHT_REUSE_SERVER === '1',
   },
 });

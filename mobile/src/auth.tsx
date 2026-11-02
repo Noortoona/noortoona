@@ -2,7 +2,7 @@ import * as SecureStore from "expo-secure-store";
 import React, { createContext, useContext, useEffect, useMemo, useState } from "react";
 import { api, ApiError } from "./api";
 
-export type Role = "admin" | "supervisor" | "customer" | "partner";
+export type Role = "admin" | "supervisor" | "customer" | "partner" | "customer_service";
 export type User = { id: string; name: string; email: string; phone?: string; role: Role; status: string };
 
 type AuthContextValue = {

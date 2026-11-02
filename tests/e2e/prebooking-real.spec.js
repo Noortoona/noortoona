@@ -1,0 +1,57 @@
+import {test,expect} from '@playwright/test';
+
+test('guest journey persists real PostgreSQL booking, attribution, staff followup and safe revisit',async({page,request})=>{
+ const before=await(await request.get('/__test/state')).json();
+ await page.addInitScript(()=>localStorage.setItem('halaAnalyticsConsent','no'));
+ await page.goto('/?utm_source=tiktok&utm_campaign=qa-isolated');
+ await page.locator('[data-start]:visible').first().click();
+ await page.locator('[data-occasion="activity"]').click();
+ await page.locator('[data-activity="padel"]').click();
+ await page.locator('#nextBtn').click();
+ await page.locator('#name1').fill('نشاط اختبار معزول');
+ await page.locator('#location').fill('موقع اختبار محلي');
+ await page.locator('#date').fill('2027-02-09');
+ await page.locator('#nextBtn').click();
+ await page.locator('.visual-template-card').first().click();
+ await page.locator('#nextBtn').click();
+ await page.locator('#nextBtn').click();
+ await page.locator('#nextBtn').click();
+ await page.locator('#nextBtn').click();
+ await page.locator('#contactName').fill('عميل اختبار معزول');
+ await page.locator('#contactPhone').fill('0531112244');
+ await expect(page.locator('#nextBtn')).toBeEnabled();
+ await page.locator('#nextBtn').click();
+ await expect(page.getByText('تم تسجيل طلب حجزك بنجاح! ✨')).toBeVisible();
+ const number=await page.locator('.booking-number').textContent();expect(number).toMatch(/^HALA-[A-F0-9]{12}$/);
+ const state=await(await request.get('/__test/state')).json();
+ expect(state.bookings).toHaveLength(before.bookings.length+1);
+ const row=state.bookings.find(b=>b.booking_number===number);
+ expect(row.payment_status).toBe('pending_payment');expect(row.booking_status).toBe('pre_booking_received');expect(row.attribution.source).toBe('tiktok');
+ await page.getByRole('link',{name:'عرض حجزي',exact:true}).click();
+ await expect(page.getByText(number,{exact:true})).toBeVisible();
+ await page.reload();await expect(page.getByText(number,{exact:true})).toBeVisible();
+ expect(page.url()).not.toMatch(/token=/);
+ const staffHeaders={authorization:'Bearer '+state.staff};
+ const staffList=await(await request.get('/api/admin/bookings',{headers:staffHeaders})).json();
+ expect(staffList.bookings.some(b=>b.id===row.id)).toBeTruthy();expect(staffList.notifications.some(n=>n.booking_id===row.id&&n.kind==='internal')).toBeTruthy();
+ expect((await request.patch('/api/admin/bookings',{headers:staffHeaders,data:{id:row.id,bookingStatus:'contacted',notes:'متابعة فعلية داخل الاختبار'}})).status()).toBe(200);
+ expect((await request.patch('/api/admin/bookings',{headers:staffHeaders,data:{id:row.id,paymentStatus:'paid'}})).status()).toBe(400);
+ await page.reload();await expect(page.getByText(/تم التواصل · بانتظار الدفع/)).toBeVisible();
+ const insights=await(await request.get('/api/admin/insights',{headers:staffHeaders})).json();
+ expect(insights.bookings.total).toBe(state.bookings.length);expect(insights.bookings.realizedRevenueHalalas).toBe(0);
+});
+
+test('launch form registers actual contact without requiring marketing opt-in or making a booking',async({page,request})=>{
+ const before=await(await request.get('/__test/state')).json();
+ await page.addInitScript(()=>localStorage.setItem('halaAnalyticsConsent','no'));
+ await page.goto('/#prelaunch');
+ const form=page.locator('[data-lead-form="launch"]');
+ await form.locator('[name="name"]').fill('مهتم اختبار معزول');
+ await form.locator('[name="phone"]').fill('0531112255');
+ await expect(form.locator('[name="marketingConsent"]')).not.toBeChecked();
+ await form.locator('button[type="submit"]').click();
+ await expect(form.locator('[role="status"]')).toContainText('تم تسجيل اهتمامك');
+ const state=await(await request.get('/__test/state')).json();expect(state.bookings).toHaveLength(before.bookings.length);
+ const data=await(await request.get('/api/admin/leads',{headers:{authorization:'Bearer '+state.staff}})).json();
+ expect(data.leads.some(l=>l.phone==='966531112255'&&!l.marketing_consent)).toBeTruthy();
+});

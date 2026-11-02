@@ -7,7 +7,7 @@ import { normalizeDigits, normalizePhone } from '../netlify/functions/_shared/do
 import { normalizeReferralCode, referralAmounts } from '../netlify/functions/_shared/partners.mjs';
 
 async function handler(name, bindings) {
-  bindings={normalizeDigits,readCatalog:async()=>({packages:publicPackages()}),catalogPackage:(catalog,code)=>catalog.packages.find(p=>p.code===code||p.name===code)||null,...bindings};
+  bindings={analyticsEnvironment:()=>"preview:unit-test",normalizeDigits,readCatalog:async()=>({packages:publicPackages()}),catalogPackage:(catalog,code)=>catalog.packages.find(p=>p.code===code||p.name===code)||null,...bindings};
   let source = await readFile(new URL(`../netlify/functions/${name}.mts`, import.meta.url), 'utf8');
   source = source.replace(/^import .*;\s*$/gm, '');
   const prefix = Object.entries(bindings).map(([key, value]) => `const ${key}=globalThis.__testBindings.${key};`).join('\n');
@@ -56,6 +56,7 @@ test('payment order uses server price plus 599 SAR supervisor addon and owner au
   let owner=true, addon=59900, inserted=[];
   const db={sql:async(parts,...args)=>{
     const sql=parts.join('?');
+    if(sql.includes('FROM bookings'))return [];
     if(sql.includes('FROM event_members'))return owner?[{exists:true}]:[];
     if(sql.includes('FROM guests'))return [{count:12}];
     if(sql.includes("status='paid'"))return [];

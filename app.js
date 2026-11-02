@@ -1,8 +1,10 @@
 const N=window.NOORTOONA;
 const $=(s,root=document)=>root.querySelector(s);
 const $$=(s,root=document)=>[...root.querySelectorAll(s)];
-const stages=['المناسبة','التفاصيل','القالب','التصميم','الضيوف','المعاينة','الإرسال'];
-const defaults={step:1,occasionKey:'wedding',activityKey:'padel',customOccasion:'',customActivity:'',template:'ليلة كحلية',name1:'أحمد',name2:'سارة',hostName:'',date:'2026-12-14',time:'20:00',duration:'3',country:'السعودية',city:'الرياض',location:'الرياض',mapsUrl:'',description:'',videoUrl:'',pdfUrl:'',message:'يسعدنا حضوركم ومشاركتنا هذه المناسبة',package:'هلا بلس',capacity:'20',shareAmount:'35',shareLabel:'قيمة القطّة',requireShareConsent:true,allowNamedCompanions:true,waitlistEnabled:true,requestSupervisor:false,supervisorPreference:'',guestText:'',activityPicking:false,design:{font:'ruqaa',layout:'classic',accent:'#e3bd64',headline:'يسعدنا حضوركم',image:'',audio:'',showCountdown:true,showMap:true,showQr:true,showMaybe:true,showDecline:true,allowChildren:true,allowNotes:true,photographyPermission:false}};
+const stages=['المناسبة','التفاصيل','القالب','التصميم','الضيوف','المعاينة','تأكيد الحجز'];
+const H=window.HALA_BOOKING;
+const track=(name,metadata={})=>H?.track(name,metadata);
+const defaults={step:1,occasionKey:'wedding',activityKey:'padel',customOccasion:'',customActivity:'',template:'ليلة كحلية',name1:'',name2:'',hostName:'',date:'',time:'20:00',duration:'3',country:'السعودية',city:'الرياض',location:'',mapsUrl:'',description:'',videoUrl:'',pdfUrl:'',message:'يسعدنا حضوركم ومشاركتنا هذه المناسبة',package:'هلا بلس',capacity:'20',shareAmount:'35',shareLabel:'قيمة القطّة',requireShareConsent:true,allowNamedCompanions:true,waitlistEnabled:true,requestSupervisor:false,supervisorPreference:'',guestText:'',guestCount:100,contactName:'',contactPhone:'',contactEmail:'',marketingConsent:false,referralCode:'',activityPicking:false,design:{font:'ruqaa',layout:'classic',accent:'#e3bd64',headline:'يسعدنا حضوركم',image:'',audio:'',showCountdown:true,showMap:true,showQr:true,showMaybe:true,showDecline:true,allowChildren:true,allowNotes:true,photographyPermission:false}};
 let restored={};try{restored=JSON.parse(localStorage.getItem('noortoonaDraftV55')||'{}')||{}}catch{}
 const state={...defaults,...restored,design:{...defaults.design,...(restored.design||{})}};
 // Re-select a current package when opening an older locally saved draft.
@@ -13,6 +15,7 @@ const saveDraft=()=>{try{localStorage.setItem('noortoonaDraftV55',JSON.stringify
 const occasion=()=>N.occasions.find(x=>x.key===state.occasionKey)||N.occasions[0];
 const activity=()=>N.activities.find(x=>x.key===state.activityKey)||N.activities[0];
 const groupKey=()=>state.occasionKey==='activity'?state.activityKey:state.occasionKey;
+let checkoutQuote=null,quoteRevision=0,submittingBooking=false;
 let catalogPackages=[{code:'hala_basic',name:'هلا الأساسية',amount:44900,amountSar:449,guestLimit:100},{code:'hala_plus',name:'هلا بلس',amount:109900,amountSar:1099,guestLimit:250},{code:'hala_premium',name:'هلا بريميوم',amount:179900,amountSar:1799,guestLimit:500}],hiddenTemplateKeys=[],catalogServices=null;
 const templates=()=>N.templateChoices(groupKey(),hiddenTemplateKeys);
 const eventLabel=()=>state.customOccasion||(state.occasionKey==='activity'?'تجمع ونشاط':occasion().label);
@@ -52,9 +55,11 @@ function eventTitle(){
 const progress=()=>`<div class="journey-progress" role="list" aria-label="مراحل إنشاء الدعوة">${stages.map((label,i)=>`<div class="journey-step ${i+1===state.step?'active':''} ${i+1<state.step?'done':''}" role="listitem"><span>${i+1<state.step?'✓':i+1}</span><small>${label}</small></div>`).join('')}</div>`;
 const heading=(title,sub)=>`<div class="builder-heading"><h2>${title}</h2>${sub?`<p>${sub}</p>`:''}</div>`;
 const field=(id,label,value,type='text',attrs='')=>`<label class="journey-field"><span>${label}</span><input id="${id}" type="${type}" value="${N.esc(value)}" ${attrs}></label>`;
-const setTemplate=(name)=>{state.template=name;state.design.accent=N.templateByName(name,groupKey()).accent;saveDraft();render()};
+const setTemplate=(name)=>{track('template_selected',{template:name});state.template=name;state.design.accent=N.templateByName(name,groupKey()).accent;saveDraft();render()};
 
 function openBuilder(key='wedding',resume=false){
+  nextBtn.style.display='';prevBtn.style.display='';
+  track('booking_started',{occasion:key});
   if(!resume){state.occasionKey=key;state.step=1;state.activityPicking=false;cleanTypeFields();applyTypeExperience()}
   else{state.step=Math.min(7,Math.max(1,Number(state.step)||1));state.activityPicking=false}
   if(!templates().some(t=>t.name===state.template))state.template=templates()[0].name;
@@ -79,58 +84,87 @@ function renderTemplates(){return `${heading(`اختر قالب ${state.occasion
 function invitePreview(){return `<div class="host-phone"><div class="host-phone-notch"></div>${N.canvas({...state,occasion:eventLabel()})}</div>`}
 function renderDesign(){const x=experience();return `${heading('صمّم دعوتك','التخصيص بسيط؛ القالب هو الهوية واللون مجرد لمسة')}<div class="type-behavior-note"><b>${x.showRsvp===false?'دعوة معلوماتية بدون تأكيد حضور':x.rsvpPrompt||'تأكيد حضور مخصص'}</b><span>${x.allowCompanions===false?'بدون طلب مرافقين':'يمكن إدارة المرافقين حسب هذا النوع'}${x.showQr===false?' • بدون QR افتراضيًا':' • QR متاح'}</span></div><div class="design-workspace"><div class="host-preview-wrap">${invitePreview()}<button type="button" class="guest-preview-link" data-full-preview>معاينة كضيف بالحجم الكامل</button></div><div class="design-controls"><label><span>النص الرئيسي</span><input id="headline" maxlength="70" value="${N.esc(state.design.headline)}"></label><label><span>الخط</span><select id="font"><option value="ruqaa">رقعة أنيق</option><option value="tajawal">تجوال</option><option value="serif">كلاسيكي</option></select></label><label><span>اللون الرئيسي</span><input id="accent" type="color" value="${state.design.accent}"></label><div class="mini-template-switch"><span>تغيير القالب</span>${templates().map(t=>`<button type="button" class="mini-template ${state.template===t.name?'selected':''}" data-template="${N.esc(t.name)}">${thumb(t)}</button>`).join('')}</div><label class="image-upload"><span>استخدام صورتك كخلفية</span><input id="designImage" type="file" accept="image/png,image/jpeg,image/webp"></label><label class="image-upload"><span>موسيقى الدعوة (اختياري، حتى 600 كيلوبايت)</span><input id="designAudio" type="file" accept="audio/mpeg,audio/ogg,audio/wav,audio/mp4,audio/aac"></label>${N.safeAudioUrl(state.design.audio)?`<audio controls preload="none" src="${N.esc(state.design.audio)}" aria-label="معاينة موسيقى الدعوة"></audio><button type="button" id="removeAudio" class="outline-btn dark-outline">إزالة الموسيقى</button>`:""}<small>تعمل الموسيقى باختيار الضيف. أعد اختيار الملفات عند استعادة المسودة.</small></div></div>`}
 function parseGuests(){return state.guestText.split(/\r?\n/).map(line=>{const [name,...rest]=line.split(/[,،]/);return{name:name?.trim(),phone:rest.join(',').trim()}}).filter(x=>x.name)}
-function renderGuests(){const count=parseGuests().length;return `${heading('أضف الضيوف','كل سطر: اسم الضيف، رقم الجوال')}<div class="guest-entry"><textarea id="guestText" rows="10" placeholder="محمد العتيبي، 0500000000\nخالد الحربي، 0500000001">${N.esc(state.guestText)}</textarea><div class="guest-entry-note"><span>${count} ضيف</span><small>يمكنك أيضًا الإضافة والاستيراد من لوحة المضيف بعد الإنشاء.</small></div></div>`}
+function renderGuests(){const count=parseGuests().length;return `${heading('عدد المدعوين وقائمتهم','حدّد العدد المطلوب للتسعير؛ يمكنك إضافة أسماء الضيوف لاحقًا')}${field('guestCount','عدد المدعوين المطلوب',state.guestCount,'number','min="1" max="5000" step="1" required')}<div class="guest-entry"><textarea id="guestText" rows="10" placeholder="محمد العتيبي، 0500000000\nخالد الحربي، 0500000001">${N.esc(state.guestText)}</textarea><div class="guest-entry-note"><span>${count} ضيف</span><small>يمكنك أيضًا الإضافة والاستيراد من لوحة المضيف بعد الإنشاء.</small></div></div>`}
 function renderReview(){const count=parseGuests().length;return `${heading('راجع دعوتك','هذه المعاينة تستخدم نفس الرسم الذي سيصل للضيف')}<div class="review-grid"><div>${invitePreview()}<button type="button" class="guest-preview-link" data-full-preview>معاينة كضيف</button></div><div class="review-summary"><h3>${N.esc(state.name1)}${state.name2?' و '+N.esc(state.name2):''}</h3>${state.hostName?`<p>${N.esc(state.hostName)}</p>`:''}<dl><div><dt>النوع</dt><dd>${N.esc(state.occasionKey==='activity'?activityLabel():occasion().label)}</dd></div><div><dt>التاريخ</dt><dd>${N.esc(state.date)}</dd></div><div><dt>الموقع</dt><dd>${N.esc(state.location)}</dd></div><div><dt>القالب</dt><dd>${N.esc(state.template)}</dd></div><div><dt>الضيوف</dt><dd>${count}</dd></div>${state.occasionKey==='activity'?`<div><dt>القطّة</dt><dd>${Number(state.shareAmount||0).toLocaleString('ar-SA')} ر.س للفرد</dd></div>`:''}</dl></div></div>`}
 function supervisorChoice(){
   return `<fieldset class="supervisor-gender-choice"><legend>تفضيلك لخدمة الاستقبال</legend><label><input type="radio" name="supervisorPreference" value="male" ${state.supervisorPreference==='male'?'checked':''}> مشرف</label><label><input type="radio" name="supervisorPreference" value="female" ${state.supervisorPreference==='female'?'checked':''}> مشرفة</label><small>يُراجع التوفر حسب المدينة والموعد قبل تأكيد التكليف.</small></fieldset>`;
 }
 function renderSend(){
   const sp=Number(window.HALA_AUTH?.supervisorPrice??599);
-  const packagePrices=Object.fromEntries(catalogPackages.map(p=>[p.name,p.amountSar]));
-  const packageLimits=Object.fromEntries(catalogPackages.map(p=>[p.name,p.guestLimit]));
-  const base=packagePrices[state.package]??catalogPackages[0].amountSar,total=base+(state.requestSupervisor?sp:0);
-  return `${heading('جاهزة للإرسال','راجع الباقة والخدمات الإضافية قبل إنشاء المناسبة')}<div class="send-card"><span>✦</span><h3>كل شيء جاهز</h3><p>سيتم إنشاء روابط فريدة للضيوف وحفظ إعدادات الدعوة والقطّة وقائمة الانتظار.</p><div class="package-row">${catalogPackages.map(pkg=>pkg.name).map(p=>`<button type="button" data-package="${p}" class="${state.package===p?'selected':''}">${p} <small>${packagePrices[p]} ر.س • حتى ${packageLimits[p]} ضيف</small></button>`).join('')}</div><label class="supervisor-addon"><input id="requestSupervisor" type="checkbox" ${state.requestSupervisor?'checked':''}><span><b>أضف مشرفًا أو مشرفة لمناسبتك</b><small>يتابع الاستقبال والحضور والتنسيق يوم المناسبة</small></span><strong>+${sp.toLocaleString('ar-SA')} ر.س</strong></label>${state.requestSupervisor?supervisorChoice():''}<div class="checkout-summary"><span>الإجمالي الحالي</span><strong>${total.toLocaleString('ar-SA')} ر.س</strong><small>${state.requestSupervisor?('يشمل خدمة '+(state.supervisorPreference==='female'?'مشرفة':'مشرف')+' المناسبة'):'بدون خدمة المشرف'}</small></div></div>`;
+  return `${heading('تأكيد طلب الحجز','راجع السعر وأدخل بيانات التواصل. لا يتم تحصيل أي مبلغ الآن.')}<div class="send-card booking-checkout"><div class="package-row">${catalogPackages.map(p=>`<button type="button" data-package="${N.esc(p.name)}" class="${state.package===p.name?'selected':''}">${N.esc(p.name)} <small>${H.money(p.amount)} • حتى ${p.guestLimit} ضيف</small></button>`).join('')}</div>${field('guestCount','عدد المدعوين المطلوب',state.guestCount,'number','min="1" max="5000" step="1" required')}<label class="supervisor-addon"><input id="requestSupervisor" type="checkbox" ${state.requestSupervisor?'checked':''}><span><b>إضافة مشرف أو مشرفة</b><small>يُراجع التوفر قبل التأكيد النهائي</small></span><strong>+${sp.toLocaleString('ar-SA')} ر.س</strong></label>${state.requestSupervisor?supervisorChoice():''}<label class="journey-field"><span>كود القاعة أو المؤثر (اختياري)</span><input id="referralCode" maxlength="24" value="${N.esc(state.referralCode||localStorage.getItem('halaReferralCode')||'')}" autocomplete="off"></label><button type="button" id="refreshBookingQuote" class="outline-btn dark-outline">تحديث السعر وتطبيق الكود</button><div id="bookingQuote" class="checkout-summary" aria-live="polite"><span>جاري حساب السعر من هلا…</span></div><div class="journey-form contact-details">${field('contactName','اسم العميل',state.contactName,'text','autocomplete="name" maxlength="120" required')}${field('contactPhone','رقم الجوال',state.contactPhone,'tel','autocomplete="tel" inputmode="tel" required')}${field('contactEmail','البريد الإلكتروني (اختياري)',state.contactEmail,'email','autocomplete="email" maxlength="180"')}<label class="journey-check"><input id="marketingConsent" type="checkbox" ${state.marketingConsent?'checked':''}><span>أوافق اختياريًا على استقبال أخبار وعروض هلا. الحجز متاح دون هذه الموافقة.</span></label></div><p class="booking-notice">هذه خطوة تأكيد طلب حجز مبدئي دون دفع. سيُحفظ الطلب أولًا ثم يتواصل معك الفريق لاستكمال الدفع والتأكيد النهائي.</p><a href="${H.whatsapp()}" data-hala-support target="_blank" rel="noopener noreferrer">تحتاج مساعدة؟ تواصل مع خدمة العملاء — اختياري</a></div>`;
+}
+async function updateBookingQuote(){
+  if(state.step!==7)return;
+  saveInputs();const revision=++quoteRevision;checkoutQuote=null;
+  const element=$('#bookingQuote',body);if(!element)return;
+  element.innerHTML='<span>جاري حساب السعر من هلا…</span>';
+  nextBtn.disabled=true;
+  try{
+    const selected=catalogPackages.find(p=>p.name===state.package);
+    const data=await H.api('/api/bookings/quote',{method:'POST',body:JSON.stringify({packageCode:selected?.code,guestCount:Number(state.guestCount),services:state.requestSupervisor?['supervisor']:[],supervisorPreference:state.supervisorPreference,referralCode:state.referralCode||''})});
+    if(revision!==quoteRevision||state.step!==7)return;
+    checkoutQuote=data.quote;
+    element.innerHTML=`<span>الباقة ${H.money(data.quote.baseAmount)}</span><span>الخدمات ${H.money(data.quote.addonAmount)}</span><span>الخصم ${H.money(data.quote.discountAmount)}</span><strong>الإجمالي النهائي ${H.money(data.quote.total)}</strong><small>لا يتم الدفع الآن — تأكيد نهائي بعد التواصل</small>`;
+    track('price_viewed',{package:selected?.code});
+  }catch(error){if(revision===quoteRevision&&state.step===7)element.innerHTML=`<span role="alert">${N.esc(error.message)}</span>`;}
+  finally{if(revision===quoteRevision)nextBtn.disabled=submittingBooking||!checkoutQuote;}
 }
 function render(){
   $('.builder-progress').style.display='none';let content='';
   if(state.step===1)content=state.activityPicking?renderActivities():`${heading('اختر نوع المناسبة','كل لحظة تستحق دعوة أجمل')}${renderOccasions()}`;
   if(state.step===2)content=renderDetails();if(state.step===3)content=renderTemplates();if(state.step===4)content=renderDesign();if(state.step===5)content=renderGuests();if(state.step===6)content=renderReview();if(state.step===7)content=renderSend();
-  body.innerHTML=`${progress()}<div class="journey-save-state"><span>✓ محفوظ تلقائيًا</span><b>الخطوة ${state.step} من ${stages.length}</b></div><div class="journey-content">${content}</div>`;body.scrollTop=0;prevBtn.style.visibility=state.step===1&&!state.activityPicking?'hidden':'visible';nextBtn.textContent=state.step===7?'إنشاء وفتح لوحة المضيف':'التالي ←';nextBtn.disabled=false;bind();requestAnimationFrame(()=>$('.journey-step.active',body)?.scrollIntoView({block:'nearest',inline:'center'}));
+  body.innerHTML=`${progress()}<div class="journey-save-state"><span>✓ محفوظ تلقائيًا</span><b>الخطوة ${state.step} من ${stages.length}</b></div><div class="journey-content">${content}</div>`;body.scrollTop=0;prevBtn.style.visibility=state.step===1&&!state.activityPicking?'hidden':'visible';nextBtn.textContent=state.step===7?'تأكيد طلب الحجز':'التالي ←';nextBtn.disabled=submittingBooking;bind();if(state.step===7)updateBookingQuote();requestAnimationFrame(()=>$('.journey-step.active',body)?.scrollIntoView({block:'nearest',inline:'center'}));
 }
 function bind(){
-  $$('[data-occasion]',body).forEach(b=>b.onclick=()=>{state.occasionKey=b.dataset.occasion;state.customOccasion='';cleanTypeFields();applyTypeExperience();if(state.occasionKey==='activity')state.activityPicking=true;else{state.activityPicking=false;state.template=templates()[0].name}saveDraft();render()});
+  $$('[data-occasion]',body).forEach(b=>b.onclick=()=>{state.occasionKey=b.dataset.occasion;track('occasion_selected',{occasion:state.occasionKey});state.customOccasion='';cleanTypeFields();applyTypeExperience();if(state.occasionKey==='activity')state.activityPicking=true;else{state.activityPicking=false;state.template=templates()[0].name}saveDraft();render()});
   $$('[data-activity]',body).forEach(b=>b.onclick=()=>{state.activityKey=b.dataset.activity;state.template=templates()[0].name;saveDraft();render()});
-  $$('[data-template]',body).forEach(b=>b.onclick=()=>setTemplate(b.dataset.template));$$('[data-package]',body).forEach(b=>b.onclick=()=>{state.package=b.dataset.package;render()});$$('[data-full-preview]',body).forEach(b=>b.onclick=openFullPreview);const supervisorToggle=$('#requestSupervisor',body);if(supervisorToggle)supervisorToggle.onchange=e=>{state.requestSupervisor=e.target.checked;saveDraft();render()};
+  $$('[data-template]',body).forEach(b=>b.onclick=()=>setTemplate(b.dataset.template));$$('[data-package]',body).forEach(b=>b.onclick=()=>{state.package=b.dataset.package;track('package_viewed',{package:state.package});render()});$$('[data-full-preview]',body).forEach(b=>b.onclick=openFullPreview);const supervisorToggle=$('#requestSupervisor',body);if(supervisorToggle)supervisorToggle.onchange=e=>{state.requestSupervisor=e.target.checked;saveDraft();render()};
   $$('input[name="supervisorPreference"]',body).forEach(radio=>radio.onchange=e=>{state.supervisorPreference=e.target.value;saveDraft();render()});
+  $('#refreshBookingQuote',body)?.addEventListener('click',updateBookingQuote);
+  ['guestCount','referralCode'].forEach(id=>$('#'+id,body)?.addEventListener('change',updateBookingQuote));
+  let contactTracked=false;['contactName','contactPhone','contactEmail'].forEach(id=>$('#'+id,body)?.addEventListener('input',()=>{if(!contactTracked){track('contact_started');contactTracked=true}}));
   const font=$('#font',body);if(font){font.value=state.design.font;font.onchange=e=>{state.design.font=e.target.value;render()}}const headline=$('#headline',body);if(headline)headline.oninput=e=>{state.design.headline=e.target.value;$('.invite-headline',body).textContent=e.target.value;saveDraft()};const accent=$('#accent',body);if(accent)accent.oninput=e=>{state.design.accent=e.target.value;$('.invite-canvas',body).style.setProperty('--invite-accent',e.target.value);saveDraft()};const upload=$('#designImage',body);if(upload)upload.onchange=handleImage;const audio=$('#designAudio',body);if(audio)audio.onchange=handleAudio;const removeAudio=$('#removeAudio',body);if(removeAudio)removeAudio.onclick=()=>{state.design.audio='';saveDraft();render()};
   $$('input:not([type=file]),textarea,select',body).forEach(el=>el.addEventListener('input',()=>{clearTimeout(window.__draftSave);window.__draftSave=setTimeout(saveInputs,250)}));
 }
-function saveInputs(){['customOccasion','customActivity','name1','name2','hostName','date','time','location','city','mapsUrl','message','capacity','shareAmount','guestText'].forEach(k=>{const el=$('#'+k,body);if(el)state[k]=el.value});['requireShareConsent','allowNamedCompanions','waitlistEnabled','requestSupervisor'].forEach(k=>{const el=$('#'+k,body);if(el)state[k]=el.checked});saveDraft()}
+function saveInputs(){['customOccasion','customActivity','name1','name2','hostName','date','time','location','city','mapsUrl','message','capacity','shareAmount','guestText','guestCount','contactName','contactPhone','contactEmail','referralCode'].forEach(k=>{const el=$('#'+k,body);if(el)state[k]=el.value});['requireShareConsent','allowNamedCompanions','waitlistEnabled','requestSupervisor','marketingConsent'].forEach(k=>{const el=$('#'+k,body);if(el)state[k]=el.checked});saveDraft()}
 function validUrl(v){if(!v)return true;try{return['https:','http:'].includes(new URL(v).protocol)}catch{return false}}
 function validate(){if(state.step===7&&state.requestSupervisor&&!['male','female'].includes(state.supervisorPreference))return'اختر مشرفًا أو مشرفة قبل المتابعة';if(state.step===1&&state.occasionKey==='custom'&&!state.customOccasion.trim())return'اكتب اسم المناسبة';if(state.step===1&&state.activityPicking&&state.activityKey==='activityCustom'&&!state.customActivity.trim())return'اكتب اسم النشاط';if(state.step===2){const schema=window.HALA_V6_SCHEMA?.schemaFor(state.occasionKey);for(const f of (schema?.fields||[])){if(f.required&&!String(state[f.key]||'').trim())return 'أكمل حقل: '+f.label}if(!validUrl(state.mapsUrl))return'رابط الموقع غير صالح';if(state.occasionKey==='activity'&&Number(state.capacity)<1)return'أدخل سعة صحيحة'}return''}
 function handleImage(e){const file=e.target.files?.[0];if(!file)return;if(!file.type.startsWith('image/')||file.size>10*1024*1024)return toast('اختر صورة صالحة أقل من 10MB');const reader=new FileReader();reader.onload=()=>{const img=new Image();img.onload=()=>{const max=1400,scale=Math.min(1,max/Math.max(img.width,img.height)),canvas=document.createElement('canvas');canvas.width=Math.max(1,Math.round(img.width*scale));canvas.height=Math.max(1,Math.round(img.height*scale));canvas.getContext('2d').drawImage(img,0,0,canvas.width,canvas.height);const image=canvas.toDataURL('image/jpeg',.78);if(image.length>600000)return toast('الصورة كبيرة؛ اختر صورة أصغر');state.design.image=image;saveDraft();render()};img.onerror=()=>toast('تعذر قراءة الصورة');img.src=reader.result};reader.readAsDataURL(file)}
 function handleAudio(e){const file=e.target.files?.[0];if(!file)return;if(!['audio/mpeg','audio/mp3','audio/ogg','audio/wav','audio/x-wav','audio/mp4','audio/aac'].includes(file.type)||file.size>600*1024)return toast('اختر ملف صوت أقل من 600 كيلوبايت');const reader=new FileReader();reader.onload=()=>{const audio=N.safeAudioUrl(reader.result);if(!audio)return toast('صيغة الملف غير مدعومة');state.design.audio=audio;saveDraft();render()};reader.onerror=()=>toast('تعذر قراءة الصوت');reader.readAsDataURL(file)}
 function openFullPreview(){let overlay=$('#journeyFullPreview');if(!overlay){overlay=document.createElement('div');overlay.id='journeyFullPreview';overlay.className='journey-full-preview';document.body.appendChild(overlay)}overlay.innerHTML=`<button type="button" aria-label="إغلاق">×</button><div class="full-preview-phone">${N.canvas({...state,occasion:eventLabel()},{guestName:'ضيف هلا'})}</div>`;overlay.classList.add('open');$('button',overlay).onclick=()=>overlay.classList.remove('open')}
 async function createEvent(){
-  cleanTypeFields();
-  nextBtn.disabled=true;nextBtn.textContent='جاري إنشاء المناسبة…';
+  if(submittingBooking)return;
+  if(!checkoutQuote)return toast('راجع السعر النهائي قبل تأكيد الحجز');
+  saveInputs();cleanTypeFields();
+  if(!state.contactName.trim()||!state.contactPhone.trim())return toast('أدخل اسم العميل ورقم جواله');
+  if(!state.date||!state.location.trim())return toast('حدّد تاريخ المناسبة وموقعها قبل الحجز');
+  submittingBooking=true;nextBtn.disabled=true;nextBtn.textContent='جاري حفظ طلب الحجز…';
   try{
-    const session=await window.HALA_AUTH?.ensureLogin?.('create');
-    if(!session?.token)throw new Error('سجّل دخولك برقم الجوال للمتابعة');
-    if(session.user?.role!=='customer')throw new Error('إنشاء المناسبة متاح من حساب العميل');
-    const payload={...state,referralCode:localStorage.getItem('halaReferralCode')||'',occasion:eventLabel(),activityType:activityLabel(),title:eventTitle(),design:{...state.design,hostName:state.hostName||'',occasionKey:state.occasionKey,activityKey:state.activityKey}};
-    const res=await fetch('/api/events',{method:'POST',headers:{'content-type':'application/json',authorization:`Bearer ${session.token}`},body:JSON.stringify(payload)}),data=await res.json();
-    if(!res.ok)throw new Error(data.error||'تعذر إنشاء المناسبة');
-    const dashboardUrl=`/dashboard?event=${encodeURIComponent(data.event.id)}`;
-    localStorage.setItem('noortoonaOwner',JSON.stringify({eventId:data.event.id,ownerToken:data.ownerToken}));
-    localStorage.removeItem('noortoonaDraftV55');
-    const guests=parseGuests();
-    if(guests.length){
-      const gr=await fetch('/api/guests',{method:'POST',headers:{'content-type':'application/json','x-noortoona-owner-token':data.ownerToken},body:JSON.stringify({eventId:data.event.id,guests})});
-      if(!gr.ok){const gd=await gr.json().catch(()=>({}));toast(`${gd.error||'تم إنشاء المناسبة وتعذر إضافة الضيوف'}. يمكنك إضافتهم من لوحة المضيف.`);setTimeout(()=>location.href=dashboardUrl,1300);return;}
+    const session=H.session();
+    if(session?.user&&session.user.role!=='customer')throw new Error('أنشئ الحجز من حساب عميل أو سجّل الخروج أولًا');
+    const selected=catalogPackages.find(p=>p.name===state.package);
+    const eventPayload={...state,requestSupervisor:false,referralCode:'',package:selected?.code,occasion:eventLabel(),activityType:activityLabel(),title:eventTitle(),design:{...state.design,hostName:state.hostName||'',occasionKey:state.occasionKey,activityKey:state.activityKey,supervisorPreference:state.requestSupervisor?state.supervisorPreference:''}};
+    delete eventPayload.createdEvent;delete eventPayload.bookingAccessToken;delete eventPayload.bookingIdempotencyKey;
+    delete eventPayload.contactName;delete eventPayload.contactPhone;delete eventPayload.contactEmail;delete eventPayload.marketingConsent;
+    if(!state.bookingIdempotencyKey)state.bookingIdempotencyKey=crypto.randomUUID();
+    if(!state.bookingAccessToken)state.bookingAccessToken=H.secret();
+    saveDraft();
+    if(!state.createdEvent){
+      const data=await H.api('/api/events',{method:'POST',body:JSON.stringify(eventPayload)});
+      state.createdEvent={id:data.event.id,ownerToken:data.ownerToken};saveDraft();
+      localStorage.setItem('noortoonaOwner',JSON.stringify({eventId:data.event.id,ownerToken:data.ownerToken}));
     }
-    window.HALA_AUTH?.track?.('event_created',{occasion:state.occasionKey,supervisor:Boolean(state.requestSupervisor)});toast('تم إنشاء مناسبتك بنجاح ✨');setTimeout(()=>location.href=dashboardUrl,500);
-  }catch(e){toast(e.message);nextBtn.disabled=false;nextBtn.textContent='إنشاء وفتح لوحة المضيف'}
+    const result=await H.api('/api/bookings',{method:'POST',body:JSON.stringify({eventId:state.createdEvent.id,ownerToken:state.createdEvent.ownerToken,idempotencyKey:state.bookingIdempotencyKey,accessToken:state.bookingAccessToken,contact:{name:state.contactName.trim(),phone:state.contactPhone.trim(),email:state.contactEmail.trim()},guestCount:Number(state.guestCount),services:state.requestSupervisor?['supervisor']:[],supervisorPreference:state.supervisorPreference,referralCode:state.referralCode||'',...H.context(),marketingConsent:state.marketingConsent,expectedTotal:checkoutQuote?.total})});
+    H.remember(result.booking,result.accessToken||state.bookingAccessToken);
+    localStorage.removeItem('noortoonaDraftV55');
+    const booking=result.booking;
+    body.innerHTML=`<section class="booking-success" role="status"><img class="auth-logo" src="/assets/brand/hala-logo-dark.svg?v=20261102" alt="هلا HALA"><h2>تم تسجيل طلب حجزك بنجاح! ✨</h2><p>شكرًا لاختيارك هلا.</p><p>تم استلام تفاصيل مناسبتك وحفظ طلبك برقم:</p><strong class="booking-number">${N.esc(booking.booking_number)}</strong><p>سيتواصل معك فريق هلا قريبًا لاستكمال إجراءات الدفع والتأكيد النهائي.</p><p>يمكنك متابعة تفاصيل طلبك من حسابك في هلا.</p><p class="booking-notice">تسجيل الطلب لا يعني إتمام الدفع أو اعتماد الحجز النهائي.</p><div class="event-actions"><a class="gold-btn" href="/booking.html?id=${encodeURIComponent(booking.id)}">عرض حجزي</a><a class="outline-btn dark-outline" href="${H.whatsapp(booking.booking_number)}" target="_blank" rel="noopener noreferrer">التواصل مع خدمة العملاء</a></div><p>لحظتك .. تبدأ بهلا 🤍</p></section>`;
+    nextBtn.style.display='none';prevBtn.style.display='none';
+    // Guest list import is a separate optional operation; booking remains saved if it fails.
+    const guests=parseGuests();
+    if(guests.length){try{await H.api('/api/guests',{method:'POST',headers:{'x-noortoona-owner-token':state.createdEvent.ownerToken},body:JSON.stringify({eventId:state.createdEvent.id,guests})});}catch{toast('حُفظ الحجز. يمكنك إكمال إضافة المدعوين من لوحة المناسبة لاحقًا.');}}
+  }catch(error){toast(error.message);nextBtn.disabled=false;nextBtn.textContent='تأكيد طلب الحجز';}
+  finally{submittingBooking=false;}
 }
 nextBtn.onclick=async()=>{saveInputs();const error=validate();if(error)return toast(error);if(state.step===1&&state.activityPicking){state.activityPicking=false;state.step=2;saveDraft();render();return}if(state.step<7){state.step++;saveDraft();render();return}await createEvent()};prevBtn.onclick=()=>{saveInputs();if(state.step===1&&state.activityPicking){state.activityPicking=false;saveDraft();render();return}if(state.step>1){state.step--;saveDraft();render()}};
 $$('[data-start]').forEach(b=>b.onclick=()=>openBuilder(state.occasionKey));$$('[data-close]').forEach(b=>b.onclick=closeBuilder);document.addEventListener('keydown',e=>{if(e.key==='Escape'){closeBuilder();$('#journeyFullPreview')?.classList.remove('open')}});
@@ -144,7 +178,7 @@ function renderLanding(){
   const prices=catalogPackages.map(p=>({name:p.name,guests:`حتى ${p.guestLimit} ضيف`,price:p.amountSar,reference:p.promoLicenseId&&Number.isFinite(p.referenceAmountSar)&&p.referenceAmountSar>p.amountSar?p.referenceAmountSar:0,featured:p.code==='hala_plus',items:p.code==='hala_basic'?['قوالب دعوات قابلة للتخصيص','رابط الدعوة وموقع المناسبة','إدارة التأكيد والاعتذار']:p.code==='hala_plus'?['كل مزايا الأساسية','إرسال واتساب عند تفعيل الخدمة','QR لكل ضيف','لوحة متابعة المدعوين']:['كل مزايا بلس','تخصيصات متقدمة','قوائم انتظار وتقارير حضور','أولوية الدعم حسب التوفر']}));
   const pg=$('#priceGrid');
   if(pg)pg.innerHTML=prices.map(p=>`<article class="price-card ${p.featured?'featured':''}">${p.featured?'<span class="price-tag">خيارنا المقترح</span>':''}<h3>${p.name}</h3><p>${p.guests}</p>${p.reference?`<div class="price-previous">السعر السابق الموثق <del>${p.reference.toLocaleString("ar-SA")} ريال</del></div><span class="verified-promo">السعر بعد التخفيض المرخّص</span>`:""}<div class="price-number">${Number(p.price).toLocaleString("ar-SA")}<small> ريال</small></div><ul>${p.items.map(i=>`<li>${i}</li>`).join('')}</ul><button type="button" class="gold-btn" data-land-package="${p.name}" style="width:100%">اختر الباقة</button></article>`).join('');
-  $$('[data-land-package]').forEach(b=>b.onclick=()=>{state.package=b.dataset.landPackage;openBuilder(state.occasionKey)});
+  $$('[data-land-package]').forEach(b=>b.onclick=()=>{state.package=b.dataset.landPackage;track('package_viewed',{package:state.package});openBuilder(state.occasionKey)});
   const services=$('#services .service-grid');
   if(services&&catalogServices)services.innerHTML=catalogServices.map(service=>`<article><span>✦</span><h3>${N.esc(service.name)}</h3><p>${N.esc(service.description)}</p></article>`).join('')||'<p>لا توجد خدمات إضافية متاحة حاليًا.</p>';
 

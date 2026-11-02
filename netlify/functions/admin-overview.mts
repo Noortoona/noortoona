@@ -2,19 +2,20 @@ import type { Config } from "@netlify/functions";
 import { getDatabase } from "@netlify/database";
 import { requireRole } from "./_shared/auth.mjs";
 import { secureJson } from "./_shared/domain.mjs";
+import { analyticsEnvironment } from "./_shared/analytics.mjs";
 
 export default async(req:Request)=>{
   if(req.method!=="GET")return new Response("Method Not Allowed",{status:405});
   const auth=await requireRole(req,["admin"]);if(!auth.ok)return secureJson({error:auth.error},auth.status);
   try{
-    const db=getDatabase();
+    const db=getDatabase(),environment=analyticsEnvironment();
     const [
       visits,visitsToday,unique7,users,supervisors,events,eventsToday,guests,accepted,declined,pendingRsvp,checkedIn,
       wa,revenue,supervisorStats,inviteViews,recentOps,recentEvents,recentPayments
     ]=await Promise.all([
-      db.sql`SELECT COUNT(*)::int count FROM page_views WHERE event_name='page_view'`,
-      db.sql`SELECT COUNT(*)::int count FROM page_views WHERE event_name='page_view' AND created_at>=date_trunc('day',NOW())`,
-      db.sql`SELECT COUNT(DISTINCT session_id)::int count FROM page_views WHERE created_at>NOW()-INTERVAL '7 days'`,
+      db.sql`SELECT COUNT(*)::int count FROM page_views WHERE event_name='page_view' AND environment=${environment}`,
+      db.sql`SELECT COUNT(*)::int count FROM page_views WHERE event_name='page_view' AND environment=${environment} AND created_at>=(date_trunc('day',NOW() AT TIME ZONE 'Asia/Riyadh') AT TIME ZONE 'Asia/Riyadh')`,
+      db.sql`SELECT COUNT(DISTINCT visitor_id)::int count FROM page_views WHERE environment=${environment} AND event_name='page_view' AND created_at>NOW()-INTERVAL '7 days'`,
       db.sql`SELECT COUNT(*)::int count FROM users WHERE role='customer'`,
       db.sql`SELECT COUNT(*)::int count FROM users WHERE role='supervisor'`,
       db.sql`SELECT COUNT(*)::int count FROM events`,
@@ -25,7 +26,7 @@ export default async(req:Request)=>{
       db.sql`SELECT COUNT(*)::int count FROM guests WHERE rsvp_status IS NULL OR rsvp_status IN ('pending','maybe')`,
       db.sql`SELECT COUNT(*)::int count FROM guests WHERE checked_in_at IS NOT NULL`,
       db.sql`SELECT COUNT(*)::int total,COUNT(*) FILTER(WHERE status='sent')::int sent,COUNT(*) FILTER(WHERE status='delivered')::int delivered,COUNT(*) FILTER(WHERE status='read')::int read,COUNT(*) FILTER(WHERE status='failed')::int failed FROM whatsapp_messages`,
-      db.sql`SELECT COALESCE(SUM(amount) FILTER(WHERE status='paid'),0)::bigint revenue,COUNT(*) FILTER(WHERE status='paid')::int paid FROM payment_orders`,
+      db.sql`SELECT COALESCE(SUM(amount) FILTER(WHERE status='paid'),0)::bigint revenue,COUNT(*) FILTER(WHERE status='paid')::int paid FROM payment_orders WHERE environment=${environment} AND payment_mode='live'`,
       db.sql`SELECT COUNT(*)::int total,COUNT(*) FILTER(WHERE status='requested')::int requested,COUNT(*) FILTER(WHERE status='assigned')::int assigned,COUNT(*) FILTER(WHERE status='completed')::int completed FROM supervisor_requests`,
       db.sql`SELECT COUNT(*)::int count FROM guests WHERE viewed_at IS NOT NULL`,
       db.sql`SELECT a.action,a.entity_type,a.entity_id,a.metadata,a.created_at,u.name actor_name,u.role actor_role FROM audit_log a LEFT JOIN users u ON u.id=a.actor_user_id ORDER BY a.created_at DESC LIMIT 80`,
@@ -39,7 +40,7 @@ export default async(req:Request)=>{
         guests:Number(guests[0]?.count||0),accepted:Number(accepted[0]?.count||0),declined:Number(declined[0]?.count||0),pendingRsvp:Number(pendingRsvp[0]?.count||0),checkedIn:Number(checkedIn[0]?.count||0),inviteViews:Number(inviteViews[0]?.count||0),
         whatsapp:wa[0]||{},revenueHalalas:Number(revenue[0]?.revenue||0),paidOrders:Number(revenue[0]?.paid||0),supervisorRequests:supervisorStats[0]||{}
       },
-      recentOps,recentEvents,recentPayments
+      recentOps,recentEvents,recentPayments,analyticsScope:{environment,uniqueVisitors7dDefinition:"معرّفات متصفح وافقت على القياس؛ تقدير وليس أشخاصًا مؤكدين",legacyEventsExcluded:true,revenueDefinition:"مدفوعات live الموثقة فقط ضمن البيئة الحالية"}
     });
   }catch(error){console.error(error);return secureJson({error:"تعذر تحميل لوحة الإدارة"},500)}
 };

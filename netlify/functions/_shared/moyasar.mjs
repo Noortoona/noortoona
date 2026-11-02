@@ -60,6 +60,11 @@ export async function reconcileMoyasarOrder(db, order, payment) {
       RETURNING id, event_id, user_id, package_code, amount, currency, status, provider_payment_id, payment_method, paid_at
     `;
     await recordAcquisition(db, order);
+    if(order.booking_id){
+      // Only this verified server reconciliation can finalize a prebooking.
+      await db.sql`UPDATE bookings SET payment_status='paid',booking_status='confirmed',paid_at=COALESCE(paid_at,NOW()),updated_at=NOW() WHERE id=${order.booking_id} AND total_amount=${Number(order.amount)}`;
+      await db.sql`INSERT INTO booking_notifications(id,booking_id,event_name,kind,status,message) VALUES(${crypto.randomUUID()},${order.booking_id},'booking.paid','internal','queued','تم التحقق من سداد الحجز من مزود الدفع') ON CONFLICT(booking_id,kind,event_name) DO NOTHING`;
+    }
     return { paid: true, status: "paid", order: rows[0] };
   }
 

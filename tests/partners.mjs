@@ -6,7 +6,7 @@ import { normalizeReferralCode, referralAmounts, recordAcquisition } from '../ne
 import { packageFor, publicPackages } from '../netlify/functions/_shared/payments.mjs';
 
 async function handler(name, bindings) {
-  bindings={readCatalog:async()=>({packages:publicPackages()}),catalogPackage:(catalog,code)=>catalog.packages.find(p=>p.code===code||p.name===code)||null,...bindings};
+  bindings={analyticsEnvironment:()=>"preview:unit-test",readCatalog:async()=>({packages:publicPackages()}),catalogPackage:(catalog,code)=>catalog.packages.find(p=>p.code===code||p.name===code)||null,...bindings};
   let source = await readFile(new URL(`../netlify/functions/${name}.mts`, import.meta.url), 'utf8');
   source = source.replace(/^import .*;\s*$/gm, '');
   const globals = Object.entries(bindings).map(([key, value]) => `const ${key}=globalThis.__partnerTest.${key};`).join('\n');
@@ -30,6 +30,7 @@ test('checkout ignores client prices, validates a code, and snapshots the discou
   const inserts=[];
   const db={sql:async(parts,...args)=>{
     const sql=parts.join('?');
+    if(sql.includes('FROM bookings'))return [];
     if(sql.includes('FROM event_members'))return [{yes:1}];
     if(sql.includes('FROM guests'))return [{count:2}];
     if(sql.includes("status='paid'"))return [];

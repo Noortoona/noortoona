@@ -6,6 +6,7 @@ import { moyasarFeatures } from "./_shared/payments.mjs";
 import { readCatalog, catalogPackage } from "./_shared/catalog.mjs";
 import { supervisorAddonHalalas } from "./_shared/settings.mjs";
 import { activePartner, normalizeReferralCode, referralAmounts } from "./_shared/partners.mjs";
+import { analyticsEnvironment } from "./_shared/analytics.mjs";
 
 async function snapshot(db: any, userId: string, eventId: string) {
   const orders = await db.sql`
@@ -58,7 +59,9 @@ export default async (req: Request) => {
   try {
     const body: any = await req.json();
     const eventId = String(body.eventId || "");
-    const selected = catalogPackage(await readCatalog(db),body.packageCode);
+    const booking=(await db.sql`SELECT * FROM bookings WHERE event_id=${eventId} AND user_id=${auth.user.id} AND environment=${analyticsEnvironment()} LIMIT 1`)[0];
+    if(booking?.booking_status==='cancelled')return secureJson({error:'الحجز ملغى'},409);
+    const selected = booking ? {code:booking.package_code,name:booking.package_name,amount:Number(booking.base_amount),guestLimit:booking.guest_limit,currency:booking.currency} : catalogPackage(await readCatalog(db),body.packageCode);
     if (!eventId || !selected) return secureJson({ error: "اختر باقة صحيحة" }, 400);
     if (!await canAccessEvent(auth.user, eventId)) return secureJson({ error: "غير مصرح" }, 403);
     const member = await db.sql`SELECT 1 FROM event_members WHERE event_id=${eventId} AND user_id=${auth.user.id} AND member_role='owner' LIMIT 1`;
@@ -79,14 +82,14 @@ export default async (req: Request) => {
     if (paid[0]) return secureJson({ order: paid[0], publishableKey: features.publishableKey, alreadyPaid: true, features: { applePay: features.applePay, stcPay: features.stcPay } });
 
     const requests = await db.sql`SELECT status,amount FROM supervisor_requests WHERE event_id=${eventId} AND user_id=${auth.user.id} LIMIT 1`;
-    const addon = requests[0] && requests[0].status !== 'canceled' ? (Number.isInteger(Number(requests[0].amount))&&Number(requests[0].amount)>=0?Number(requests[0].amount):await supervisorAddonHalalas(db)) : 0;
+    const addon = booking?Number(booking.addon_amount):requests[0] && requests[0].status !== 'canceled' ? (Number.isInteger(Number(requests[0].amount))&&Number(requests[0].amount)>=0?Number(requests[0].amount):await supervisorAddonHalalas(db)) : 0;
     const eventReferral = body.referralCode === undefined ? (await db.sql`SELECT referral_code FROM events WHERE id=${eventId} LIMIT 1`)[0]?.referral_code : null;
-    const rawCode = body.referralCode === undefined ? eventReferral || '' : body.referralCode || '';
+    const rawCode = booking?booking.referral_code||'':body.referralCode === undefined ? eventReferral || '' : body.referralCode || '';
     const code = normalizeReferralCode(rawCode);
     if (rawCode && !code) return secureJson({ error: 'كود الإحالة غير صالح' }, 400);
     const partner = code ? await activePartner(db, code, auth.user.id) : null;
-    if (code && !partner) return secureJson({ error: 'كود الإحالة غير متاح' }, 400);
-    const { total, discountAmount, commissionAmount } = referralAmounts(selected.amount, addon, partner);
+    if (code && !partner&&!booking) return secureJson({ error: 'كود الإحالة غير متاح' }, 400);
+    const { total, discountAmount, commissionAmount } = booking?{total:Number(booking.total_amount),discountAmount:Number(booking.discount_amount),commissionAmount:Number(booking.commission_amount)}:referralAmounts(selected.amount, addon, partner);
     if (total <= 0) return secureJson({ error: 'قيمة الطلب غير صالحة' }, 400);
 
     const pending = await db.sql`
@@ -96,11 +99,11 @@ export default async (req: Request) => {
       ORDER BY created_at DESC LIMIT 1
     `;
     let order = pending[0];
-    if (!order || body.forceNew === true) {
+    if (!order || body.forceNew === true&&!booking) {
       const id = crypto.randomUUID();
       const rows = await db.sql`
-        INSERT INTO payment_orders (id, event_id, user_id, package_code, amount, supervisor_addon_amount, currency, referral_code, referral_partner_id, discount_amount, commission_amount, guest_limit)
-        VALUES (${id}, ${eventId}, ${auth.user.id}, ${selected.code}, ${total}, ${addon}, ${selected.currency}, ${partner?.code || null}, ${partner?.user_id || null}, ${discountAmount}, ${commissionAmount}, ${selected.guestLimit})
+        INSERT INTO payment_orders (id, event_id, user_id, package_code, amount, supervisor_addon_amount, currency, referral_code, referral_partner_id, discount_amount, commission_amount, guest_limit,booking_id,environment,payment_mode)
+        VALUES (${id}, ${eventId}, ${auth.user.id}, ${selected.code}, ${total}, ${addon}, ${selected.currency}, ${booking?.referral_code||partner?.code || null}, ${booking?.partner_user_id||partner?.user_id || null}, ${discountAmount}, ${commissionAmount}, ${selected.guestLimit},${booking?.id||null},${analyticsEnvironment()},${features.mode})
         RETURNING id, event_id, package_code, guest_limit, amount, supervisor_addon_amount, currency, status, referral_code, discount_amount, created_at
       `;
       order = rows[0];
