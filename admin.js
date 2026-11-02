@@ -1,5 +1,5 @@
 const root=document.getElementById("adminRoot");
-let s=null,eventQuery="",eventPage=1,catalogRevision=0;
+let s=null,eventQuery="",eventPage=1,bookingQuery="",bookingPage=1,catalogRevision=0;
 const esc=x=>String(x??"").replace(/[&<>'"]/g,m=>({"&":"&amp;","<":"&lt;",">":"&gt;","'":"&#39;",'"':"&quot;"}[m]));
 const n=x=>Number(x||0).toLocaleString("ar-SA");
 const money=x=>(Number(x||0)/100).toLocaleString("ar-SA",{maximumFractionDigits:2})+" ر.س";
@@ -46,14 +46,14 @@ async function api(url,opt={}){
 function card(label,value,sub=""){return `<article class="metric-card"><span>${label}</span><strong>${value}</strong><small>${sub}</small></article>`}
 async function load(){
   try{
-    const [overview,usersData,supData,settings,partners,eventsData,catalog]=await Promise.all([api("/api/admin/overview"),api("/api/admin/users"),api("/api/admin/supervisors"),api("/api/admin/settings"),api("/api/admin/partners"),api(`/api/admin/events?page=${eventPage}&q=${encodeURIComponent(eventQuery)}`),api("/api/admin/catalog")]);
-    render(overview,usersData.users||[],supData,settings,partners,eventsData,catalog);
+    const [overview,usersData,supData,settings,partners,eventsData,catalog,bookings]=await Promise.all([api("/api/admin/overview"),api("/api/admin/users"),api("/api/admin/supervisors"),api("/api/admin/settings"),api("/api/admin/partners"),api(`/api/admin/events?page=${eventPage}&q=${encodeURIComponent(eventQuery)}`),api("/api/admin/catalog"),api(`/api/admin/bookings?page=${bookingPage}&q=${encodeURIComponent(bookingQuery)}`)]);
+    render(overview,usersData.users||[],supData,settings,partners,eventsData,catalog,bookings);
   }catch(e){
     root.innerHTML=`<div class="portal-empty"><h2>تعذر فتح لوحة الإدارة</h2><p>${esc(e.message)}</p></div>`;
   }
 }
-function render(d,users,supData,settings,partners,eventsData,catalog){
-  const x=d.stats,w=x.whatsapp||{},sr=x.supervisorRequests||{};
+function render(d,users,supData,settings,partners,eventsData,catalog,bookings){
+  const x=d.stats,w=x.whatsapp||{},sr=x.supervisorRequests||{},bs=bookings.stats||{};
   const supervisors=supData.supervisors||[],requests=supData.requests||[];
   root.className="";
   root.innerHTML=`
@@ -68,6 +68,8 @@ function render(d,users,supData,settings,partners,eventsData,catalog){
       ${card("مشاهدات الدعوات",n(x.inviteViews),"ضيوف فتحوا الدعوة")}
       ${card("تم الدخول",n(x.checkedIn),"QR")}
       ${card("إيرادات مدفوعة",money(x.revenueHalalas),n(x.paidOrders)+" عملية")}
+      ${card("حجوزات مسبقة",n(bs.total||0),n(bs.new_count||0)+" بانتظار التواصل")}
+      ${card("حجوزات بانتظار السداد",n(bs.pending_payment||0),money(bs.potential_amount||0)+" قيمة متوقعة وليست إيرادًا")}
       ${card("طلبات مشرف",n(sr.requested||0),n(sr.assigned||0)+" معيّن")}
     </section>
 
@@ -86,6 +88,29 @@ function render(d,users,supData,settings,partners,eventsData,catalog){
         <h2>أحدث المناسبات</h2>
         <div class="portal-list">${d.recentEvents.map(e=>`<div><b>${esc(e.title)}</b><span>${esc(e.occasion)} • ${esc(e.city||"")}</span><small>${new Date(e.created_at).toLocaleString("ar-SA")}</small></div>`).join("")||"<p>لا توجد بيانات بعد</p>"}</div>
       </article>
+    </section>
+
+    <section class="portal-panel" id="adminBookings">
+      <div class="panel-head"><div><span class="eyebrow dark">الحجوزات الحقيقية</span><h2>حجوزات ما قبل الإطلاق</h2><p>هذه الطلبات محفوظة في قاعدة البيانات ولم تُعتبر إيرادًا إلا بعد تحقق السداد. إشعارات البريد والواتساب تعرض حالة إرسالها الحقيقية.</p></div></div>
+      <form id="bookingSearch" class="inline-admin-form"><input name="q" value="${esc(bookingQuery)}" placeholder="رقم الحجز أو اسم العميل أو رقم الجوال" aria-label="البحث في الحجوزات"><button class="gold-btn" type="submit">بحث</button></form>
+      <div class="portal-list">${(bookings.bookings||[]).map(b=>{
+        const statusText={pending_contact:'جديد',contacted:'تم التواصل',awaiting_payment:'بانتظار الدفع',confirmed:'مؤكد',completed:'مكتمل',canceled:'ملغي'};
+        const phone=String(b.customer_phone||'').replace(/\D/g,'');
+        const wa=/^9665\d{8}$/.test(phone)?'https://wa.me/'+phone+'?text='+encodeURIComponent('مرحبًا، معك فريق هلا بخصوص حجزك رقم '+b.booking_code):'';
+        return `<div class="booking-admin-row">
+          <b>${esc(b.booking_code)} • ${esc(b.customer_name||'عميل هلا')}</b>
+          <span>${esc(b.title)} • ${esc(b.occasion)} • ${esc(b.event_date||'التاريخ غير محدد')}</span>
+          <small>${esc(b.customer_phone||'')} • ${esc(b.package_name)} • ${money(b.amount)} • ${n(b.guest_count)} ضيف • ${esc(b.referral_code||'بدون إحالة')}</small>
+          <small>الدفع: ${esc(b.payment_status)} • البريد: ${esc(b.email_status||'غير مسجل')} • واتساب: ${esc(b.whatsapp_status||'غير مسجل')}</small>
+          <div class="event-actions"><select data-booking-status="${esc(b.id)}">${Object.entries(statusText).map(([value,label])=>`<option value="${value}" ${b.status===value?'selected':''}>${label}</option>`).join('')}</select>
+            <input data-booking-notes="${esc(b.id)}" value="${esc(b.staff_notes||'')}" maxlength="2000" placeholder="ملاحظات متابعة داخلية">
+            <button class="outline-btn dark-outline" data-booking-save="${esc(b.id)}">حفظ المتابعة</button>
+            ${wa?`<a class="outline-btn dark-outline" href="${wa}" target="_blank" rel="noopener noreferrer">تواصل واتساب</a>`:''}
+            <a class="outline-btn dark-outline" href="/dashboard?event=${encodeURIComponent(b.event_id)}">تفاصيل المناسبة</a>
+          </div>
+        </div>`;
+      }).join('')||'<p>لا توجد حجوزات فعلية حتى الآن.</p>'}</div>
+      <div class="event-actions"><button class="outline-btn dark-outline" id="previousBookings" ${bookingPage<=1?'disabled':''}>السابق</button><span>صفحة ${n(bookingPage)}</span><button class="outline-btn dark-outline" id="nextBookings" ${bookings.hasMore?'':'disabled'}>التالي</button></div>
     </section>
 
     <section class="portal-panel">
@@ -133,6 +158,17 @@ function render(d,users,supData,settings,partners,eventsData,catalog){
       <div class="ops-table">${d.recentOps.map(o=>`<div><b>${esc(o.action)}</b><span>${esc(o.actor_name||"النظام")}</span><span>${esc(o.entity_type||"")} ${esc(o.entity_id||"")}</span><small>${new Date(o.created_at).toLocaleString("ar-SA")}</small></div>`).join("")||"<p>لا توجد عمليات بعد</p>"}</div>
     </section>`;
 
+  document.getElementById("bookingSearch")?.addEventListener("submit",e=>{e.preventDefault();bookingQuery=String(new FormData(e.currentTarget).get('q')||'');bookingPage=1;load()});
+  document.getElementById("previousBookings")?.addEventListener("click",()=>{bookingPage=Math.max(1,bookingPage-1);load()});
+  document.getElementById("nextBookings")?.addEventListener("click",()=>{bookingPage++;load()});
+  document.querySelectorAll("[data-booking-save]").forEach(btn=>btn.onclick=async()=>{
+    const id=btn.dataset.bookingSave;
+    const status=document.querySelector("[data-booking-status='"+id+"']")?.value;
+    const staffNotes=document.querySelector("[data-booking-notes='"+id+"']")?.value||"";
+    btn.disabled=true;
+    try{await api('/api/admin/bookings',{method:'PATCH',body:JSON.stringify({id,status,staffNotes})});await load()}
+    catch(e){alert(e.message);btn.disabled=false}
+  });
   bindCatalogForms();
   document.getElementById("eventSearch")?.addEventListener("submit",e=>{e.preventDefault();eventQuery=String(new FormData(e.currentTarget).get("q")||"");eventPage=1;load()});
   document.getElementById("previousEvents").onclick=()=>{eventPage=Math.max(1,eventPage-1);load()};

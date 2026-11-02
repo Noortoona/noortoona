@@ -4,7 +4,7 @@ import { boundedInteger, boundedMoney, isSameOriginRequest, secureJson } from ".
 import { getAuth, linkEventMember, recordAudit } from "./_shared/auth.mjs";
 import { supervisorAddonHalalas } from "./_shared/settings.mjs";
 import { readCatalog, catalogPackage, availableTemplate } from "./_shared/catalog.mjs";
-import { activePartner, normalizeReferralCode } from "./_shared/partners.mjs";
+import { activePartner, normalizeReferralCode, referralAmounts } from "./_shared/partners.mjs";
 
 export default async (req: Request) => {
   if (req.method !== "POST") return new Response("Method Not Allowed", { status: 405 });
@@ -34,16 +34,39 @@ export default async (req: Request) => {
     if (data.referralCode && !referralCode) return secureJson({ error: "كود الإحالة غير صالح" }, 400);
     const referral = referralCode && auth?.user?.role === "customer" ? await activePartner(db, referralCode, auth.user.id) : null;
     if (referralCode && !referral) return secureJson({ error: "كود الإحالة غير متاح" }, 400);
+    // Record the pre-launch booking in the same SQL statement as the event.
+    // A notification outage must never erase a legitimate booking.
+    const addon = data.requestSupervisor ? await supervisorAddonHalalas(db) : 0;
+    const quote = referralAmounts(selectedPackage.amount, addon, referral);
+    const bookingId = crypto.randomUUID();
+    const bookingCode = "HALA-" + id.replaceAll("-", "").slice(0, 12).toUpperCase();
+    const shouldBook = auth?.user?.role === "customer";
     const [event] = await db.sql`
+      WITH created AS (
       INSERT INTO events (id, owner_token, title, occasion, name1, name2, event_date, event_time, duration_hours, country, city, location, maps_url, description, video_url, pdf_url, message, template, package_name, design_json, activity_type, capacity, share_amount, share_label, require_share_consent, allow_named_companions, waitlist_enabled, referral_code)
       VALUES (${id}, ${ownerToken}, ${title}, ${occasion}, ${name1}, ${String(data.name2 || "").trim().slice(0, 180)}, ${data.date || null}, ${data.time || null}, ${boundedInteger(data.duration || 3, 1, 24)}, ${String(data.country || "").slice(0, 100)}, ${String(data.city || "").slice(0, 100)}, ${String(data.location || "").slice(0, 220)}, ${String(data.mapsUrl || "").slice(0, 1200)}, ${String(data.description || "").slice(0, 3000)}, ${String(data.videoUrl || "").slice(0, 1200)}, ${String(data.pdfUrl || "").slice(0, 1200)}, ${String(data.message || "").slice(0, 3000)}, ${String(data.template || "لؤلؤة").slice(0, 100)}, ${selectedPackage.name}, ${designJson}::jsonb, ${String(data.activityType || "").slice(0, 100)}, ${data.capacity ? boundedInteger(data.capacity, 1, 500) : null}, ${boundedMoney(data.shareAmount, 100_000)}, ${String(data.shareLabel || "قيمة القطّة").slice(0, 100)}, ${Boolean(data.requireShareConsent)}, ${Boolean(data.allowNamedCompanions)}, ${Boolean(data.waitlistEnabled)}, ${referral?.code || null})
-      RETURNING id, title, occasion, name1, name2, event_date, event_time, duration_hours, country, city, location, maps_url, description, video_url, pdf_url, message, template, package_name, design_json, activity_type, capacity, share_amount, share_label, require_share_consent, allow_named_companions, waitlist_enabled, created_at
+      RETURNING id, owner_token, title, occasion, name1, name2, event_date, event_time, duration_hours, country, city, location, maps_url, description, video_url, pdf_url, message, template, package_name, design_json, activity_type, capacity, share_amount, share_label, require_share_consent, allow_named_companions, waitlist_enabled, created_at
+      ), booked AS (
+        INSERT INTO booking_requests (id,event_id,customer_user_id,booking_code,package_code,package_name,guest_limit,amount,discount_amount,currency,referral_code)
+        SELECT ${bookingId},created.id,${auth?.user?.id || null},${bookingCode},${selectedPackage.code},${selectedPackage.name},${selectedPackage.guestLimit},${quote.total},${quote.discountAmount},${selectedPackage.currency},${referral?.code || null}
+        FROM created WHERE ${shouldBook}
+        RETURNING id
+      ), mail_notice AS (
+        INSERT INTO booking_notifications (id,booking_id,channel,recipient)
+        SELECT ${crypto.randomUUID()},id,'email','bookings@halainvites.com' FROM booked
+        RETURNING id
+      ), whatsapp_notice AS (
+        INSERT INTO booking_notifications (id,booking_id,channel,recipient)
+        SELECT ${crypto.randomUUID()},id,'whatsapp','966532763736' FROM booked
+        RETURNING id
+      )
+      SELECT * FROM created
     `;
     if (auth?.user) {
       await linkEventMember(event.id, auth.user.id, "owner");
       await recordAudit(auth.user.id, "event.created", "event", event.id, { occasion: event.occasion, package: event.package_name });
       if (data.requestSupervisor) {
-        const amount = await supervisorAddonHalalas(db);
+        const amount = addon;
         await db.sql`
           INSERT INTO supervisor_requests (id,event_id,user_id,amount,status)
           VALUES (${crypto.randomUUID()},${event.id},${auth.user.id},${amount},'requested')
@@ -52,7 +75,7 @@ export default async (req: Request) => {
         await recordAudit(auth.user.id, "supervisor.requested", "event", event.id, { amount, preference });
       }
     }
-    return secureJson({ event, ownerToken, accountLinked: Boolean(auth?.user), supervisorRequested: Boolean(data.requestSupervisor) });
+    return secureJson({ event, ownerToken, bookingCode: shouldBook ? bookingCode : null, bookingStatus: shouldBook ? "pending_contact" : null, paymentStatus: shouldBook ? "pending_payment" : null, accountLinked: Boolean(auth?.user), supervisorRequested: Boolean(data.requestSupervisor) });
   } catch (error) {
     console.error(error);
     return secureJson({ error: "تعذر إنشاء المناسبة" }, 500);

@@ -89,13 +89,14 @@ function renderSend(){
   const packagePrices=Object.fromEntries(catalogPackages.map(p=>[p.name,p.amountSar]));
   const packageLimits=Object.fromEntries(catalogPackages.map(p=>[p.name,p.guestLimit]));
   const base=packagePrices[state.package]??catalogPackages[0].amountSar,total=base+(state.requestSupervisor?sp:0);
-  return `${heading('جاهزة للإرسال','راجع الباقة والخدمات الإضافية قبل إنشاء المناسبة')}<div class="send-card"><span>✦</span><h3>كل شيء جاهز</h3><p>سيتم إنشاء روابط فريدة للضيوف وحفظ إعدادات الدعوة والقطّة وقائمة الانتظار.</p><div class="package-row">${catalogPackages.map(pkg=>pkg.name).map(p=>`<button type="button" data-package="${p}" class="${state.package===p?'selected':''}">${p} <small>${packagePrices[p]} ر.س • حتى ${packageLimits[p]} ضيف</small></button>`).join('')}</div><label class="supervisor-addon"><input id="requestSupervisor" type="checkbox" ${state.requestSupervisor?'checked':''}><span><b>أضف مشرفًا أو مشرفة لمناسبتك</b><small>يتابع الاستقبال والحضور والتنسيق يوم المناسبة</small></span><strong>+${sp.toLocaleString('ar-SA')} ر.س</strong></label>${state.requestSupervisor?supervisorChoice():''}<div class="checkout-summary"><span>الإجمالي الحالي</span><strong>${total.toLocaleString('ar-SA')} ر.س</strong><small>${state.requestSupervisor?('يشمل خدمة '+(state.supervisorPreference==='female'?'مشرفة':'مشرف')+' المناسبة'):'بدون خدمة المشرف'}</small></div></div>`;
+  return `${heading('تأكيد طلب الحجز','راجع الباقة والخدمات الإضافية قبل إرسال طلبك المبدئي')}<div class="send-card"><span>✦</span><h3>كل شيء جاهز</h3><p>سيتم إنشاء روابط فريدة للضيوف وحفظ إعدادات الدعوة والقطّة وقائمة الانتظار.</p><div class="package-row">${catalogPackages.map(pkg=>pkg.name).map(p=>`<button type="button" data-package="${p}" class="${state.package===p?'selected':''}">${p} <small>${packagePrices[p]} ر.س • حتى ${packageLimits[p]} ضيف</small></button>`).join('')}</div><label class="supervisor-addon"><input id="requestSupervisor" type="checkbox" ${state.requestSupervisor?'checked':''}><span><b>أضف مشرفًا أو مشرفة لمناسبتك</b><small>يتابع الاستقبال والحضور والتنسيق يوم المناسبة</small></span><strong>+${sp.toLocaleString('ar-SA')} ر.س</strong></label>${state.requestSupervisor?supervisorChoice():''}<div class="checkout-summary"><span>الإجمالي الحالي</span><strong>${total.toLocaleString('ar-SA')} ر.س</strong><small>${state.requestSupervisor?('يشمل خدمة '+(state.supervisorPreference==='female'?'مشرفة':'مشرف')+' المناسبة'):'بدون خدمة المشرف'}</small></div></div>`;
 }
 function render(){
+  nextBtn.style.display='';
   $('.builder-progress').style.display='none';let content='';
   if(state.step===1)content=state.activityPicking?renderActivities():`${heading('اختر نوع المناسبة','كل لحظة تستحق دعوة أجمل')}${renderOccasions()}`;
   if(state.step===2)content=renderDetails();if(state.step===3)content=renderTemplates();if(state.step===4)content=renderDesign();if(state.step===5)content=renderGuests();if(state.step===6)content=renderReview();if(state.step===7)content=renderSend();
-  body.innerHTML=`${progress()}<div class="journey-save-state"><span>✓ محفوظ تلقائيًا</span><b>الخطوة ${state.step} من ${stages.length}</b></div><div class="journey-content">${content}</div>`;body.scrollTop=0;prevBtn.style.visibility=state.step===1&&!state.activityPicking?'hidden':'visible';nextBtn.textContent=state.step===7?'إنشاء وفتح لوحة المضيف':'التالي ←';nextBtn.disabled=false;bind();requestAnimationFrame(()=>$('.journey-step.active',body)?.scrollIntoView({block:'nearest',inline:'center'}));
+  body.innerHTML=`${progress()}<div class="journey-save-state"><span>✓ محفوظ تلقائيًا</span><b>الخطوة ${state.step} من ${stages.length}</b></div><div class="journey-content">${content}</div>`;body.scrollTop=0;prevBtn.style.visibility=state.step===1&&!state.activityPicking?'hidden':'visible';nextBtn.textContent=state.step===7?'تأكيد طلب الحجز':'التالي ←';nextBtn.disabled=false;bind();requestAnimationFrame(()=>$('.journey-step.active',body)?.scrollIntoView({block:'nearest',inline:'center'}));
 }
 function bind(){
   $$('[data-occasion]',body).forEach(b=>b.onclick=()=>{state.occasionKey=b.dataset.occasion;state.customOccasion='';cleanTypeFields();applyTypeExperience();if(state.occasionKey==='activity')state.activityPicking=true;else{state.activityPicking=false;state.template=templates()[0].name}saveDraft();render()});
@@ -111,6 +112,22 @@ function validate(){if(state.step===7&&state.requestSupervisor&&!['male','female
 function handleImage(e){const file=e.target.files?.[0];if(!file)return;if(!file.type.startsWith('image/')||file.size>10*1024*1024)return toast('اختر صورة صالحة أقل من 10MB');const reader=new FileReader();reader.onload=()=>{const img=new Image();img.onload=()=>{const max=1400,scale=Math.min(1,max/Math.max(img.width,img.height)),canvas=document.createElement('canvas');canvas.width=Math.max(1,Math.round(img.width*scale));canvas.height=Math.max(1,Math.round(img.height*scale));canvas.getContext('2d').drawImage(img,0,0,canvas.width,canvas.height);const image=canvas.toDataURL('image/jpeg',.78);if(image.length>600000)return toast('الصورة كبيرة؛ اختر صورة أصغر');state.design.image=image;saveDraft();render()};img.onerror=()=>toast('تعذر قراءة الصورة');img.src=reader.result};reader.readAsDataURL(file)}
 function handleAudio(e){const file=e.target.files?.[0];if(!file)return;if(!['audio/mpeg','audio/mp3','audio/ogg','audio/wav','audio/x-wav','audio/mp4','audio/aac'].includes(file.type)||file.size>600*1024)return toast('اختر ملف صوت أقل من 600 كيلوبايت');const reader=new FileReader();reader.onload=()=>{const audio=N.safeAudioUrl(reader.result);if(!audio)return toast('صيغة الملف غير مدعومة');state.design.audio=audio;saveDraft();render()};reader.onerror=()=>toast('تعذر قراءة الصوت');reader.readAsDataURL(file)}
 function openFullPreview(){let overlay=$('#journeyFullPreview');if(!overlay){overlay=document.createElement('div');overlay.id='journeyFullPreview';overlay.className='journey-full-preview';document.body.appendChild(overlay)}overlay.innerHTML=`<button type="button" aria-label="إغلاق">×</button><div class="full-preview-phone">${N.canvas({...state,occasion:eventLabel()},{guestName:'ضيف هلا'})}</div>`;overlay.classList.add('open');$('button',overlay).onclick=()=>overlay.classList.remove('open')}
+function showPrebookingSuccess(eventId,code,guestWarning=''){
+  const safeCode=N.esc(code||'');
+  const supportUrl='https://wa.me/966532763736?text='+encodeURIComponent('مرحبًا هلا، أريد الاستفسار عن الحجز رقم '+code);
+  body.innerHTML=`<div class="journey-content"><div class="send-card" role="status" aria-live="polite">
+    <span>✦</span><h3>تم تسجيل طلب حجزك بنجاح! ✨</h3>
+    <p>شكرًا لاختيارك هلا. تم حفظ طلبك المبدئي برقم:</p>
+    <h2 style="direction:ltr">${safeCode}</h2>
+    <p>سيتواصل معك فريق هلا لاستكمال إجراءات الدفع والتأكيد النهائي. هذا الطلب غير مدفوع بعد.</p>
+    ${guestWarning?`<p class="field-help">${N.esc(guestWarning)}</p>`:''}
+    <div class="event-actions"><a class="gold-btn" href="/dashboard?event=${encodeURIComponent(eventId)}">عرض تفاصيل حجزي</a>
+      <a class="outline-btn dark-outline" href="${supportUrl}" target="_blank" rel="noopener noreferrer">مساعدة واتساب (اختياري)</a></div>
+    <p>لحظتك .. تبدأ بهلا</p>
+  </div></div>`;
+  prevBtn.style.visibility='hidden';
+  nextBtn.style.display='none';
+}
 async function createEvent(){
   cleanTypeFields();
   nextBtn.disabled=true;nextBtn.textContent='جاري إنشاء المناسبة…';
@@ -125,12 +142,16 @@ async function createEvent(){
     localStorage.setItem('noortoonaOwner',JSON.stringify({eventId:data.event.id,ownerToken:data.ownerToken}));
     localStorage.removeItem('noortoonaDraftV55');
     const guests=parseGuests();
+    let guestWarning='';
     if(guests.length){
-      const gr=await fetch('/api/guests',{method:'POST',headers:{'content-type':'application/json','x-noortoona-owner-token':data.ownerToken},body:JSON.stringify({eventId:data.event.id,guests})});
-      if(!gr.ok){const gd=await gr.json().catch(()=>({}));toast(`${gd.error||'تم إنشاء المناسبة وتعذر إضافة الضيوف'}. يمكنك إضافتهم من لوحة المضيف.`);setTimeout(()=>location.href=dashboardUrl,1300);return;}
+      try{
+        const gr=await fetch('/api/guests',{method:'POST',headers:{'content-type':'application/json','x-noortoona-owner-token':data.ownerToken},body:JSON.stringify({eventId:data.event.id,guests})});
+        if(!gr.ok){const gd=await gr.json().catch(()=>({}));guestWarning=gd.error||'تعذرت إضافة بعض الضيوف. يمكنك إضافتهم من لوحة المناسبة.';}
+      }catch{guestWarning='تعذرت إضافة الضيوف حاليًا. يمكنك إضافتهم لاحقًا من لوحة المناسبة.'}
     }
-    window.HALA_AUTH?.track?.('event_created',{occasion:state.occasionKey,supervisor:Boolean(state.requestSupervisor)});toast('تم إنشاء مناسبتك بنجاح ✨');setTimeout(()=>location.href=dashboardUrl,500);
-  }catch(e){toast(e.message);nextBtn.disabled=false;nextBtn.textContent='إنشاء وفتح لوحة المضيف'}
+    window.HALA_AUTH?.track?.('prebooking_created',{occasion:state.occasionKey,supervisor:Boolean(state.requestSupervisor)});
+    showPrebookingSuccess(data.event.id,data.bookingCode,guestWarning);
+  }catch(e){toast(e.message);nextBtn.disabled=false;nextBtn.textContent='تأكيد طلب الحجز'}
 }
 nextBtn.onclick=async()=>{saveInputs();const error=validate();if(error)return toast(error);if(state.step===1&&state.activityPicking){state.activityPicking=false;state.step=2;saveDraft();render();return}if(state.step<7){state.step++;saveDraft();render();return}await createEvent()};prevBtn.onclick=()=>{saveInputs();if(state.step===1&&state.activityPicking){state.activityPicking=false;saveDraft();render();return}if(state.step>1){state.step--;saveDraft();render()}};
 $$('[data-start]').forEach(b=>b.onclick=()=>openBuilder(state.occasionKey));$$('[data-close]').forEach(b=>b.onclick=closeBuilder);document.addEventListener('keydown',e=>{if(e.key==='Escape'){closeBuilder();$('#journeyFullPreview')?.classList.remove('open')}});
