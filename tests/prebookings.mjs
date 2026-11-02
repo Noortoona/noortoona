@@ -17,8 +17,8 @@ const db={sql:async(parts,...values)=>{const release=await lock();try{return(awa
 globalThis.__HALA_BOOKING_TEST_DB__=db;
 const env={CONTEXT:'deploy-preview',DEPLOY_ID:'booking-test-preview',D360_MODE:'sandbox',D360_API_KEY:'synthetic-key',D360_WEBHOOK_TOKEN:'synthetic-webhook-token'};
 globalThis.Netlify={env:{get:key=>env[key]}};
-let providerCalls=0,providerBehavior='accepted';
-globalThis.fetch=async()=>{providerCalls++;if(providerBehavior==='timeout')throw Error('synthetic network timeout');return providerBehavior==='rejected'?Response.json({errors:[{code:'synthetic-rejection'}]},{status:400}):Response.json({messages:[{id:'synthetic-message-'+providerCalls}]});};
+let providerCalls=0,providerBehavior='accepted',lastProviderRequest;
+globalThis.fetch=async(url,options)=>{lastProviderRequest={url,options};providerCalls++;if(providerBehavior==='timeout')throw Error('synthetic network timeout');return providerBehavior==='rejected'?Response.json({errors:[{code:'synthetic-rejection'}]},{status:400}):Response.json({messages:[{id:'synthetic-message-'+providerCalls}]});};
 const h={};for(const name of ['bookings','booking-quote','admin-bookings','admin-booking-settings','public-settings','whatsapp-webhook'])h[name]=(await import('../netlify/functions/'+name+'.mts')).default;
 const {createSession}=await import('../netlify/functions/_shared/auth.mjs');
 const {notifyBooking}=await import('../netlify/functions/_shared/booking-notifications.mjs');
@@ -115,6 +115,36 @@ await test('prebooking persistence, authorization and transactional notification
  });
  await t.test('same sender/recipient or unapproved template stays pending setup without sending',async()=>{
   const calls=providerCalls;env.D360_SENDER_PHONE='966532763736';const response=await json('bookings','/api/bookings',payload(await event()));assert.equal(response.status,201);assert.equal(response.data.notification.status,'pending_setup');assert.equal(providerCalls,calls);
+ });
+ await t.test('Meta transport requires separate approved configuration and authentic signed delivery events',async()=>{
+  env.HALA_BOOKING_WA_PROVIDER='meta';env.META_WA_GRAPH_VERSION='v24.0';env.META_WA_PHONE_NUMBER_ID='123456789012345';env.META_WA_SENDER_PHONE='966510654663';
+  env.META_WA_ACCESS_TOKEN='synthetic-meta-token';env.META_WA_APP_SECRET='synthetic-meta-secret';env.META_WA_VERIFY_TOKEN='synthetic-verify-token';
+  env.META_WA_BOOKING_TEMPLATE='hala_new_booking_admin_ar';env.META_WA_BOOKING_TEMPLATE_APPROVED='true';providerBehavior='accepted';
+  const before=providerCalls;const response=await json('bookings','/api/bookings',payload(await event()));
+  assert.equal(response.status,201);assert.equal(response.data.notification.status,'queued');assert.equal(providerCalls,before+1);
+  assert.equal(lastProviderRequest.url,'https://graph.facebook.com/v24.0/123456789012345/messages');
+  assert.equal(lastProviderRequest.options.headers.authorization,'Bearer synthetic-meta-token');
+  assert.equal(lastProviderRequest.options.headers['D360-API-KEY'],undefined);
+  const outbound=JSON.parse(lastProviderRequest.options.body);
+  assert.equal(outbound.to,'966532763736');assert.equal(outbound.template.name,'hala_new_booking_admin_ar');
+  assert.equal(outbound.template.components[0].parameters.length,7);
+  const row=(await pg.query("SELECT * FROM booking_notifications WHERE booking_id=$1 AND kind='whatsapp'",[response.data.booking.id])).rows[0];
+  const base='https://staging.example/api/whatsapp/webhook';
+  const verify=await h['whatsapp-webhook'](new Request(base+'?hub.mode=subscribe&hub.verify_token=synthetic-verify-token&hub.challenge=1234'));
+  assert.equal(verify.status,200);assert.equal(await verify.text(),'1234');
+  assert.equal((await h['whatsapp-webhook'](new Request(base+'?hub.mode=subscribe&hub.verify_token=wrong&hub.challenge=1234'))).status,403);
+  const body=JSON.stringify({object:'whatsapp_business_account',entry:[{changes:[{field:'messages',value:{metadata:{phone_number_id:env.META_WA_PHONE_NUMBER_ID},statuses:[{id:row.message_id,status:'delivered'}]}}]}]});
+  const key=await crypto.subtle.importKey('raw',new TextEncoder().encode(env.META_WA_APP_SECRET),{name:'HMAC',hash:'SHA-256'},false,['sign']);
+  const signature='sha256='+Buffer.from(await crypto.subtle.sign('HMAC',key,new TextEncoder().encode(body))).toString('hex');
+  const callback=sig=>h['whatsapp-webhook'](new Request(base,{method:'POST',headers:{'x-hub-signature-256':sig},body}));
+  assert.equal((await callback('sha256='+'0'.repeat(64))).status,401);
+  assert.equal((await pg.query('SELECT status FROM booking_notifications WHERE id=$1',[row.id])).rows[0].status,'queued');
+  assert.equal((await callback(signature)).status,200);
+  assert.equal((await pg.query('SELECT status FROM booking_notifications WHERE id=$1',[row.id])).rows[0].status,'delivered');
+  const calls=providerCalls;assert.equal((await notifyBooking(db,(await pg.query('SELECT * FROM bookings WHERE id=$1',[response.data.booking.id])).rows[0],'https://staging.example')).status,'already_attempted');assert.equal(providerCalls,calls);
+  env.META_WA_BOOKING_TEMPLATE_APPROVED='false';
+  const pending=await json('bookings','/api/bookings',payload(await event()));assert.equal(pending.data.notification.status,'pending_setup');assert.equal(providerCalls,calls);
+  delete env.HALA_BOOKING_WA_PROVIDER;
  });
  await t.test('preview records never appear in production bookings or customer listing',async()=>{
   env.CONTEXT='production';const view=await json('admin-bookings','/api/admin/bookings',undefined,admin);assert.equal(view.data.total,0);const list=await json('bookings','/api/bookings',undefined,customer);assert.deepEqual(list.data.bookings,[]);env.CONTEXT='deploy-preview';

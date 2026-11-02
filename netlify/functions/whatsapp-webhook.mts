@@ -2,23 +2,38 @@ import { getDatabase } from "@netlify/database";
 import type { Config } from "@netlify/functions";
 import { secureJson } from "./_shared/domain.mjs";
 import { extractStatuses, nextStatus, providerError } from "./_shared/whatsapp.mjs";
+import { metaStatuses, verifyMetaSignature } from "./_shared/meta-whatsapp.mjs";
 
 export default async (req: Request) => {
-  if (req.method === "GET") return secureJson({ ok: true, service: "hala-whatsapp-webhook", version: "delivery-v2" });
+  if (req.method === "GET") {
+    const url = new URL(req.url);
+    if (url.searchParams.has('hub.mode')) {
+      const valid = url.searchParams.get('hub.mode') === 'subscribe' &&
+        !!Netlify.env.get('META_WA_VERIFY_TOKEN') &&
+        url.searchParams.get('hub.verify_token') === Netlify.env.get('META_WA_VERIFY_TOKEN');
+      return valid ? new Response(url.searchParams.get('hub.challenge') || '', {status:200,headers:{'content-type':'text/plain'}}) : new Response('Forbidden',{status:403});
+    }
+    return secureJson({ ok: true, service: "hala-whatsapp-webhook", version: "delivery-v3" });
+  }
   if (req.method !== "POST") return new Response("Method Not Allowed", { status: 405 });
-  const token = Netlify.env.get("D360_WEBHOOK_TOKEN");
-  if (!token) return new Response("Webhook not configured", { status: 503 });
-  const encoder = new TextEncoder();
-  const [expected, supplied] = await Promise.all([`Bearer ${token}`,req.headers.get("authorization") || ""]
-    .map(async value => new Uint8Array(await crypto.subtle.digest('SHA-256', encoder.encode(value)))));
-  let difference = 0;
-  for (let i=0;i<expected.length;i++) difference |= expected[i] ^ supplied[i];
-  if (difference !== 0) return new Response("Unauthorized", { status: 401 });
+  const meta = req.headers.has('x-hub-signature-256');
+  if (meta && !Netlify.env.get('META_WA_APP_SECRET')) return new Response("Webhook not configured", {status:503});
+  if (!meta) {
+    const token = Netlify.env.get("D360_WEBHOOK_TOKEN");
+    if (!token) return new Response("Webhook not configured", { status: 503 });
+    const encoder = new TextEncoder();
+    const [expected, supplied] = await Promise.all([`Bearer ${token}`,req.headers.get("authorization") || ""]
+      .map(async value => new Uint8Array(await crypto.subtle.digest('SHA-256', encoder.encode(value)))));
+    let difference = 0;
+    for (let i=0;i<expected.length;i++) difference |= expected[i] ^ supplied[i];
+    if (difference !== 0) return new Response("Unauthorized", { status: 401 });
+  }
   const body = await req.text();
   if (body.length > 256_000) return new Response("Payload too large", { status: 413 });
+  if (meta && !await verifyMetaSignature(body,req.headers.get('x-hub-signature-256'),Netlify.env.get('META_WA_APP_SECRET'))) return new Response("Unauthorized",{status:401});
   let payload: any;
   try { payload = JSON.parse(body); } catch { return new Response("Invalid JSON", { status: 400 }); }
-  const statuses = extractStatuses(payload).filter((s: any) => typeof s?.id === "string" && ['sent','delivered','read','failed'].includes(s?.status));
+  const statuses = (meta ? metaStatuses(payload,String(Netlify.env.get('META_WA_PHONE_NUMBER_ID')||'')) : extractStatuses(payload)).filter((s: any) => typeof s?.id === "string" && ['sent','delivered','read','failed'].includes(s?.status));
   if (!statuses.length) return new Response("ok");
   const client = await getDatabase().pool.connect();
   try {
@@ -27,6 +42,13 @@ export default async (req: Request) => {
     await client.query("SET LOCAL lock_timeout = '2s'");
     await client.query("SET LOCAL statement_timeout = '3s'");
     for (const s of statuses) {
+      if (meta) {
+        const notification=(await client.query("SELECT id,status FROM booking_notifications WHERE kind='whatsapp' AND message_id=$1 FOR UPDATE",[s.id])).rows[0];
+        if (!notification) throw new Error("Message not persisted yet");
+        const status=nextStatus(notification.status,s.status);
+        await client.query("UPDATE booking_notifications SET status=$1,error_code=$2,updated_at=NOW() WHERE id=$3",[status,status==='failed'?providerError({errors:s.errors}).code:null,notification.id]);
+        continue;
+      }
       const found = (await client.query("SELECT id, guest_id FROM whatsapp_messages WHERE message_id=$1", [s.id])).rows[0];
       if (!found) {
         const otp = (await client.query("UPDATE otp_codes SET delivery_status=$1 WHERE message_id=$2 RETURNING id", [s.status,s.id])).rows[0];
