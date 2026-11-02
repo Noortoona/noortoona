@@ -1,10 +1,10 @@
 export const theme = {
   colors: {
-    burgundy: "#651D32",
-    burgundyDeep: "#2E0D1B",
-    burgundySoft: "#8A354D",
-    gold: "#C8A45D",
-    goldSoft: "#E8D8B5",
+    burgundy: "#11151D",
+    burgundyDeep: "#0A0D13",
+    burgundySoft: "#263044",
+    gold: "#D3A447",
+    goldSoft: "#F0D08A",
     cream: "#FBF6EE",
     paper: "#FFFDF9",
     ink: "#23171B",

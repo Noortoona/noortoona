@@ -52,7 +52,7 @@ const styles = StyleSheet.create({
   root: { flex: 1, backgroundColor: theme.colors.burgundyDeep },
   content: { flexGrow: 1, justifyContent: "flex-end" },
   brandBlock: { flex: 1, minHeight: 260, alignItems: "center", justifyContent: "center", paddingTop: 60 },
-  logoImage: { width: 210, height: 120 },
+  logoImage: { width: 240, height: 107 },
   entries: { flexDirection: "row-reverse", flexWrap: "wrap", gap: 7 },
   entry: { borderWidth: 1, borderColor: theme.colors.line, borderRadius: 12, paddingHorizontal: 12, paddingVertical: 10 },
   entryActive: { backgroundColor: theme.colors.burgundy, borderColor: theme.colors.burgundy },
