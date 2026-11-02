@@ -17,8 +17,8 @@
     "android": {
       "package": "com.noortoona.hala",
       "adaptiveIcon": {
-        "foregroundImage": "./assets/hala-icon.png",
-        "backgroundColor": "#2E0D1B"
+        "foregroundImage": "./assets/hala-icon-foreground.png",
+        "backgroundColor": "#11151D"
       }
     },
     "plugins": [
@@ -44,7 +44,7 @@
           "image": "./assets/hala-icon.png",
           "imageWidth": 180,
           "resizeMode": "contain",
-          "backgroundColor": "#2E0D1B"
+          "backgroundColor": "#11151D"
         }
       ],
       [
