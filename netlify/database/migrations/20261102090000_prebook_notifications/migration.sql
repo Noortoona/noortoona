@@ -12,6 +12,8 @@ CREATE TABLE IF NOT EXISTS booking_requests (
   currency text NOT NULL DEFAULT 'SAR',
   referral_code text,
   status text NOT NULL DEFAULT 'pending_contact' CHECK (status IN ('pending_contact','contacted','awaiting_payment','confirmed','completed','canceled')),
+  staff_notes text NOT NULL DEFAULT '',
+  last_contacted_at timestamptz,
   payment_status text NOT NULL DEFAULT 'pending_payment' CHECK (payment_status IN ('pending_payment','paid','refunded')),
   created_at timestamptz NOT NULL DEFAULT now(),
   updated_at timestamptz NOT NULL DEFAULT now()
