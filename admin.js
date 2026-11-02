@@ -95,8 +95,8 @@ function render(d,users,supData,settings,partners,eventsData,catalog,bookings){
       <form id="bookingSearch" class="inline-admin-form"><input name="q" value="${esc(bookingQuery)}" placeholder="رقم الحجز أو اسم العميل أو رقم الجوال" aria-label="البحث في الحجوزات"><button class="gold-btn" type="submit">بحث</button></form>
       <div class="portal-list">${(bookings.bookings||[]).map(b=>{
         const statusText={pending_contact:'جديد',contacted:'تم التواصل',awaiting_payment:'بانتظار الدفع',confirmed:'مؤكد',completed:'مكتمل',canceled:'ملغي'};
-        const phone=String(b.customer_phone||'').replace(/\\D/g,'');
-        const wa=/^9665\\d{8}$/.test(phone)?'https://wa.me/'+phone+'?text='+encodeURIComponent('مرحبًا، معك فريق هلا بخصوص حجزك رقم '+b.booking_code):'';
+        const phone=String(b.customer_phone||'').replace(/\D/g,'');
+        const wa=/^9665\d{8}$/.test(phone)?'https://wa.me/'+phone+'?text='+encodeURIComponent('مرحبًا، معك فريق هلا بخصوص حجزك رقم '+b.booking_code):'';
         return `<div class="booking-admin-row">
           <b>${esc(b.booking_code)} • ${esc(b.customer_name||'عميل هلا')}</b>
           <span>${esc(b.title)} • ${esc(b.occasion)} • ${esc(b.event_date||'التاريخ غير محدد')}</span>
