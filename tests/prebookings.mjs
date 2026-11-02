@@ -44,7 +44,7 @@ await test("real prebookings create a durable pending record and notifications",
     title:"مناسبة اختبار حقيقية في بيئة معزولة",name1:"العميل",occasion:"زواج",package:"هلا بلس",
     date:"2027-01-01"
   },customer.token));
-  assert.equal(result.status,200,await result.text());
+  assert.equal(result.status,200);
   const body=await result.json();
   assert.match(body.bookingCode,/^HALA-[A-F0-9]{12}$/);
   assert.equal(body.paymentStatus,"pending_payment");
