@@ -31,6 +31,19 @@ export default async (req: Request) => {
       if (!found) {
         const otp = (await client.query("UPDATE otp_codes SET delivery_status=$1 WHERE message_id=$2 RETURNING id", [s.status,s.id])).rows[0];
         if (otp) continue;
+        const booking = (await client.query(
+          "SELECT id,status FROM booking_notifications WHERE channel='whatsapp' AND provider_message_id=$1 FOR UPDATE", [s.id]
+        )).rows[0];
+        if (booking) {
+          const previous = booking.status === 'accepted' ? 'queued' : booking.status;
+          const updated = nextStatus(previous, s.status);
+          if (updated !== previous) {
+            const errorCode = updated === 'failed' ? JSON.stringify(providerError({ errors: s.errors })) : null;
+            await client.query("UPDATE booking_notifications SET status=$1,last_error=$2,updated_at=NOW() WHERE id=$3",
+              [updated,errorCode,booking.id]);
+          }
+          continue;
+        }
         throw new Error("Message not persisted yet");
       }
       // Same lock order as sender; old attempts must never change the latest guest state.
