@@ -1,20 +1,15 @@
 (()=> {
-  const KEY="halaSession", SID="halaVisitorId";
+  const KEY="halaSession";
   const referral=new URLSearchParams(location.search).get('ref');
   if(referral&&/^[A-Z0-9_-]{4,24}$/i.test(referral))localStorage.setItem('halaReferralCode',referral.toUpperCase());
   const session=()=>{try{return JSON.parse(localStorage.getItem(KEY)||"null")}catch{return null}};
   const save=s=>localStorage.setItem(KEY,JSON.stringify(s));
   let resolver=null, purpose="login", supervisorPrice=599;
 
-  function ensureVisitor(){
-    let id=localStorage.getItem(SID);
-    if(!id){id=crypto.randomUUID().replaceAll("-","");localStorage.setItem(SID,id)}
-    return id;
-  }
+  // The consent-aware tracker owns anonymous identifiers and page-view events.
   async function track(event,metadata={}){
-    try{await fetch("/api/analytics/track",{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({sessionId:ensureVisitor(),event,path:location.pathname,metadata}),keepalive:true})}catch{}
+    return window.HALA_ANALYTICS?.track(event,metadata) || false;
   }
-  track("page_view",{referrer:document.referrer?new URL(document.referrer).hostname:"direct"});
   fetch("/api/events/supervisor").then(r=>r.ok?r.json():null).then(x=>{if(typeof x?.amountSar==="number"&&Number.isFinite(x.amountSar)&&x.amountSar>=0)supervisorPrice=x.amountSar}).catch(()=>{});
 
   function modal(){
@@ -24,7 +19,7 @@
       <div class="auth-backdrop" data-auth-close></div>
       <section class="auth-card" dir="rtl">
         <button class="auth-close" data-auth-close>×</button>
-        <img src="/assets/brand/hala-logo-dark.svg" alt="هلا" class="auth-logo">
+        <img src="/assets/brand/hala-logo-dark.svg?v=20261102" alt="هلا" class="auth-logo">
         <div id="authPhoneStep">
           <span class="auth-kicker">دخول سريع</span><h2>رقم جوالك يكفي</h2>
           <p>نرسل لك رمز تحقق على واتساب، وبعدها تفتح لوحة مناسباتك مباشرة.</p>
@@ -75,7 +70,7 @@
     catch(e){m.querySelector("#authError").textContent=e.message}
     finally{btn.disabled=false;btn.textContent="تأكيد والدخول"}
   }
-  function route(user){location.href=user?.role==="admin"?"/admin.html":user?.role==="supervisor"?"/supervisor.html":user?.role==="partner"?"/partner.html":"/customer.html"}
+  function route(user){location.href=["admin","customer_service"].includes(user?.role)?"/admin.html":user?.role==="supervisor"?"/supervisor.html":user?.role==="partner"?"/partner.html":"/customer.html"}
   async function validSession(){
     const s=session();if(!s?.token)return null;
     try{const r=await fetch("/api/auth/me",{headers:{authorization:`Bearer ${s.token}`}});if(!r.ok){localStorage.removeItem(KEY);return null}const d=await r.json();s.user=d.user;save(s);return s}catch{return s}

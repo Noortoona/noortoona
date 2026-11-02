@@ -84,7 +84,7 @@ test('public builder replaces fallback prices, template visibility and service t
   const elements={ '#builderModal':{classList:{contains:()=>false}}, '#builderBody':{}, '#nextBtn':{}, '#prevBtn':{}, '#priceGrid':prices, '#templateGrid':templates, '#services .service-grid':services };
   const fixture={version:1,packages:[{code:'hala_basic',name:'هلا الأساسية',amount:16900,guestLimit:120,currency:'SAR'},{code:'hala_plus',name:'هلا بلس',amount:35900,guestLimit:260,currency:'SAR'},{code:'hala_premium',name:'هلا بريميوم',amount:70900,guestLimit:510,currency:'SAR'}],hiddenTemplateKeys:['wedding:ليلة كحلية'],services:[{id:'test',name:'خدمة خاصة',description:'<script>unsafe</script>',enabled:true}]};
   const requested=[];
-  const context={window:{},URL,URLSearchParams,location:{search:''},localStorage:{getItem:()=>null,setItem(){},removeItem(){}},document:{querySelector:selector=>elements[selector]||null,querySelectorAll:()=>[],addEventListener(){}},fetch:async path=>{requested.push(path);return {ok:true,json:async()=>fixture}},setTimeout,clearTimeout};
+  const context={window:{HALA_BOOKING:{money:v=>String(Number(v)/100),whatsapp:()=>"https://wa.me/966532763736"}},URL,URLSearchParams,location:{search:''},localStorage:{getItem:()=>null,setItem(){},removeItem(){}},document:{querySelector:selector=>elements[selector]||null,querySelectorAll:()=>[],addEventListener(){}},fetch:async path=>{requested.push(path);return {ok:true,json:async()=>fixture}},setTimeout,clearTimeout};
   vm.runInNewContext(renderer,context);
   vm.runInNewContext(await readFile(new URL('../app.js',import.meta.url),'utf8'),context);
   await new Promise(resolve=>setImmediate(resolve));
@@ -101,7 +101,7 @@ test('admin catalog submits its revision and reloads rather than overwriting a c
   const notice={textContent:''},button={disabled:false},calls=[];
   const elements={adminRoot:{innerHTML:''},logoutBtn:{},catalogResult:notice};
   let conflicts=false,reloads=0;
-  const context={document:{getElementById:id=>elements[id]||null,createElement:()=>({}),body:{appendChild(){}}},fetch:async(path,options)=>{calls.push({path,body:JSON.parse(options.body)});return Response.json(conflicts?{error:'stale'}:{ok:true},{status:conflicts?409:200})},localStorage:{},window:{},location:{},alert(){}};
+  const context={document:{getElementById:id=>elements[id]||null,createElement:()=>({}),body:{appendChild(){}}},fetch:async(path,options)=>{calls.push({path,body:JSON.parse(options.body)});return Response.json(conflicts?{error:'stale'}:{ok:true},{status:conflicts?409:200})},localStorage:{},window:{},URLSearchParams,location:{search:''},alert(){}};
   vm.runInNewContext(await readFile(new URL('../admin.js',import.meta.url),'utf8'),context);
   vm.runInNewContext('s={token:"fixture-token"};catalogRevision=4;',context);
   context.load=async()=>{reloads++};
@@ -121,7 +121,7 @@ test('premium fallback, required supervisor preference and promotional reference
   async function appFor(packages){
     const priceGrid={innerHTML:''},elements={'#builderModal':{classList:{contains:()=>false}},'#builderBody':{},'#nextBtn':{},'#prevBtn':{},'#priceGrid':priceGrid};
     const fixture={version:1,packages,hiddenTemplateKeys:[],services:[]};
-    const context={window:{},URL,URLSearchParams,location:{search:''},localStorage:{getItem:()=>null,setItem(){},removeItem(){}},document:{querySelector:selector=>elements[selector]||null,querySelectorAll:()=>[],addEventListener(){}},fetch:async()=>({ok:true,json:async()=>fixture}),setTimeout,clearTimeout};
+    const context={window:{HALA_BOOKING:{money:v=>String(Number(v)/100),whatsapp:()=>"https://wa.me/966532763736"}},URL,URLSearchParams,location:{search:''},localStorage:{getItem:()=>null,setItem(){},removeItem(){}},document:{querySelector:selector=>elements[selector]||null,querySelectorAll:()=>[],addEventListener(){}},fetch:async()=>({ok:true,json:async()=>fixture}),setTimeout,clearTimeout};
     vm.runInNewContext(renderer,context);vm.runInNewContext(await readFile(new URL('../app.js',import.meta.url),'utf8'),context);
     await new Promise(resolve=>setImmediate(resolve));
     return {context,priceGrid};

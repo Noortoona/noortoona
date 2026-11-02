@@ -3,7 +3,7 @@ import { Alert, Pressable, RefreshControl, ScrollView, StyleSheet, Text, View } 
 import { useRouter } from "expo-router";
 import { api } from "@/api";
 import { useRequireRole } from "@/roleGate";
-import { BrandHeader, Card, Screen, Stat } from "@/ui";
+import { BrandHeader, Card, Screen, Stat, PrimaryButton } from "@/ui";
 import { theme } from "@/theme";
 
 type Home = { stats: { events: number; customers: number; supervisors: number }; events: Array<{ id: string; title: string; occasion: string; event_date?: string; location?: string }> };
@@ -21,6 +21,7 @@ export default function AdminHome() {
     <Screen>
       <BrandHeader title="إدارة هلا" subtitle="نظرة تنفيذية على المنصة" onLogout={auth.signOut} />
       <ScrollView contentContainerStyle={styles.body} refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => { setRefreshing(true); load(); }} />}>
+        <PrimaryButton label="إدارة الحجوزات والعملاء والاهتمامات" onPress={() => router.push("/staff" as never)} />
         <View style={styles.stats}>
           <Stat label="المناسبات" value={data?.stats.events ?? "—"} accent />
           <Stat label="العملاء" value={data?.stats.customers ?? "—"} />

@@ -30,7 +30,7 @@
         <a href="#templates">القوالب</a>
         <a href="#how">كيف تعمل؟</a>
         <a href="#services">الخدمات</a>
-        <a href="#pricing">الباقات</a>
+        <a href="#pricing">الباقات</a><a href="#prelaunch">الإطلاق</a>
       </nav>
       <button class="mobile-menu-btn" id="mobileMenuBtn" aria-label="فتح القائمة" aria-expanded="false">☰</button>
       <div class="nav-actions">
@@ -39,7 +39,7 @@
       </div>
     </div>
   </header>
-  <div class="mobile-menu" id="mobileMenu" aria-hidden="true"><a href="#occasions">المناسبات</a><a href="#templates">القوالب</a><a href="#how">كيف تعمل؟</a><a href="#services">الخدمات</a><a href="#pricing">الباقات</a><button class="gold-btn" data-start>أنشئ مناسبتك</button></div>
+  <div class="mobile-menu" id="mobileMenu" aria-hidden="true"><a href="#occasions">المناسبات</a><a href="#templates">القوالب</a><a href="#how">كيف تعمل؟</a><a href="#services">الخدمات</a><a href="#pricing">الباقات</a><a href="#prelaunch">الإطلاق</a><button class="gold-btn" data-start>أنشئ مناسبتك</button></div>
 
   <main>
     <section id="home" class="hero">
@@ -212,7 +212,7 @@
           <div class="business-pricing-head"><h3>هلا للأعمال والمؤسسات</h3><p>تسعير استرشادي لخدمات الشركات القادمة، ويُعتمد نطاق الخدمة النهائي بعرض سعر وعقد مستقل.</p></div>
           <div class="business-price-grid">
             <article class="business-price-card"><span class="business-status">قريبًا</span><h4>هلا أعمال</h4><p>فعالية واحدة حتى 500 مدعو، مع هوية خاصة وتقارير حضور.</p><strong>تبدأ من 2,999 <small>ريال / فعالية</small></strong></article>
-            <article class="business-price-card"><span class="business-status">قريبًا</span><h4>هلا المؤسسات</h4><p>اشتراك شهري حتى أربع فعاليات، مع تحديد حد المدعوين والخدمات في العقد.</p><strong>يبدأ من 8,999 <small>ريال / شهر</small></strong></article>
+            <article class="business-price-card"><span class="business-status">قريبًا</span><h4>هلا المؤسسات</h4><p>اشتراك شهري، مع تحديد نطاق المدعوين والخدمات في العقد.</p><strong>يبدأ من 8,999 <small>ريال / شهر</small></strong></article>
           </div>
           <p class="pricing-extras">خدمات إضافية: <b>مشرف أو مشرفة +599 ريالًا</b> • <b>تصميم حصري ابتداءً من 149 ريالًا</b> (حسب التوفر وعرض السعر).</p>
           <p class="pricing-disclaimer">الباقات التجارية والإضافات غير المفعلة تُطلب بعد التعاقد. يتم تأكيد الرسوم قبل الدفع.</p>
@@ -220,6 +220,7 @@
       </div>
     </section>
 
+    <section class="section prelaunch-section" id="prelaunch"><div class="container"><div class="portal-panel"><span class="eyebrow">بداية قريبة… بطابع هلا</span><h2>كن من أوائل عملاء هلا</h2><p>سجّل اهتمامك بالإطلاق دون إنشاء حجز. يمكنك طلب التواصل فقط، والموافقة على الأخبار والعروض مستقلة واختيارية.</p><form data-lead-form="launch" class="lead-form"><label>الاسم (اختياري)<input name="name" maxlength="120" autocomplete="name"></label><label>رقم الجوال<input name="phone" type="tel" inputmode="tel" autocomplete="tel" placeholder="05XXXXXXXX"></label><label>البريد الإلكتروني<input name="email" type="email" autocomplete="email" maxlength="180"></label><label>الخدمة التي تهمك (اختياري)<select name="service"><option value="">لم أحدد بعد</option value="invitation">دعوات رقمية</option><option value="supervisor">مشرف أو مشرفة</option><option value="partnership">الشراكة مع هلا</option></select></label><p class="form-help">أدخل رقم جوال أو بريدًا إلكترونيًا حقيقيًا لنتمكن من متابعة اهتمامك.</p><label class="journey-check"><input name="marketingConsent" type="checkbox"><span>أوافق اختياريًا على استقبال أخبار إطلاق هلا والعروض التسويقية.</span></label><button type="submit" class="gold-btn">تسجيل اهتمامي</button><p role="status" aria-live="polite"></p></form><a data-hala-support href="https://wa.me/966532763736" target="_blank" rel="noopener noreferrer">للمساعدة: خدمة عملاء هلا</a></div></div></section>
     <section class="section final-cta">
       <div class="container cta-card light-sweep"><div><span class="eyebrow">هلا</span><h2>مناسبتك تستحق بداية أجمل.</h2><p>أنشئ أول دعوة وابدأ تجربة هلا الآن.</p></div><button class="gold-btn" data-start>لحظتك .. تبدأ بهلا</button></div>
     </section>
@@ -238,7 +239,10 @@
   <div class="toast" id="toast"></div>
   <script src="invitation-renderer.js"></script>
   <script src="invitation-schemas.js"></script>
+  <script src="analytics.js"></script>
+  <script src="booking-client.js"></script>
   <script src="app.js"></script>
+  <script src="prelaunch.js"></script>
   <script src="account.js"></script>
 </body>
 </html>

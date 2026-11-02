@@ -5,7 +5,8 @@ import * as ImagePicker from "expo-image-picker";
 import * as DocumentPicker from "expo-document-picker";
 import { File } from "expo-file-system";
 import { api } from "@/api";
-import { useRequireRole } from "@/roleGate";
+import { useAuth } from "@/auth";
+import * as SecureStore from "expo-secure-store";
 import { BrandHeader, PrimaryButton, Screen } from "@/ui";
 import { theme } from "@/theme";
 import { isGoogleMapsUrl } from "@/links";
@@ -13,6 +14,7 @@ import { occasionForApi } from "@/templateCatalog";
 import { DEFAULT_PACKAGES, availableTemplatesFor, publicCatalog, type PublicCatalog } from "@/catalog";
 import { audioDataUri, imageDataUri, MAX_AUDIO_BYTES } from "@/designMedia";
 import { InvitationPreview } from "@/InvitationPreview";
+import { track } from "@/prebooking";
 import { ActivityKey, OccasionKey, TemplateArtwork, templatesFor } from "@/templates";
 
 const OCCASIONS: Array<{ key: OccasionKey; label: string; emoji: string; twoNames: boolean }> = [
@@ -44,7 +46,7 @@ const ACTIVITIES: Array<{ key: ActivityKey; label: string }> = [
 ];
 
 export default function CreateEvent() {
-  const auth = useRequireRole("customer");
+  const auth = useAuth();
   const router = useRouter();
   const [step, setStep] = useState(1);
   const [occasionKey, setOccasionKey] = useState<OccasionKey>("wedding");
@@ -79,6 +81,8 @@ export default function CreateEvent() {
   const activity = useMemo(() => ACTIVITIES.find(a => a.key === activityKey)!, [activityKey]);
   const currentTemplates = useMemo(() => availableTemplatesFor(occasionKey, activityKey, catalog.hiddenTemplateKeys), [occasionKey, activityKey, catalog.hiddenTemplateKeys]);
   const packages = catalog.packages;
+  useEffect(() => { void track("booking_started", "/mobile/customer/create"); }, []);
+  useEffect(() => { if (step === 3) void track("package_viewed", "/mobile/customer/create", { packageCode }); }, [packageCode, step]);
   const selectedTemplate = currentTemplates.find(t => t.name === template) || currentTemplates[0];
   useEffect(() => { api<{ supervisorAddonSar: number }>("/api/pricing/quote").then(result => setSupervisorPrice(result.supervisorAddonSar)).catch(() => undefined); }, []);
 
@@ -89,7 +93,7 @@ export default function CreateEvent() {
   }, []);
   useEffect(() => { if (currentTemplates[0] && !currentTemplates.some(item => item.name === template)) setTemplate(currentTemplates[0].name); }, [currentTemplates, template]);
 
-  if (auth.loading || !auth.user) return null;
+  if (auth.loading) return null;
 
   async function pickImage() {
     setMediaBusy(true);
@@ -121,6 +125,7 @@ export default function CreateEvent() {
 
   function chooseOccasion(key: OccasionKey) {
     setOccasionKey(key);
+    void track("occasion_selected", "/mobile/customer/create", { occasion: key });
     setName2("");
     const first = availableTemplatesFor(key, activityKey, catalog.hiddenTemplateKeys)[0];
     if (first) setTemplate(first.name);
@@ -143,6 +148,7 @@ export default function CreateEvent() {
   }
 
   async function create() {
+    if (busy) return;
     const error = validateDetails();
     if (!selectedTemplate) return Alert.alert("القوالب", "لا توجد قوالب متاحة لهذا النوع حاليًا.");
     if (error) return Alert.alert("أكمل البيانات", error);
@@ -152,7 +158,7 @@ export default function CreateEvent() {
       const occasion = occasionForApi(occasionKey, selected.label);
       const activityType = occasionKey === "activity" ? (activityKey === "activityCustom" ? customActivity.trim() : activity.label) : "";
       const pkg = packages.find(p => p.code === packageCode)!;
-      const result = await api<{ event: { id: string } }>("/api/events", {
+      const result = await api<{ event: { id: string }; ownerToken: string }>("/api/events", {
         method: "POST",
         body: JSON.stringify({
           occasion,
@@ -173,15 +179,16 @@ export default function CreateEvent() {
           waitlistEnabled: occasionKey === "activity",
           template: selectedTemplate?.name || "",
           package: pkg.name,
-          requestSupervisor,
+          requestSupervisor: false,
           supervisorPreference: requestSupervisor ? supervisorPreference : null,
-          design: { occasionKey, activityKey, headline, accent, font, image, audio },
+          design: { occasionKey, activityKey, headline, accent, font, image, audio, supervisorPreference: requestSupervisor ? supervisorPreference : "" },
         }),
       }, auth.token);
 
+      await SecureStore.setItemAsync(`hala.event.owner.${result.event.id}`, result.ownerToken);
       router.replace({
-        pathname: "/customer/event/[id]" as never,
-        params: { id: result.event.id },
+        pathname: "/customer/payment" as never,
+        params: { eventId: result.event.id },
       });
     } catch (e: any) {
       Alert.alert("تعذر إنشاء المناسبة", e?.message || "حاول مرة أخرى");
@@ -270,7 +277,7 @@ export default function CreateEvent() {
             <Text style={styles.help}>القوالب المعروضة مخصصة لنوع دعوتك الحالي.</Text>
             <View style={styles.templateGrid}>
               {currentTemplates.map(t => (
-                <Pressable key={t.name} onPress={() => setTemplate(t.name)} style={styles.templateCard}>
+                <Pressable key={t.name} onPress={() => { setTemplate(t.name); void track("template_selected", "/mobile/customer/create", { template: t.name }); }} style={styles.templateCard}>
                   <TemplateArtwork template={t} label={occasionKey === "activity" ? activity.label : selected.label} selected={template === t.name} />
                   <Text style={styles.templateName}>{t.name}</Text>
                 </Pressable>
@@ -283,7 +290,7 @@ export default function CreateEvent() {
             <Text style={styles.label}>الخط</Text>
             <View style={styles.activityChoices}>{[{ key: "ruqaa", label: "رقعة" }, { key: "tajawal", label: "تجوال" }, { key: "serif", label: "كلاسيكي" }].map(option => <Pressable key={option.key} accessibilityRole="button" accessibilityState={{ selected: font === option.key }} onPress={() => setFont(option.key)} style={[styles.activityChoice, font === option.key && styles.activityChoiceActive]}><Text style={[styles.activityChoiceText, font === option.key && styles.activityChoiceTextActive]}>{option.label}</Text></Pressable>)}</View>
             <Text style={styles.label}>اللون الرئيسي</Text>
-            <View style={styles.activityChoices}>{["#E3BD64", "#651D32", "#9A7434", "#246A4A", "#FFFFFF"].map(color => <Pressable key={color} accessibilityRole="button" accessibilityLabel={`اختيار اللون ${color}`} accessibilityState={{ selected: accent === color }} onPress={() => setAccent(color)} style={{ width: 42, height: 42, borderRadius: 21, backgroundColor: color, borderWidth: accent === color ? 4 : 1, borderColor: theme.colors.ink }} />)}</View>
+            <View style={styles.activityChoices}>{["#E3BD64", "#11151D", "#9A7434", "#246A4A", "#FFFFFF"].map(color => <Pressable key={color} accessibilityRole="button" accessibilityLabel={`اختيار اللون ${color}`} accessibilityState={{ selected: accent === color }} onPress={() => setAccent(color)} style={{ width: 42, height: 42, borderRadius: 21, backgroundColor: color, borderWidth: accent === color ? 4 : 1, borderColor: theme.colors.ink }} />)}</View>
             <PrimaryButton label={image ? "تغيير الصورة / التصميم" : "رفع صورة أو تصميم خاص"} onPress={pickImage} loading={mediaBusy} secondary />
             {image ? <><Image source={{ uri: image }} style={{ width: "100%", height: 220, borderRadius: 14 }} resizeMode="cover" /><PrimaryButton label="إزالة الصورة" onPress={() => setImage("")} secondary /></> : null}
             <PrimaryButton label={audio ? "تغيير موسيقى الدعوة" : "إضافة موسيقى (حتى 600 كيلوبايت)"} onPress={pickAudio} loading={mediaBusy} secondary />

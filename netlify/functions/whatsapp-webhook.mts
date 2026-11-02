@@ -31,6 +31,12 @@ export default async (req: Request) => {
       if (!found) {
         const otp = (await client.query("UPDATE otp_codes SET delivery_status=$1 WHERE message_id=$2 RETURNING id", [s.status,s.id])).rows[0];
         if (otp) continue;
+        const notification=(await client.query("SELECT id,status FROM booking_notifications WHERE message_id=$1 FOR UPDATE",[s.id])).rows[0];
+        if(notification){
+          const status=nextStatus(notification.status,s.status);
+          await client.query("UPDATE booking_notifications SET status=$1,error_code=$2,updated_at=NOW() WHERE id=$3",[status,status==='failed'?providerError({errors:s.errors}).code:null,notification.id]);
+          continue;
+        }
         throw new Error("Message not persisted yet");
       }
       // Same lock order as sender; old attempts must never change the latest guest state.

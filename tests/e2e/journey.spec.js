@@ -8,6 +8,9 @@ test('رحلة إنشاء نشاط بادل كاملة على iPhone', async ({ 
   }));
   await page.addInitScript(() => localStorage.setItem('halaSession', JSON.stringify({ token: 'test-session', user: { id: 'test-user', role: 'customer' } })));
   await page.route('**/api/auth/me', route => route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ user: { id: 'test-user', role: 'customer' } }) }));
+  await page.addInitScript(() => localStorage.setItem('halaAnalyticsConsent','no'));
+  await page.route('**/api/bookings/quote',route=>route.fulfill({status:200,contentType:'application/json',body:JSON.stringify({quote:{baseAmount:109900,addonAmount:0,discountAmount:0,total:109900,guestLimit:250}})}));
+  await page.route('**/api/bookings',route=>route.fulfill({status:201,contentType:'application/json',body:JSON.stringify({booking:{id:'booking-e2e',booking_number:'HALA-E2E',booking_status:'pre_booking_received',payment_status:'pending_payment'}})}));
   await page.goto('/');
   await expect(page.locator('body')).not.toHaveCSS('overflow-x', 'scroll');
   await page.locator('[data-start]:visible').first().click();
@@ -18,6 +21,7 @@ test('رحلة إنشاء نشاط بادل كاملة على iPhone', async ({ 
   await expect(page.getByRole('heading', { name: /تفاصيل النشاط — بادل/ })).toBeVisible();
   await page.locator('#name1').fill('بادل الخميس');
   await page.locator('#location').fill('ملعب الرياض');
+  await page.locator('#date').fill('2027-02-01');
   await page.locator('#nextBtn').click();
   await expect(page.locator('.visual-template-card')).toHaveCount(4);
   expect(await page.locator('#builderBody').evaluate(el => el.scrollWidth <= el.clientWidth + 1)).toBe(true);
@@ -33,9 +37,12 @@ test('رحلة إنشاء نشاط بادل كاملة على iPhone', async ({ 
   await page.locator('#nextBtn').click();
   await expect(page.getByRole('heading', { name: 'راجع دعوتك' })).toBeVisible();
   await page.locator('#nextBtn').click();
-  await expect(page.getByText('كل شيء جاهز')).toBeVisible();
+  await expect(page.getByRole('heading',{name:'تأكيد طلب الحجز'})).toBeVisible();
+  await page.locator('#contactName').fill('عميل اختبار');
+  await page.locator('#contactPhone').fill('0531112233');
   await page.locator('#nextBtn').click();
-  await expect(page).toHaveURL(/\/dashboard\?event=event-e2e/);
+  await expect(page.getByText('تم تسجيل طلب حجزك بنجاح! ✨')).toBeVisible();
+  await expect(page.locator('.booking-number')).toHaveText('HALA-E2E');
 });
 
 test('دعوة الضيف تحسب القطّة وتسجل الرد', async ({ page }) => {

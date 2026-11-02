@@ -5,6 +5,8 @@ import { api } from "@/api";
 import { useRequireRole } from "@/roleGate";
 import { BrandHeader, Card, Empty, PrimaryButton, Screen, Stat } from "@/ui";
 import { theme } from "@/theme";
+import { analyticsConsent, setAnalyticsConsent, track } from "@/prebooking";
+import { Switch } from "react-native";
 
 type Home = {
   stats: { events: number; guests: number; accepted: number; checkedIn: number };
@@ -16,6 +18,8 @@ export default function CustomerHome() {
   const router = useRouter();
   const [data, setData] = useState<Home | null>(null);
   const [refreshing, setRefreshing] = useState(false);
+  const [consent, setConsent] = useState(false);
+  useEffect(() => { analyticsConsent().then(setConsent); }, []);
 
   const load = useCallback(async () => {
     if (!auth.token) return;
@@ -35,6 +39,9 @@ export default function CustomerHome() {
           <Text style={styles.heroText}>أنشئ الدعوة، أرسلها، وتابع التأكيد والدخول من تطبيق واحد.</Text>
           <PrimaryButton label="+ إنشاء دعوة جديدة" onPress={() => router.push("/customer/create" as never)} />
         </View>
+        <PrimaryButton label="حجوزاتي ومتابعة الطلبات" onPress={() => router.push("/customer/bookings" as never)} secondary />
+        <PrimaryButton label="كن من أوائل عملاء هلا" onPress={() => router.push("/launch" as never)} secondary />
+        <View style={{ flexDirection: "row", gap: 10, alignItems: "center" }}><Switch value={consent} accessibilityLabel="الموافقة الاختيارية على إحصائيات الاستخدام" onValueChange={value => { setConsent(value); void setAnalyticsConsent(value).then(() => { if (value) void track("page_view", "/mobile/customer"); }); }} /><Text style={[styles.eventMeta, { flex: 1 }]}>أوافق اختياريًا على قياس استخدام التطبيق بمعرّفات تقديرية لتحسين التجربة. هذا منفصل عن الرسائل التسويقية.</Text></View>
         <View style={styles.stats}>
           <Stat label="مناسباتي" value={data?.stats.events ?? "—"} accent />
           <Stat label="المدعوون" value={data?.stats.guests ?? "—"} />

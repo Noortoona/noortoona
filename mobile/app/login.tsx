@@ -1,3 +1,4 @@
+import * as SecureStore from "expo-secure-store";
 import React, { useEffect, useState } from "react";
 import { Image, KeyboardAvoidingView, Platform, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from "react-native";
 import { useRouter } from "expo-router";
@@ -34,9 +35,9 @@ export default function LoginScreen() {
     <KeyboardAvoidingView style={styles.root} behavior={Platform.OS === "ios" ? "padding" : undefined}>
       <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
         <View style={styles.brandBlock}><Image source={require("../assets/hala-logo.png")} style={styles.logoImage} resizeMode="contain" accessibilityLabel="HALA | هلا" /><Text style={styles.tagline}>لحظتك .. تبدأ بهلا</Text></View>
-        <View style={styles.sheet}>
+        <View style={styles.sheet}><PrimaryButton label="كن من أوائل عملاء هلا" secondary onPress={() => router.push("/launch" as never)} /><PrimaryButton label="تصفح واحجز دون تسجيل دخول" secondary onPress={() => router.push("/customer/create" as never)} /><PrimaryButton label="متابعة حجزي الأخير" secondary onPress={() => { void SecureStore.getItemAsync("hala.booking.last").then(id => id ? router.push({pathname:"/customer/bookings" as never,params:{id}}) : router.push("/customer/create" as never)); }} />
           <Text style={styles.title}>{sent ? "رمز التحقق" : `دخول ${entry}`}</Text>
-          <View style={styles.entries}>{["العملاء", "الإدارة", "المشرفين", "الشركاء"].map(label => <Pressable key={label} accessibilityRole="button" accessibilityState={{ selected: entry === label }} onPress={() => setEntry(label)} style={[styles.entry, entry === label && styles.entryActive]}><Text style={[styles.entryText, entry === label && styles.entryTextActive]}>{label}</Text></Pressable>)}</View>
+          <View style={styles.entries}>{["العملاء", "الإدارة", "المشرفين", "الشركاء", "خدمة العملاء"].map(label => <Pressable key={label} accessibilityRole="button" accessibilityState={{ selected: entry === label }} onPress={() => setEntry(label)} style={[styles.entry, entry === label && styles.entryActive]}><Text style={[styles.entryText, entry === label && styles.entryTextActive]}>{label}</Text></Pressable>)}</View>
           <Text style={styles.help}>{sent ? "أدخل الرمز المرسل إلى واتساب. صلاحيته ٥ دقائق." : "ادخل برقمك المسجل. تحدد صلاحيات حسابك اللوحة المتاحة لك."}</Text>
           <TextInput value={phone} onChangeText={value => { setPhone(value); setSent(false); setCode(""); }} placeholder="رقم الجوال" placeholderTextColor="#9B8C91" style={styles.input} textAlign="right" keyboardType="phone-pad" editable={!busy && !sent} accessibilityLabel="رقم الجوال" autoComplete="tel" />
           {sent ? <TextInput value={code} onChangeText={value => setCode(normalizeDigits(value))} placeholder="رمز التحقق المكون من ٦ أرقام" placeholderTextColor="#9B8C91" style={styles.input} textAlign="right" keyboardType="number-pad" maxLength={6} textContentType="oneTimeCode" autoComplete="sms-otp" accessibilityLabel="رمز التحقق" /> : null}

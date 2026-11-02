@@ -71,7 +71,7 @@ assert.match(app, /line\.split\(\/\[,،\]\//, 'Arabic and English guest separato
 assert.match(app, /N\.canvas/, 'host must use shared invitation renderer');
 assert.match(app, /محفوظ تلقائيًا/, 'draft progress is visible');
 assert.match(app, /hasSavedDraft/, 'unfinished journey can be resumed');
-assert.ok(app.indexOf("localStorage.setItem('noortoonaOwner'") < app.indexOf("fetch('/api/guests'"), 'owner access must be preserved before guest import');
+assert.ok(app.indexOf("localStorage.setItem('noortoonaOwner'") < app.indexOf("H.api('/api/guests'"), 'owner access must be preserved before guest import');
 assert.match(guestJs, /window\.NOORTOONA\.canvas/, 'guest must use shared invitation renderer');
 assert.match(guestJs, /HALA_V6_SCHEMA.*experienceFor/, 'guest RSVP behavior comes from invitation type');
 assert.match(app, /applyTypeExperience/, 'builder applies per-type invitation defaults');
@@ -106,7 +106,8 @@ assert.match(whatsapp, /message_status|whatsapp|template/i, 'WhatsApp sending re
 assert.match(netlifyConfig, /from = "\/i\/\*"[\s\S]*to = "\/guest\.html\?code=:splat"/, 'unique invitation route');
 assert.match(netlifyConfig, /from = "\/dashboard"[\s\S]*to = "\/dashboard\.html"/, 'dashboard route');
 assert.match(app, /requestSupervisor/, 'builder supports optional event supervisor');
-assert.match(app, /HALA_AUTH.*ensureLogin/, 'event creation requires a verified phone account');
+assert.match(app, /H\.api\('\/api\/bookings'/, 'booking must be persisted before showing success');
+assert.doesNotMatch(app, /HALA_AUTH.*ensureLogin/, 'prebooking does not require WhatsApp OTP');
 assert.match(indexHtml, /account\.js/, 'public site loads phone account experience');
 assert.match(accountJs, /auth\/otp\/request/, 'phone login requests OTP');
 assert.match(accountJs, /auth\/otp\/verify/, 'phone login verifies OTP');
