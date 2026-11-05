@@ -1,12 +1,12 @@
 # HALA — Meta WhatsApp Cloud API integration handoff (2 Nov 2026)
 
-This branch prepares **booking notifications only**. Existing invitation and OTP traffic remains on 360dialog. No Meta account, number, template, credential, subscription, or production deployment was changed by this branch.
+This branch prepares **booking notifications** for Meta Cloud API. HALA uses its existing 360dialog transport for invitations and OTP.
 
 ## Identity and onboarding
 
 | Purpose | Value |
 | --- | --- |
-| Cloud API sending phone | Dedicated HALA sender configured in Netlify |
+| Cloud API sending phone | Dedicated HALA sender active in the WhatsApp Business app, with Cloud API registration pending |
 | Desired display name | HALA (subject to Meta review) |
 | Customer service and booking alert recipient | +966532763736 |
 | Website | https://halainvites.com |
@@ -15,7 +15,9 @@ This branch prepares **booking notifications only**. Existing invitation and OTP
 | Time zone | Asia/Riyadh |
 | Brand | Use approved repository assets in assets/brand/; do not substitute an approximate logo |
 
-Meta Business/Developers was not signed in from the available browser. The account owner should open https://business.facebook.com/ on local Safari in Saudi Arabia, select HALA's existing business portfolio, inspect WhatsApp Accounts and any 360dialog ownership, and only then add the dedicated sending number. If the number is already used in WhatsApp, check the supported migration or coexistence route before changing its registration. Complete phone ownership and two-step verification **inside Meta**. Do not provide a login password, SMS code, PIN, access token, or app secret in a chat or issue.
+The account owner created the HALA app under Noortoona in Meta for Developers. Meta returned error `2494064` in the direct phone registration flow because the dedicated number is already registered in the WhatsApp Business app. The app on the owner's iPhone shows the Business Platform connection screen. That screen scans the QR code issued by an eligible Embedded Signup flow for an existing WhatsApp Business app number. Use Coexistence to keep the number in the app. The owner can skip chat history sharing for this booking-alert integration. [Meta's Embedded Signup overview](https://www.postman.com/meta/whatsapp-business-platform/overview)
+
+The Netlify site currently uses the 360dialog sandbox. A live channel and its billing are still unverified. Review the existing WhatsApp account and partner setup before starting a live Coexistence flow. Once the correct channel is ready, the owner should complete the QR scan and any verification on the iPhone. Enter credentials only on the corresponding provider or hosting platform.
 
 ## Message templates to submit for approval
 
@@ -71,7 +73,7 @@ After review/deployment, set Meta's callback to `https://halainvites.com/api/wha
 ## Operational semantics
 
 - A booking is committed before any provider request; its internal notice and WhatsApp `pending_setup` outbox row are stored transactionally.
-- Exactly one dispatch attempt is claimed per booking. API acceptance with a message ID yields `queued`; authenticated status events can advance it to `sent`, `delivered`, `read`, or `failed`. Timeout is `DISPATCH_UNCERTAIN` and is not automatically retried.
+- Exactly one dispatch attempt is claimed per booking. The admin panel shows `queued` with a provider message ID as accepted by the provider. Authenticated status events can advance it to `sent`, `delivered`, `read`, or `failed`. Timeout is `DISPATCH_UNCERTAIN` and is not automatically retried.
 - The admin panel reads actual outbox and booking rows from the database; the customer gets the booking reference irrespective of WhatsApp outcome.
 - The email integration for bookings@halainvites.com is **not active or tested**. Do not label an email as delivered until a verified mail provider and a separate email outbox are implemented.
 - Test end-to-end with an authorized booking and the authorized recipient **after** number registration and template approval. Confirm the sender Phone Number ID, API response ID, signed callback, database status, and receipt on the recipient device. The local tests use synthetic credentials and do not deliver real messages.
