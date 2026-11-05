@@ -11,7 +11,7 @@ export function metaBookingConfig(env, recipient, context) {
       !/^v\d+\.\d+$/.test(version) || !/^\d{5,30}$/.test(phoneId) ||
       !/^[a-z][a-z0-9_]{0,511}$/.test(template) ||
       !env('META_WA_ACCESS_TOKEN') || !env('META_WA_APP_SECRET') ||
-      !env('META_WA_VERIFY_TOKEN') || sender !== '966510654663' ||
+      !env('META_WA_VERIFY_TOKEN') || !/^9665\d{8}$/.test(sender) ||
       !/^9665\d{8}$/.test(recipient) || sender === recipient ||
       !(context === 'production' || context === 'deploy-preview' && env('HALA_BOOKING_NOTIFICATIONS_PREVIEW') === 'true')) return null;
   return { apiBase: `https://graph.facebook.com/${version}/${phoneId}`, phoneId, template, token: env('META_WA_ACCESS_TOKEN') };

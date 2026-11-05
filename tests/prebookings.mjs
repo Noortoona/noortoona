@@ -117,10 +117,19 @@ await test('prebooking persistence, authorization and transactional notification
   const calls=providerCalls;env.D360_SENDER_PHONE='966532763736';const response=await json('bookings','/api/bookings',payload(await event()));assert.equal(response.status,201);assert.equal(response.data.notification.status,'pending_setup');assert.equal(providerCalls,calls);
  });
  await t.test('Meta transport requires separate approved configuration and authentic signed delivery events',async()=>{
-  env.HALA_BOOKING_WA_PROVIDER='meta';env.META_WA_GRAPH_VERSION='v24.0';env.META_WA_PHONE_NUMBER_ID='123456789012345';env.META_WA_SENDER_PHONE='966510654663';
+  env.HALA_BOOKING_WA_PROVIDER='meta';env.META_WA_GRAPH_VERSION='v24.0';env.META_WA_PHONE_NUMBER_ID='123456789012345';
   env.META_WA_ACCESS_TOKEN='synthetic-meta-token';env.META_WA_APP_SECRET='synthetic-meta-secret';env.META_WA_VERIFY_TOKEN='synthetic-verify-token';
   env.META_WA_BOOKING_TEMPLATE='hala_new_booking_admin_ar';env.META_WA_BOOKING_TEMPLATE_APPROVED='true';providerBehavior='accepted';
-  const before=providerCalls;const response=await json('bookings','/api/bookings',payload(await event()));
+  const before=providerCalls;
+  for (const sender of ['', '966532763736']) {
+   env.META_WA_SENDER_PHONE=sender;
+   const pending=await json('bookings','/api/bookings',payload(await event()));
+   assert.equal(pending.status,201);
+   assert.equal(pending.data.notification.status,'pending_setup');
+   assert.equal(providerCalls,before);
+  }
+  env.META_WA_SENDER_PHONE='966500000001';
+  const response=await json('bookings','/api/bookings',payload(await event()));
   assert.equal(response.status,201);assert.equal(response.data.notification.status,'queued');assert.equal(providerCalls,before+1);
   assert.equal(lastProviderRequest.url,'https://graph.facebook.com/v24.0/123456789012345/messages');
   assert.equal(lastProviderRequest.options.headers.authorization,'Bearer synthetic-meta-token');

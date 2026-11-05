@@ -6,7 +6,7 @@ This branch prepares **booking notifications only**. Existing invitation and OTP
 
 | Purpose | Value |
 | --- | --- |
-| Cloud API sending phone | +966510654663 |
+| Cloud API sending phone | Dedicated HALA sender configured in Netlify |
 | Desired display name | HALA (subject to Meta review) |
 | Customer service and booking alert recipient | +966532763736 |
 | Website | https://halainvites.com |
@@ -56,7 +56,7 @@ HALA_BOOKING_NOTIFICATION_RECIPIENT_CONFIRMED=true
 META_WA_BOOKING_TEMPLATE_APPROVED=true
 META_WA_GRAPH_VERSION=<supported Graph version, for example v24.0 after checking Meta>
 META_WA_PHONE_NUMBER_ID=<sending Phone Number ID, numeric>
-META_WA_SENDER_PHONE=966510654663
+META_WA_SENDER_PHONE=<approved sender in international format, digits only>
 META_WA_ACCESS_TOKEN=<system-user token with whatsapp_business_messaging permission>
 META_WA_APP_SECRET=<app secret for webhook HMAC verification>
 META_WA_VERIFY_TOKEN=<random secret chosen for webhook challenge>
@@ -64,7 +64,7 @@ META_WA_BOOKING_TEMPLATE=hala_new_booking_admin_ar
 META_WA_TEMPLATE_LANGUAGE=ar
 ```
 
-Do not paste actual secrets in a repository, PR, chat, or logs. The admin can update the recipient in HALA's booking settings; confirm the saved recipient is the dedicated customer-service phone before enabling. Keep `HALA_BOOKING_NOTIFICATIONS_PREVIEW` unset unless testing intentionally in an isolated preview. Production credentials must not be put in a preview context. Existing `D360_*` variables remain for invitations and OTP. Check the current 360dialog contract and actual WABA ownership before changing or cancelling anything.
+Do not paste actual secrets in a repository, PR, chat, or logs. Verify in Meta that the configured Phone Number ID belongs to the approved sender. Set the sender as a Functions environment variable without putting its value in the repository. The admin can update the recipient in HALA's booking settings; confirm the saved recipient is the dedicated customer-service phone before enabling. Keep `HALA_BOOKING_NOTIFICATIONS_PREVIEW` unset unless testing intentionally in an isolated preview. Production credentials must not be put in a preview context. Existing `D360_*` variables remain for invitations and OTP. Check the current 360dialog contract and actual WABA ownership before changing or cancelling anything.
 
 After review/deployment, set Meta's callback to `https://halainvites.com/api/whatsapp/webhook`, use the same verify token, and subscribe to the `messages` webhook field. The endpoint responds to Meta's GET challenge and authenticates POST callbacks with `X-Hub-Signature-256` computed on the raw body using the app secret. Configure Meta's subscription on the correct WABA and verify the callback in the Meta console. The existing D360 bearer-authenticated callback remains available.
 
