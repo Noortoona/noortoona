@@ -1,0 +1,57 @@
+name: Hala Android Preview APK
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - hala-mobile
+    paths:
+      - ".github/workflows/hala-android-preview.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  android-preview:
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    env:
+      CI: "1"
+      EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
+    defaults:
+      run:
+        working-directory: mobile
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "24.19.0"
+          cache: npm
+          cache-dependency-path: mobile/package-lock.json
+      - name: Validate Expo token
+        run: test -n "$EXPO_TOKEN"
+      - uses: expo/expo-github-action@v8
+        with:
+          eas-version: "24.10.0"
+          token: ${{ secrets.EXPO_TOKEN }}
+      - name: Install and check
+        run: |
+          npm ci
+          npm run typecheck
+          npx expo-doctor@1.20.4
+      - name: Build Android internal preview
+        run: |
+          eas build --platform android --profile preview --non-interactive --wait --json --message "Hala contacts Android preview $GITHUB_SHA" > android-build.json
+          node --input-type=module <<'NODE'
+          import { readFileSync, appendFileSync } from 'node:fs';
+          const builds = JSON.parse(readFileSync('android-build.json','utf8'));
+          const build = Array.isArray(builds) ? builds[0] : builds;
+          if (build?.status !== 'FINISHED' || !build?.artifacts?.buildUrl) throw new Error('Android build did not finish with an APK URL');
+          appendFileSync(process.env.GITHUB_STEP_SUMMARY, `Android preview: [Download build](${build.artifacts.buildUrl})\n`);
+          NODE
+      - name: Save build metadata
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: hala-android-preview-result
+          path: mobile/android-build.json
+          if-no-files-found: ignore
