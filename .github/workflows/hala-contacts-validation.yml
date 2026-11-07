@@ -1,0 +1,33 @@
+name: Hala Contacts Feature Validation
+on:
+  push:
+    branches:
+      - feature/hala-phone-contact-guests-20261107
+  pull_request:
+    branches:
+      - hala-mobile
+    paths:
+      - "mobile/**"
+      - ".github/workflows/hala-contacts-validation.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    name: Validate mobile contacts feature
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "24.19.0"
+      - name: Check npm lockfile
+        working-directory: mobile
+        run: npm ci --ignore-scripts
+      - name: Typecheck
+        working-directory: mobile
+        run: npm run typecheck
+      - name: Expo Doctor
+        working-directory: mobile
+        run: npx expo-doctor@1.20.4
