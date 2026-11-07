@@ -1,12 +1,25 @@
+import { weddingTemplates } from "./weddingTemplates.ts";
 export type OccasionKey = "wedding" | "milkah" | "engagement" | "graduation" | "birthday" | "newborn" | "meeting" | "conference" | "formal" | "activity" | "custom" | "opening" | "honoring" | "national" | "condolence";
 export type ActivityKey = "padel" | "football" | "camp" | "chalet" | "trip" | "dinner" | "activityCustom";
 export type AtlasKey = "activities" | "social" | "events" | "formal";
 
 export type TemplateOption = {
   name: string;
-  atlas: AtlasKey;
-  row: number;
-  col: number;
+  id?: string;
+  version?: number;
+  slug?: string;
+  collection?: string;
+  tags?: string[];
+  curated?: boolean;
+  font?: string;
+  textColors?: string[];
+  alignments?: string[];
+  customBackground?: boolean;
+  thumbnail?: string;
+  background?: string;
+  atlas?: AtlasKey;
+  row?: number;
+  col?: number;
   accent: string;
 };
 
@@ -14,7 +27,7 @@ const make = (atlas: AtlasKey, row: number, names: string[]): TemplateOption[] =
   names.map((name, col) => ({ name, atlas, row, col, accent: col === 3 ? "#9A7434" : "#E3BD64" }));
 
 export const templateCatalog: Record<string, TemplateOption[]> = {
-    wedding:make('social',2,['ليلة كحلية','حديقة اللؤلؤ','أقواس ذهبية','مخمل ملكي']),
+    wedding:[...weddingTemplates,...make('social',2,['ليلة كحلية','حديقة اللؤلؤ','أقواس ذهبية','مخمل ملكي'])],
     milkah:make('social',3,['ليلة الملكة','خاتم الوعد','لؤلؤة','مخمل ملكي']),
     engagement:make('social',3,['وعد من ذهب','ورد الخطوبة','زمردة','نقاء']),
     graduation:make('events',0,['قبعة النجاح','ثمرة السنين','منصة المجد','بداية']),

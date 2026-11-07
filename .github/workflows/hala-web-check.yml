@@ -15,7 +15,7 @@ concurrency:
 jobs:
   verify:
     runs-on: ubuntu-24.04
-    timeout-minutes: 10
+    timeout-minutes: 20
     steps:
       - uses: actions/checkout@v5
       - uses: actions/setup-node@v5
@@ -27,8 +27,10 @@ jobs:
       - name: Build isolated public website
         run: npm run build
       - name: Install browser for invitation journeys
-        run: npx playwright install --with-deps chromium
+        run: npx playwright install --with-deps chromium webkit
       - name: Verify mocked invitation and guest UI journeys
         run: npm run test:e2e
+      - name: Verify wedding journeys on Chromium and WebKit
+        run: npm run test:e2e:wedding
       - name: Type-check Netlify functions
         run: npx tsc --noEmit --skipLibCheck --allowJs false --module nodenext --moduleResolution nodenext --target ES2022 --lib ES2022,DOM netlify/functions/*.mts

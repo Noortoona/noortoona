@@ -80,7 +80,7 @@ test('closing phone OTP resolves the pending create/login operation', async () =
 });
 
 test('public builder replaces fallback prices, template visibility and service text from the actual catalog API response', async () => {
-  const prices={innerHTML:''}, templates={innerHTML:''}, services={innerHTML:''};
+  const prices={innerHTML:''}, templates={innerHTML:'',classList:{add(){}},querySelectorAll:()=>[],querySelector:()=>null}, services={innerHTML:''};
   const elements={ '#builderModal':{classList:{contains:()=>false}}, '#builderBody':{}, '#nextBtn':{}, '#prevBtn':{}, '#priceGrid':prices, '#templateGrid':templates, '#services .service-grid':services };
   const fixture={version:1,packages:[{code:'hala_basic',name:'هلا الأساسية',amount:16900,guestLimit:120,currency:'SAR'},{code:'hala_plus',name:'هلا بلس',amount:35900,guestLimit:260,currency:'SAR'},{code:'hala_premium',name:'هلا بريميوم',amount:70900,guestLimit:510,currency:'SAR'}],hiddenTemplateKeys:['wedding:ليلة كحلية'],services:[{id:'test',name:'خدمة خاصة',description:'<script>unsafe</script>',enabled:true}]};
   const requested=[];

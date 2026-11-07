@@ -87,6 +87,7 @@ test('mobile activity/milkah payload and template artwork match the actual web g
     for (const [index, option] of options.entries()) {
       const expected = web.catalog[key][index];
       assert.equal(option.name, expected.name, key);
+      if(option.version===2){assert.equal(option.id,expected.id);assert.equal(option.background,expected.background);assert.deepEqual(option.tags,Array.from(expected.tags));continue;}
       assert.ok(expected.atlas.endsWith(`atlas-${{ activities: 'activities-a', social: 'social', events: 'events', formal: 'formal' }[option.atlas]}.webp`));
       assert.equal(expected.position, `${['0%', '33.333%', '66.667%', '100%'][option.col]} ${['0%', '25%', '50%', '75%', '100%'][option.row]}`);
     }

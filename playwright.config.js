@@ -3,6 +3,8 @@ const port=process.env.PLAYWRIGHT_TEST_PORT||'4173';
 
 export default defineConfig({
   testDir: './tests/e2e',
+  testIgnore: '**/wedding-v2.spec.js',
+  outputDir:'test-results/legacy',
   timeout: 30_000,
   fullyParallel: false,
   reporter: [['line']],

@@ -1,12 +1,13 @@
 import { cp, lstat, mkdir, readdir, rm } from 'node:fs/promises';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { execFileSync } from 'node:child_process';
 
 export const publicFiles = [
   'index.html', 'admin.html', 'customer.html', 'dashboard.html', 'guest.html', 'partner.html', 'supervisor.html',
   'account.js', 'admin.js', 'app.js', 'customer.js', 'dashboard.js', 'web-contacts.js', 'guest.js', 'guest-insights.js',
   'invitation-renderer.js', 'invitation-schemas.js', 'partner.js', 'supervisor.js',
-  'styles.css', 'v2.css', 'analytics.js', 'booking-client.js', 'booking.html', 'booking.js', 'prelaunch.js',
+  'styles.css', 'v2.css', 'wedding.css', 'analytics.js', 'booking-client.js', 'booking.html', 'booking.js', 'prelaunch.js',
 ];
 
 async function assertRegularTree(path) {
@@ -33,5 +34,6 @@ export async function buildStatic(sourceRoot = resolve(dirname(fileURLToPath(imp
 }
 
 if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
+  execFileSync(process.execPath,[fileURLToPath(new URL('./sync-wedding-templates.mjs',import.meta.url)),'--check'],{stdio:'inherit'});
   console.log(`Static website built: ${await buildStatic()}`);
 }
