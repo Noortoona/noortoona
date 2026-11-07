@@ -1,4 +1,5 @@
-// Canonical static template IDs shared with existing invitation art.
+import weddingTemplates from '../../../shared/wedding-templates.json' with {type:'json'};
+// Legacy keys stay unchanged. New metadata comes from one canonical manifest.
 export const TEMPLATE_KEYS = [
   {
     "key": "wedding:ليلة كحلية",
@@ -419,5 +420,6 @@ export const TEMPLATE_KEYS = [
     "key": "activityCustom:سينما البر",
     "group": "activityCustom",
     "name": "سينما البر"
-  }
+  },
+  ...weddingTemplates.map(t=>({key:'wedding:'+t.name,group:'wedding',name:t.name,id:'wedding-v2-'+t.slug}))
 ];

@@ -1,0 +1,186 @@
+/* HALA Wedding V2. Local OFL fonts; no change to platform brand tokens. */
+@font-face{font-family:Amiri;src:url('/assets/fonts/Amiri-Regular.woff2') format('woff2');font-display:swap;font-weight:400}
+@font-face{font-family:'Aref Ruqaa';src:url('/assets/fonts/ArefRuqaa-Regular.woff2') format('woff2');font-display:swap;font-weight:400}
+@font-face{font-family:'Aref Ruqaa';src:url('/assets/fonts/ArefRuqaa-Bold.woff2') format('woff2');font-display:swap;font-weight:700}
+@font-face{font-family:Tajawal;src:url('/assets/fonts/Tajawal-Regular.woff2') format('woff2');font-display:swap;font-weight:400}
+@font-face{font-family:Tajawal;src:url('/assets/fonts/Tajawal-Medium.woff2') format('woff2');font-display:swap;font-weight:500}
+@font-face{font-family:Tajawal;src:url('/assets/fonts/Tajawal-Bold.woff2') format('woff2');font-display:swap;font-weight:700}
+
+/* Gallery. Only thumbnails are requested here. */
+#templateGrid.wedding-library{display:block}
+.wedding-filters{display:flex;flex-wrap:wrap;justify-content:center;gap:8px;margin:10px 0 18px}
+.wedding-filters button{min-height:44px;border:1px solid #C9C0B2;border-radius:24px;background:#FFFDF8;color:#423B31;padding:9px 18px;font:600 14px Tajawal,sans-serif;cursor:pointer;transition:background-color .16s,color .16s}
+.wedding-filters button.active{background:var(--ink,#0A0D13);border-color:var(--ink,#0A0D13);color:#F0D08A}
+.wedding-result-count{text-align:center;color:#655D53;font:400 13px Tajawal,sans-serif;margin:0 0 22px}
+.wedding-landing-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:28px 22px}
+.wedding-library .visual-template-grid{grid-template-columns:repeat(4,minmax(0,1fr));gap:25px 18px}
+.wedding-template-card{min-width:0;text-align:right;transform:none!important;position:relative;border-radius:18px;background:#FFFDF9!important;border:1px solid #E8E0D2!important;box-shadow:0 5px 18px #0A0D1308;overflow:hidden;padding:8px!important}
+.wedding-template-card.selected{border-color:#9A712A!important;box-shadow:0 0 0 2px #D3A44755}
+.wedding-template-card.selected .template-art{outline:none}
+.wedding-template-card .template-art{border-radius:12px;box-shadow:none}
+.wedding-card-copy{padding:12px 4px 4px}
+.wedding-card-copy h3{color:#1A2330;font:700 19px/1.5 'Aref Ruqaa',serif;margin:0;overflow-wrap:anywhere}
+.wedding-card-copy p{color:#655D53;font:400 12px Tajawal,sans-serif;margin:4px 0 12px}
+.wedding-card-actions{display:flex;flex-wrap:wrap;gap:7px}
+.wedding-card-actions button{flex:1 1 72px;min-height:44px;border:1px solid #C9C0B2;border-radius:9px;background:#FFFDF8;color:#38332E;padding:9px 5px;font:700 12px Tajawal,sans-serif;cursor:pointer}
+.wedding-card-actions button:last-child{background:#11151D;border-color:#11151D;color:#F0D08A}
+.wedding-template-card .recommended-tag{top:16px;right:16px;background:#F5E6BE;color:#41300D;box-shadow:none}
+.wedding-thumbnail{background:#F8F1E5!important;isolation:isolate;aspect-ratio:2/3}
+.wedding-thumbnail::after{display:none}
+.wedding-thumbnail picture,.wedding-thumbnail img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
+.wedding-thumbnail>span.thumbnail-specimen{position:absolute;inset:27% 12% 17%;display:flex;flex-direction:column;justify-content:center;align-items:center;gap:15px;text-align:center;color:#302A24;text-shadow:none;z-index:2}
+.thumbnail-specimen>small{color:inherit;font:400 9px Tajawal,sans-serif}
+.thumbnail-specimen>b{font:400 clamp(20px,2.3vw,34px)/1.8 Amiri,serif;display:flex;flex-direction:column;align-items:center;gap:2px}
+.thumbnail-specimen>b i{font:400 14px Amiri,serif;font-style:normal;color:#8A642E}
+.thumbnail-specimen>span{font:400 8px Tajawal,sans-serif;letter-spacing:1px}
+.thumbnail-specimen>em{font:400 26px Amiri,serif;font-style:normal}
+.wedding-thumbnail .thumbnail-status{position:absolute;inset:auto 6px 4px!important;padding:5px;background:#FFFDF9F2;border-radius:5px;color:#403A32!important;text-shadow:none;display:block!important;font:400 10px Tajawal,sans-serif;text-align:center}
+.wedding-thumbnail[data-image-state=loaded] .thumbnail-status{display:none!important}
+.wedding-thumbnail[data-tone=dark]{background:#101722!important}
+.wedding-thumbnail[data-tone=dark] .thumbnail-specimen{color:#FBF7EF}
+.wedding-thumbnail[data-tone=dark] .thumbnail-specimen i{color:#F0D08A}
+.wedding-thumbnail[data-composition=signature-monogram] .thumbnail-specimen{inset-block-start:9%;gap:10px}
+.wedding-thumbnail[data-composition=signature-monogram] .thumbnail-specimen>em{margin-bottom:16px}
+.wedding-thumbnail[data-composition=modern-minimal] .thumbnail-specimen{align-items:flex-start;text-align:right;inset-inline:16%}
+.wedding-thumbnail[data-composition=modern-minimal] .thumbnail-specimen>b{font-family:Tajawal,sans-serif;align-items:flex-start;font-size:25px;line-height:1.7}
+.wedding-thumbnail[data-composition=fine-touch] .thumbnail-specimen>b{flex-direction:row;flex-wrap:wrap;justify-content:center;font-family:'Aref Ruqaa',serif;font-size:22px;gap:6px}
+.wedding-thumbnail[data-composition=timeless] .thumbnail-specimen{inset-block-end:8%;justify-content:space-between}
+.wedding-thumbnail[data-composition=silk-romance] .thumbnail-specimen>b{font-family:'Aref Ruqaa',serif;font-size:29px}
+.wedding-thumbnail[data-composition=pearl-veil] .thumbnail-specimen{inset-block-start:35%;gap:9px}
+.wedding-thumbnail[data-composition=eternal-promise] .thumbnail-specimen{inset:30% 18% 20%;align-items:flex-start;text-align:right}
+.wedding-thumbnail[data-composition=eternal-promise] .thumbnail-specimen>b{align-items:flex-start}
+
+/* New invitations use document flow so long Arabic names never get cropped. */
+.invite-canvas.wedding-v2{--wedding-text:#302A24;--wedding-surface:#F8F1E5;box-sizing:border-box;position:relative;isolation:isolate;display:flex;flex-direction:column;height:auto!important;min-height:650px;width:100%;padding:32px 28px 25px;overflow:hidden;border-radius:26px;background:var(--wedding-surface);color:var(--wedding-text);text-align:center;font-family:var(--invite-font),serif;line-height:1.8}
+.wedding-background,.wedding-background img,.wedding-custom-background{position:absolute;z-index:-4;inset:0;width:100%;height:100%;object-fit:cover;object-position:center;background-size:cover;background-position:center}
+.wedding-custom-background{z-index:-3}
+.wedding-veil{position:absolute;inset:0;z-index:-2;background:linear-gradient(180deg,#FCFAF506,#FCFAF51A 40%,#FCFAF50A);pointer-events:none}
+.wedding-v2[data-tone=dark] .wedding-veil{background:linear-gradient(180deg,#10172215,#10172266 55%,#10172220)}
+.wedding-brand{min-height:42px;display:flex;justify-content:center;align-items:center;margin-bottom:18px}
+.wedding-brand img{width:74px;height:40px;object-fit:contain;max-width:100%}
+.wedding-copy{position:relative;display:flex;flex-direction:column;align-items:center;flex:1;justify-content:center;min-width:0;padding:20px 0;gap:0;text-align:inherit}
+.wedding-v2 .invite-type{display:block;align-self:inherit;border:0;padding:0;margin:0 0 14px;border-radius:0;font:500 13px/1.8 Tajawal,sans-serif;color:var(--wedding-text)}
+.wedding-v2 .invite-personal{margin:0 0 12px;color:var(--wedding-text);font:400 12px/1.8 Tajawal,sans-serif;overflow-wrap:anywhere}
+.wedding-v2 .invite-headline{color:var(--wedding-text);font:400 18px/1.9 var(--invite-font),serif;white-space:pre-wrap;overflow-wrap:anywhere;margin:3px 0 15px;max-width:100%}
+.wedding-v2 h1.wedding-names{width:100%;display:flex;flex-direction:column;gap:0;color:var(--wedding-text);font:400 37px/1.8 var(--invite-font),serif;text-shadow:none;margin:0 0 15px;padding:0;overflow-wrap:anywhere;word-break:normal}
+.wedding-v2 .wedding-names>span{font-size:inherit;display:block;max-width:100%;white-space:pre-wrap}
+.wedding-names>em{display:block;font:400 22px/1.6 Amiri,serif;color:var(--wedding-text);font-style:normal}
+.wedding-v2 .invite-host{color:var(--wedding-text);font:400 13px/1.9 Tajawal,sans-serif;overflow-wrap:anywhere;margin:0 0 8px}
+.wedding-v2 .invite-message{color:var(--wedding-text);font:400 13px/2 Tajawal,sans-serif;white-space:pre-wrap;overflow-wrap:anywhere;margin:0 0 13px;max-width:100%}
+.wedding-v2 .invite-rule{background:var(--invite-accent);height:1px;width:44px;flex-shrink:0;margin:12px auto 22px}
+.wedding-v2 .invite-meta{width:100%;display:grid;grid-template-columns:1fr 1fr;gap:14px 12px;font:400 13px/1.8 Tajawal,sans-serif;color:var(--wedding-text)}
+.wedding-v2 .invite-meta>span{color:inherit;display:flex;flex-direction:column;align-items:center;gap:2px;min-width:0}
+.wedding-v2 .invite-meta small{font-size:10px;color:inherit}
+.wedding-v2 .invite-meta b{color:inherit;font-weight:500;overflow-wrap:anywhere;max-width:100%}
+.wedding-v2 .wedding-location{grid-column:1/-1}
+.wedding-notes{color:var(--wedding-text);white-space:pre-wrap;overflow-wrap:anywhere;max-width:100%;font:400 11px/1.9 Tajawal,sans-serif;margin:18px 0 0}
+.wedding-footer{background:transparent;border:0;padding:18px 0 0;font:400 10px/1.8 Tajawal,sans-serif;letter-spacing:.3px;padding-top:18px;color:var(--wedding-text);margin-top:auto}
+.wedding-ornament{position:absolute;inset:19px;z-index:-1;pointer-events:none;border:1px solid var(--invite-accent);opacity:.45}
+.wedding-v2[data-ornaments=false] .wedding-ornament,.wedding-v2[data-ornaments=false] .invite-rule{display:none}
+.wedding-v2[data-custom-background=true] .wedding-copy{background:var(--wedding-surface);border-radius:12px;padding:22px 16px}
+.wedding-v2[data-custom-background=true] .wedding-brand,.wedding-v2[data-custom-background=true] .wedding-footer{background:var(--wedding-surface);border-radius:8px}
+.wedding-v2[data-align=right]{text-align:right}
+.wedding-v2[data-align=right] .wedding-copy{align-items:stretch}
+.wedding-v2[data-align=right] .invite-rule{margin-inline:0 auto}
+.wedding-v2[data-align=right] .invite-meta>span{align-items:flex-start}
+
+/* Twelve compositions. These change hierarchy, grouping and spacing, not only colour. */
+.wedding-v2[data-composition=ivory-royal] .wedding-ornament{outline:1px solid var(--invite-accent);outline-offset:-6px}
+.wedding-v2[data-composition=ivory-royal] .wedding-names{letter-spacing:.2px}
+.wedding-v2[data-composition=midnight-prestige]{padding-inline:30px;min-height:700px}
+.wedding-v2[data-composition=midnight-prestige] .wedding-copy{border-block:1px solid var(--invite-accent);padding-block:30px;margin-block:16px}
+.wedding-v2[data-composition=midnight-prestige] .wedding-names{font-size:40px;gap:8px}
+.wedding-v2[data-composition=midnight-prestige] .invite-type{letter-spacing:1px}
+.wedding-v2[data-composition=signature-monogram]{padding-top:26px}
+.wedding-v2[data-composition=signature-monogram] .wedding-copy{justify-content:flex-start;padding-top:0}
+.wedding-monogram{min-height:90px;display:flex;justify-content:center;align-items:center;gap:8px;margin:0 auto 23px;font:400 37px/1.8 Amiri,serif;color:var(--wedding-text)}
+.wedding-monogram i{font-size:20px;font-style:normal}
+.wedding-v2[data-composition=signature-monogram] .wedding-ornament{border:none}
+.wedding-v2[data-composition=signature-monogram] .wedding-names{font-size:34px;gap:0}
+.wedding-v2[data-composition=signature-monogram] .invite-meta{padding-top:8px}
+.wedding-v2[data-composition=grand-hall]{padding-inline:37px;min-height:700px}
+.wedding-v2[data-composition=grand-hall] .wedding-copy{padding-top:52px}
+.wedding-v2[data-composition=grand-hall] .wedding-ornament{inset:100px 24px 32px;border-radius:160px 160px 0 0;opacity:.2}
+.wedding-v2[data-composition=grand-hall] .wedding-names{font-size:39px}
+.wedding-v2[data-composition=pure-elegance]{padding:34px 31px 28px}
+.wedding-v2[data-composition=pure-elegance] .wedding-ornament{display:none}
+.wedding-v2[data-composition=pure-elegance] .invite-type{font-size:11px;letter-spacing:1px;margin-bottom:33px}
+.wedding-v2[data-composition=pure-elegance] .wedding-names{font-size:42px;margin-bottom:25px}
+.wedding-v2[data-composition=pure-elegance] .invite-meta{margin-top:8px}
+.wedding-v2[data-composition=modern-minimal]{padding:37px 32px;min-height:660px}
+.wedding-v2[data-composition=modern-minimal] .wedding-brand{justify-content:flex-start;margin-bottom:32px}
+.wedding-v2[data-composition=modern-minimal] .wedding-copy{border-inline-start:2px solid var(--invite-accent);padding-inline-start:18px;align-items:stretch;justify-content:flex-start;padding-top:12px}
+.wedding-v2[data-composition=modern-minimal] .invite-type{margin-bottom:22px;font-weight:700}
+.wedding-v2[data-composition=modern-minimal] .wedding-names{font-size:33px;gap:9px;font-weight:700;line-height:1.7;margin-block:12px 24px}
+.wedding-v2[data-composition=modern-minimal] .wedding-names>em{font-size:23px}
+.wedding-v2[data-composition=modern-minimal] .wedding-ornament{border:0}
+.wedding-v2[data-composition=modern-minimal] .invite-meta{margin-top:auto}
+.wedding-v2[data-composition=fine-touch]{padding-inline:26px}
+.wedding-v2[data-composition=fine-touch] .wedding-ornament{border:0}
+.wedding-v2[data-composition=fine-touch] .wedding-copy{gap:7px}
+.wedding-v2[data-composition=fine-touch] .wedding-names{display:flex;flex-direction:row;flex-wrap:wrap;justify-content:center;align-items:center;gap:8px;font-size:34px;margin-block:22px}
+.wedding-v2[data-composition=fine-touch] .wedding-names>span{flex:1 1 110px}
+.wedding-v2[data-composition=fine-touch] .invite-meta{display:flex;flex-direction:column;gap:12px;margin-top:14px}
+.wedding-v2[data-composition=timeless]{padding:32px 28px 40px;min-height:720px}
+.wedding-v2[data-composition=timeless] .wedding-copy{justify-content:flex-start;padding-top:28px}
+.wedding-v2[data-composition=timeless] .invite-type{margin-bottom:18px}
+.wedding-v2[data-composition=timeless] .wedding-names{font-size:43px;line-height:1.9;margin-bottom:25px}
+.wedding-v2[data-composition=timeless] .invite-meta{margin-top:auto;padding-top:40px}
+.wedding-v2[data-composition=timeless] .wedding-ornament{border:0}
+.wedding-v2[data-composition=silk-romance]{padding:35px 30px 30px;min-height:690px}
+.wedding-v2[data-composition=silk-romance] .wedding-names{font-size:45px;line-height:1.9;gap:4px}
+.wedding-v2[data-composition=silk-romance] .wedding-ornament{border:0}
+.wedding-v2[data-composition=silk-romance] .invite-meta{display:flex;flex-direction:column;gap:10px}
+.wedding-v2[data-composition=silk-romance] .invite-headline{margin-bottom:28px}
+.wedding-v2[data-composition=champagne-bloom]{padding:40px 37px 30px;min-height:710px}
+.wedding-v2[data-composition=champagne-bloom] .wedding-copy{padding-block:27px;gap:2px}
+.wedding-v2[data-composition=champagne-bloom] .wedding-ornament{border:1px solid var(--invite-accent);inset:62px 23px 35px;border-radius:160px 160px 12px 12px;opacity:.3}
+.wedding-v2[data-composition=champagne-bloom] .wedding-names{font-size:38px}
+.wedding-v2[data-composition=champagne-bloom] .invite-meta{padding-top:15px}
+.wedding-v2[data-composition=pearl-veil]{padding:38px 28px;min-height:710px}
+.wedding-v2[data-composition=pearl-veil] .wedding-copy{padding-top:58px;justify-content:flex-start}
+.wedding-v2[data-composition=pearl-veil] .invite-headline{margin-bottom:25px}
+.wedding-v2[data-composition=pearl-veil] .wedding-names{font-size:41px;gap:0}
+.wedding-v2[data-composition=pearl-veil] .invite-meta{margin-top:auto;padding-top:28px}
+.wedding-v2[data-composition=pearl-veil] .wedding-ornament{border:none;border-top:1px solid var(--invite-accent);inset:115px 34px auto;height:1px;opacity:.35}
+.wedding-v2[data-composition=eternal-promise]{padding:40px 37px 35px;min-height:700px}
+.wedding-v2[data-composition=eternal-promise] .wedding-copy{align-items:stretch;text-align:inherit;justify-content:center;padding-block:50px 30px}
+.wedding-v2[data-composition=eternal-promise] .wedding-ornament{border:0}
+.wedding-v2[data-composition=eternal-promise] .wedding-names{font-size:37px;gap:2px;margin-block:14px 23px}
+.wedding-v2[data-composition=eternal-promise] .invite-meta{border-top:1px solid var(--invite-accent);padding-top:20px;gap:15px}
+
+/* Editor and dialog. */
+.wedding-design-controls{gap:22px}
+.wedding-design-controls fieldset{min-width:0;border:0;border-top:1px solid #E8E0D2;padding:16px 0 0;display:grid;gap:14px;margin:0}
+.wedding-design-controls legend{font:700 15px Tajawal,sans-serif;color:#272B32;padding:0 0 8px}
+.wedding-design-controls label{display:grid!important;gap:7px;color:#383B40;min-width:0}
+.wedding-design-controls label>span{font:500 13px Tajawal,sans-serif}
+.wedding-design-controls input:not([type=checkbox]),.wedding-design-controls select,.wedding-design-controls textarea{box-sizing:border-box;width:100%;min-width:0;border:1px solid #CDC5B8;border-radius:10px;padding:11px;background:#FFFDF9;color:#222831;font:400 15px/1.5 Tajawal,sans-serif;min-height:44px}
+.wedding-design-controls textarea{resize:vertical}
+.wedding-design-controls small,.wedding-editor-note{color:#625C53;font:400 12px/1.8 Tajawal,sans-serif}
+.wedding-editor-heading{display:flex;flex-direction:column;gap:4px}
+.wedding-editor-heading>b{font:700 24px 'Aref Ruqaa',serif;color:#1A2330}
+.wedding-editor-pair{display:grid;grid-template-columns:1fr 1fr;gap:12px;min-width:0}
+.wedding-design-controls .wedding-ornament-toggle{display:flex!important;gap:10px;align-items:center;min-height:44px}
+.wedding-ornament-toggle input{width:20px;height:20px;accent-color:#11151D}
+.wedding-switcher summary{cursor:pointer;min-height:44px;display:flex;align-items:center;font:700 14px Tajawal,sans-serif;color:#353B45}
+.wedding-switcher .mini-template-switch{margin-top:12px}
+.wedding-switcher .mini-template{min-height:44px}
+.mini-template .wedding-thumbnail .thumbnail-specimen{display:none}
+.wedding-preview-toolbar{position:relative;z-index:1;display:flex;flex-direction:column;align-items:center;gap:10px;color:#FBF7EF;max-width:min(80vw,500px);margin:0 auto 14px}
+.wedding-preview-toolbar strong{font:700 20px 'Aref Ruqaa',serif}
+.wedding-preview-toolbar>div{display:flex;gap:6px}
+.wedding-preview-toolbar button{cursor:pointer;min-height:44px;padding:10px 20px;border:1px solid #F0D08A88;border-radius:10px;background:#11151D;color:#FBF7EF;font:700 13px Tajawal,sans-serif}
+.wedding-preview-toolbar button[aria-pressed=true],.wedding-preview-toolbar>[data-preview-select]{background:#F0D08A;color:#11151D}
+.journey-full-preview:has(.wedding-preview-toolbar){display:none;overflow-y:auto;align-content:start;padding:24px 14px 40px}
+.journey-full-preview.open:has(.wedding-preview-toolbar){display:grid}
+.journey-full-preview:has(.wedding-preview-toolbar) .full-preview-phone{max-height:none;overflow:visible;box-sizing:border-box;width:min(380px,calc(100vw - 35px))}
+.journey-full-preview.preview-full .full-preview-phone{width:min(520px,calc(100vw - 35px))}
+.journey-full-preview .wedding-v2{min-height:700px}
+.journey-full-preview>[data-preview-close]{z-index:3;position:fixed}
+.wedding-library button:focus-visible,.wedding-design-controls :is(button,input,select,textarea,summary):focus-visible,.journey-full-preview button:focus-visible{outline:3px solid #8A642E;outline-offset:4px}
+.journey-full-preview button:focus-visible{outline-color:#F0D08A}
+@media(max-width:900px){.wedding-landing-grid{grid-template-columns:repeat(3,minmax(0,1fr))}.wedding-library .visual-template-grid{grid-template-columns:repeat(3,minmax(0,1fr))}}
+@media(max-width:640px){.wedding-landing-grid,.wedding-library .visual-template-grid{grid-template-columns:repeat(2,minmax(0,1fr));gap:17px 10px}.wedding-filters{gap:7px;justify-content:flex-start}.wedding-filters button{padding-inline:13px;font-size:13px}.wedding-template-card{padding:5px!important}.wedding-card-copy{padding:10px 4px 4px}.wedding-card-copy h3{font-size:18px}.wedding-card-copy p{font-size:11px}.wedding-card-actions{gap:5px}.wedding-card-actions button{font-size:11px;flex-basis:60px}.wedding-template-card .recommended-tag{top:10px;right:10px;font-size:9px;padding:4px 7px}.thumbnail-specimen>b{font-size:26px}.wedding-thumbnail>span.thumbnail-specimen{gap:10px}.thumbnail-specimen>small{font-size:8px}.wedding-thumbnail[data-composition=modern-minimal] .thumbnail-specimen>b{font-size:22px}.wedding-design-controls{padding:17px}.wedding-preview-toolbar{max-width:75vw}.wedding-preview-toolbar strong{font-size:18px}.wedding-preview-toolbar button{padding-inline:13px}.invite-canvas.wedding-v2{border-radius:27px}}
+@media(max-width:360px){.wedding-card-actions button{flex-basis:100%}.wedding-card-copy h3{font-size:17px}.thumbnail-specimen>b{font-size:22px}.wedding-v2 h1.wedding-names{font-size:32px}.wedding-editor-pair{grid-template-columns:1fr}}
+@media(prefers-reduced-motion:reduce){.wedding-library *,.wedding-v2 *,.journey-full-preview *{animation:none!important;transition:none!important;scroll-behavior:auto!important}}

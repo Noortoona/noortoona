@@ -17,7 +17,7 @@ const admin=(await createSession('browser-admin')).token,staff=(await createSess
 const handlers=new Map();
 for(const name of(await readdir(new URL('../netlify/functions/',import.meta.url))).filter(n=>n.endsWith('.mts'))){const mod=await import('../netlify/functions/'+name);if(typeof mod.config?.path==='string')handlers.set(mod.config.path,mod.default);}
 const root=resolve('dist'),port=Number(process.env.PLAYWRIGHT_TEST_PORT||4173);
-const types={'.html':'text/html; charset=utf-8','.js':'text/javascript; charset=utf-8','.css':'text/css; charset=utf-8','.svg':'image/svg+xml','.png':'image/png','.jpg':'image/jpeg','.woff2':'font/woff2'};
+const types={'.html':'text/html; charset=utf-8','.js':'text/javascript; charset=utf-8','.css':'text/css; charset=utf-8','.svg':'image/svg+xml','.png':'image/png','.jpg':'image/jpeg','.webp':'image/webp','.ttf':'font/ttf','.woff2':'font/woff2'};
 createServer(async(req,res)=>{
  try{
   const url=new URL(req.url,`http://127.0.0.1:${port}`);

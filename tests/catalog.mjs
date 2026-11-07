@@ -45,7 +45,7 @@ await test('catalog handlers persist real configuration and preserve order entit
     assert.equal(response.status,200);const data=await response.json();assert.equal(data.packages[0].amount,44900);assert.equal(data.services.length,6);
     assert.equal((await handlers['admin-catalog'](request('/api/admin/catalog',{services:[]},customer))).status,403);
     assert.equal((await handlers['admin-catalog'](request('/api/admin/catalog',{services:[]}))).status,401);
-    const adminView=await handlers['admin-catalog'](request('/api/admin/catalog',undefined,admin));assert.equal((await adminView.json()).templateKeys.length,84);
+    const adminView=await handlers['admin-catalog'](request('/api/admin/catalog',undefined,admin));assert.equal((await adminView.json()).templateKeys.length,96);
   });
   await t.test('prices, services and template visibility persist and stale revision cannot overwrite them',async()=>{
     const response=await handlers['admin-catalog'](request('/api/admin/catalog',{expectedRevision:0,packages:[{code:'hala_basic',amount:19900,guestLimit:3}],hiddenTemplateKeys:['wedding:ليلة كحلية'],services:[{id:'venues',name:'قاعات هلا',description:'خدمة مخصصة',enabled:true},{id:'paused',name:'خدمة موقوفة',description:'',enabled:false}]},admin));

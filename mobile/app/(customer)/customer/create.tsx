@@ -64,6 +64,12 @@ export default function CreateEvent() {
   const [headline, setHeadline] = useState("لحظتك .. تبدأ بهلا");
   const [message, setMessage] = useState("وجودكم يكمل فرحتنا");
   const [font, setFont] = useState("ruqaa");
+  const [textColor,setTextColor]=useState("");
+  const [alignment,setAlignment]=useState("center");
+  const [eventTitle,setEventTitle]=useState("دعوة زفاف");
+  const [designNotes,setDesignNotes]=useState("");
+  const [ornaments,setOrnaments]=useState(true);
+  const [weddingFilter,setWeddingFilter]=useState("all");
   const [accent, setAccent] = useState("#E3BD64");
   const [image, setImage] = useState("");
   const [audio, setAudio] = useState("");
@@ -80,6 +86,7 @@ export default function CreateEvent() {
   const selected = useMemo(() => OCCASIONS.find(o => o.key === occasionKey)!, [occasionKey]);
   const activity = useMemo(() => ACTIVITIES.find(a => a.key === activityKey)!, [activityKey]);
   const currentTemplates = useMemo(() => availableTemplatesFor(occasionKey, activityKey, catalog.hiddenTemplateKeys), [occasionKey, activityKey, catalog.hiddenTemplateKeys]);
+  const visibleTemplates=occasionKey==="wedding"&&weddingFilter!=="all"?currentTemplates.filter(t=>weddingFilter==="curated"?t.curated:t.tags?.includes(weddingFilter)):currentTemplates;
   const packages = catalog.packages;
   useEffect(() => { void track("booking_started", "/mobile/customer/create"); }, []);
   useEffect(() => { if (step === 3) void track("package_viewed", "/mobile/customer/create", { packageCode }); }, [packageCode, step]);
@@ -92,6 +99,9 @@ export default function CreateEvent() {
     return () => { current = false; };
   }, []);
   useEffect(() => { if (currentTemplates[0] && !currentTemplates.some(item => item.name === template)) setTemplate(currentTemplates[0].name); }, [currentTemplates, template]);
+
+  const weddingDesign=selectedTemplate?.version===2;
+  useEffect(()=>{if(selectedTemplate?.version===2){setAccent(selectedTemplate.accent);setFont(selectedTemplate.font||"amiri");setTextColor(selectedTemplate.textColors?.[0]||"");setAlignment(selectedTemplate.alignments?.[0]||"center");}},[selectedTemplate?.id]);
 
   if (auth.loading) return null;
 
@@ -181,7 +191,7 @@ export default function CreateEvent() {
           package: pkg.name,
           requestSupervisor: false,
           supervisorPreference: requestSupervisor ? supervisorPreference : null,
-          design: { occasionKey, activityKey, headline, accent, font, image, audio, supervisorPreference: requestSupervisor ? supervisorPreference : "" },
+          design: { occasionKey, activityKey, templateId:selectedTemplate?.id, templateVersion:selectedTemplate?.version, textColor, align:alignment, eventTitle, notes:designNotes, ornaments, headline, accent, font, image:selectedTemplate?.customBackground===false?"":image, audio, supervisorPreference: requestSupervisor ? supervisorPreference : "" },
         }),
       }, auth.token);
 
@@ -275,23 +285,26 @@ export default function CreateEvent() {
           <>
             <Text style={styles.sectionTitle}>اختر الشكل المناسب</Text>
             <Text style={styles.help}>القوالب المعروضة مخصصة لنوع دعوتك الحالي.</Text>
+            {occasionKey==="wedding"?<View style={styles.activityChoices}>{[{key:"all",label:"جميع القوالب"},{key:"luxury",label:"فخم"},{key:"formal",label:"رسمي"},{key:"minimal",label:"بسيط"},{key:"romantic",label:"رومانسي"},{key:"curated",label:"مختارات هلا"}].map(f=><Pressable key={f.key} accessibilityRole="button" accessibilityState={{selected:weddingFilter===f.key}} onPress={()=>setWeddingFilter(f.key)} style={[styles.activityChoice,weddingFilter===f.key&&styles.activityChoiceActive]}><Text style={[styles.activityChoiceText,weddingFilter===f.key&&styles.activityChoiceTextActive]}>{f.label}</Text></Pressable>)}</View>:null}
             <View style={styles.templateGrid}>
-              {currentTemplates.map(t => (
-                <Pressable key={t.name} onPress={() => { setTemplate(t.name); void track("template_selected", "/mobile/customer/create", { template: t.name }); }} style={styles.templateCard}>
+              {visibleTemplates.map(t => (
+                <Pressable accessibilityRole="button" accessibilityLabel={`اختيار قالب ${t.name}`} accessibilityState={{selected:template===t.name}} key={t.id||t.name} onPress={() => { setTemplate(t.name); void track("template_selected", "/mobile/customer/create", { template: t.name }); }} style={styles.templateCard}>
                   <TemplateArtwork template={t} label={occasionKey === "activity" ? activity.label : selected.label} selected={template === t.name} />
                   <Text style={styles.templateName}>{t.name}</Text>
                 </Pressable>
               ))}
             </View>
+            {weddingDesign?<><Text style={styles.label}>عنوان المناسبة</Text><TextInput value={eventTitle} onChangeText={setEventTitle} style={styles.input} textAlign="right" maxLength={100}/><Text style={styles.label}>ملاحظات إضافية</Text><TextInput value={designNotes} onChangeText={setDesignNotes} style={styles.input} textAlign="right" multiline maxLength={500}/></>:null}
             <Text style={styles.label}>العبارة الرئيسية</Text>
             <TextInput value={headline} onChangeText={setHeadline} style={styles.input} textAlign="right" maxLength={70} />
             <Text style={styles.label}>نص الدعوة</Text>
             <TextInput value={message} onChangeText={setMessage} style={styles.input} textAlign="right" multiline maxLength={1000} />
             <Text style={styles.label}>الخط</Text>
-            <View style={styles.activityChoices}>{[{ key: "ruqaa", label: "رقعة" }, { key: "tajawal", label: "تجوال" }, { key: "serif", label: "كلاسيكي" }].map(option => <Pressable key={option.key} accessibilityRole="button" accessibilityState={{ selected: font === option.key }} onPress={() => setFont(option.key)} style={[styles.activityChoice, font === option.key && styles.activityChoiceActive]}><Text style={[styles.activityChoiceText, font === option.key && styles.activityChoiceTextActive]}>{option.label}</Text></Pressable>)}</View>
+            <View style={styles.activityChoices}>{[{key:"amiri",label:"أميري"},{ key: "ruqaa", label: "رقعة" }, { key: "tajawal", label: "تجوال" }, { key: "serif", label: "كلاسيكي" }].map(option => <Pressable key={option.key} accessibilityRole="button" accessibilityState={{ selected: font === option.key }} onPress={() => setFont(option.key)} style={[styles.activityChoice, font === option.key && styles.activityChoiceActive]}><Text style={[styles.activityChoiceText, font === option.key && styles.activityChoiceTextActive]}>{option.label}</Text></Pressable>)}</View>
             <Text style={styles.label}>اللون الرئيسي</Text>
-            <View style={styles.activityChoices}>{["#E3BD64", "#11151D", "#9A7434", "#246A4A", "#FFFFFF"].map(color => <Pressable key={color} accessibilityRole="button" accessibilityLabel={`اختيار اللون ${color}`} accessibilityState={{ selected: accent === color }} onPress={() => setAccent(color)} style={{ width: 42, height: 42, borderRadius: 21, backgroundColor: color, borderWidth: accent === color ? 4 : 1, borderColor: theme.colors.ink }} />)}</View>
-            <PrimaryButton label={image ? "تغيير الصورة / التصميم" : "رفع صورة أو تصميم خاص"} onPress={pickImage} loading={mediaBusy} secondary />
+            <View style={styles.activityChoices}>{(weddingDesign?[selectedTemplate.accent,"#8A642E","#71605B","#925A60"]:["#E3BD64", "#11151D", "#9A7434", "#246A4A", "#FFFFFF"]).filter((c,i,a)=>a.indexOf(c)===i).map(color => <Pressable key={color} accessibilityRole="button" accessibilityLabel={`اختيار اللون ${color}`} accessibilityState={{ selected: accent === color }} onPress={() => setAccent(color)} style={{ width: 42, height: 42, borderRadius: 21, backgroundColor: color, borderWidth: accent === color ? 4 : 1, borderColor: theme.colors.ink }} />)}</View>
+            {weddingDesign?<><Text style={styles.label}>لون النص</Text><View style={styles.activityChoices}>{selectedTemplate.textColors?.map(color=><Pressable key={color} accessibilityRole="button" accessibilityLabel={`لون النص ${color}`} accessibilityState={{selected:textColor===color}} onPress={()=>setTextColor(color)} style={{width:44,height:44,borderRadius:22,backgroundColor:color,borderWidth:textColor===color?4:1,borderColor:theme.colors.gold}}/>)}</View>{(selectedTemplate.alignments?.length||0)>1?<View style={styles.activityChoices}>{selectedTemplate.alignments?.map(a=><PrimaryButton key={a} label={a==="right"?"محاذاة اليمين":"محاذاة الوسط"} onPress={()=>setAlignment(a)} secondary/>)}</View>:null}<PrimaryButton label={ornaments?"إخفاء الزخارف الإضافية":"إظهار الزخارف الإضافية"} onPress={()=>setOrnaments(!ornaments)} secondary/></>:null}
+            {selectedTemplate?.customBackground!==false?<PrimaryButton label={image ? "تغيير الصورة / التصميم" : "رفع صورة أو تصميم خاص"} onPress={pickImage} loading={mediaBusy} secondary />:<Text style={styles.help}>يحتفظ هذا القالب بخلفيته الأصلية.</Text>}
             {image ? <><Image source={{ uri: image }} style={{ width: "100%", height: 220, borderRadius: 14 }} resizeMode="cover" /><PrimaryButton label="إزالة الصورة" onPress={() => setImage("")} secondary /></> : null}
             <PrimaryButton label={audio ? "تغيير موسيقى الدعوة" : "إضافة موسيقى (حتى 600 كيلوبايت)"} onPress={pickAudio} loading={mediaBusy} secondary />
             {audio ? <><Text style={styles.help}>{audioName} — يبدأ تشغيل الصوت باختيار الضيف.</Text><PrimaryButton label="إزالة الموسيقى" onPress={() => { setAudio(""); setAudioName(""); }} secondary /></> : null}
@@ -302,7 +315,7 @@ export default function CreateEvent() {
 
         {step === 3 ? (
           <>
-            <InvitationPreview data={{ occasionKey, activityKey, occasion: occasionForApi(occasionKey, selected.label), activityType: occasionKey === "activity" ? (activityKey === "activityCustom" ? customActivity : activity.label) : "", name1, name2, date, time, location, message, template: selectedTemplate?.name || "", design: { headline, accent, font, image, audio } }} />
+            <InvitationPreview data={{ occasionKey, activityKey, occasion: occasionForApi(occasionKey, selected.label), activityType: occasionKey === "activity" ? (activityKey === "activityCustom" ? customActivity : activity.label) : "", name1, name2, date, time, location, message, template: selectedTemplate?.name || "", design: { templateId:selectedTemplate?.id, templateVersion:selectedTemplate?.version, textColor, align:alignment, eventTitle, notes:designNotes, ornaments, headline, accent, font, image:selectedTemplate?.customBackground===false?"":image, audio } }} />
 
             <Text style={styles.sectionTitle}>اختر الباقة</Text>
             {packages.map(p => (
