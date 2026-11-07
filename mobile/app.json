@@ -44,6 +44,12 @@
           "resizeMode": "contain",
           "backgroundColor": "#0A0D13"
         }
+      ],
+      [
+        "expo-contacts",
+        {
+          "contactsPermission": "تحتاج هلا إلى الوصول لجهات الاتصال لاختيار المدعوين الذين تحددهم فقط."
+        }
       ]
     ],
     "extra": {
