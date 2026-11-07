@@ -235,7 +235,18 @@ function bookingQuery(){return new URLSearchParams(Object.entries(bookingFilters
 async function loadBookings(){
   try{
     const d=await api('/api/admin/bookings?'+bookingQuery());bookingRows=d.bookings||[];bookingStaff=d.staff||[];
-    document.getElementById('bookingNotifications').innerHTML=(d.notifications||[]).slice(0,20).map(note=>`<div class="booking-notice"><b>${esc(note.title||'حجز جديد')}</b> <span>${esc(note.booking_number||'')}</span> <small>${esc(note.kind==='internal'?(note.read_at?'تمت متابعة الإشعار':'إشعار داخلي جديد'):H().label(note.status||note.delivery_status||note.whatsapp_status))}</small></div>`).join('');
+    document.getElementById('bookingNotifications').innerHTML=(d.notifications||[]).slice(0,20).map(note=>{
+      const status = note.status || note.delivery_status || note.whatsapp_status;
+      let label;
+      if (note.kind === 'internal') {
+        label = note.read_at ? 'تمت متابعة الإشعار' : 'إشعار داخلي جديد';
+      } else if (status === 'queued' && note.message_id) {
+        label = 'مقبول لدى مزوّد واتساب';
+      } else {
+        label = H().label(status);
+      }
+      return `<div class="booking-notice"><b>${esc(note.title||'حجز جديد')}</b> <span>${esc(note.booking_number||'')}</span> <small>${esc(label)}</small></div>`;
+    }).join('');
     document.getElementById('bookingTable').className='booking-table-wrap';
     document.getElementById('bookingTable').innerHTML=bookingRows.length?`<table class="booking-table"><thead><tr><th>الحجز والعميل</th><th>المناسبة والخدمات</th><th>القيمة والمصدر</th><th>الحالة والمتابعة</th><th>التفاصيل</th></tr></thead><tbody>${bookingRows.map(b=>{
       const e=b.event_snapshot||{},c=b.contact||{};

@@ -9,7 +9,7 @@ async function handler(file) {
   let source = await readFile(new URL('../netlify/functions/'+file, import.meta.url), 'utf8');
   source=source.replace('import { getDatabase } from "@netlify/database";','const getDatabase = () => globalThis.__waDb;');
   source=source.replace('import { canManageEvent, getAuth, recordAudit } from "./_shared/auth.mjs";','const getAuth=async()=>globalThis.__waAuth; const canManageEvent=async()=>globalThis.__waManage; const recordAudit=async()=>{};');
-  for (const part of ['domain','whatsapp']) source=source.replace(`"./_shared/${part}.mjs"`, JSON.stringify(new URL(`../netlify/functions/_shared/${part}.mjs`,import.meta.url).href));
+  for (const part of ['domain','whatsapp','meta-whatsapp']) source=source.replace(`"./_shared/${part}.mjs"`, JSON.stringify(new URL(`../netlify/functions/_shared/${part}.mjs`,import.meta.url).href));
   return (await import('data:text/javascript;base64,'+Buffer.from(ts.transpileModule(source,{compilerOptions:{module:ts.ModuleKind.ESNext,target:ts.ScriptTarget.ES2022}}).outputText).toString('base64'))).default;
 }
 const send=await handler('whatsapp-send.mts'), webhook=await handler('whatsapp-webhook.mts');
