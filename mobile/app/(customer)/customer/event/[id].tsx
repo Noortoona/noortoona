@@ -5,6 +5,7 @@ import { api, ApiError } from "@/api";
 import { useRequireRole } from "@/roleGate";
 import { BrandHeader, Card, Empty, PrimaryButton, Screen, Stat } from "@/ui";
 import { theme } from "@/theme";
+import { PhoneContactsPicker, ImportedGuest, normalizeGuestPhone } from "@/PhoneContactsPicker";
 
 type Guest = {
   id: string; name: string; phone?: string; rsvp_status?: string; checked_in_at?: string;
@@ -82,6 +83,29 @@ export default function CustomerEvent() {
     finally { setBusy(false); }
   }
 
+  async function importPhoneGuests(guests: ImportedGuest[]) {
+    if (!auth.token || !id) throw new Error("Session unavailable");
+    const known = new Set((data?.guests || []).map(g => normalizeGuestPhone(g.phone || "")).filter(Boolean));
+    let added = 0;
+    let failed = 0;
+    for (const guest of guests) {
+      const normalized = normalizeGuestPhone(guest.phone);
+      if (!guest.name.trim() || !normalized || known.has(normalized)) continue;
+      try {
+        await api("/api/guests", {
+          method: "POST",
+          body: JSON.stringify({ eventId: id, name: guest.name.trim(), phone: normalized }),
+        }, auth.token);
+        known.add(normalized);
+        added++;
+      } catch {
+        failed++;
+      }
+    }
+    await load();
+    Alert.alert("استيراد المدعوين", `تمت إضافة ${added} مدعو.${failed ? ` تعذرت إضافة ${failed}، يمكنك إعادة المحاولة.` : ""} لم يتم إرسال أي دعوة.`);
+  }
+
   async function sendInvite(guest: Guest) {
     if (!guest.phone) return Alert.alert("رقم الجوال مطلوب", "أضف رقم جوال للضيف قبل الإرسال.");
     setSending(guest.id);
@@ -141,6 +165,8 @@ export default function CustomerEvent() {
 
         <Card>
           <Text style={styles.cardTitle}>إضافة ضيف</Text>
+          <PhoneContactsPicker existingPhones={(data?.guests || []).map(g => g.phone || "")} onImport={importPhoneGuests} disabled={busy} />
+          <Text style={styles.billingHelp}>أو أضف الضيف يدويًا:</Text>
           <TextInput value={name} onChangeText={setName} style={styles.input} placeholder="اسم الضيف" textAlign="right" />
           <TextInput value={phone} onChangeText={setPhone} style={styles.input} placeholder="رقم الجوال" textAlign="right" keyboardType="phone-pad" />
           <PrimaryButton label="+ إضافة الضيف" onPress={addGuest} loading={busy} disabled={!name.trim()} />
