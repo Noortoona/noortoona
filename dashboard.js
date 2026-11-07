@@ -182,9 +182,9 @@ function render({event,guests}){
  ${insightsPanel(event,guests)}
  ${munasabatiPanel(event,guests)}
  ${activityPanel}
- <section class="dash-panel"><div class="panel-head"><div><h2>إدارة الضيوف</h2><p>أضف يدويًا أو استورد قائمة كاملة من Excel / CSV.</p></div><div class="panel-actions"><button id="importBtn" class="outline-btn dark-outline small-gold">⇧ استيراد Excel / CSV</button><button id="remindBtn" class="gold-btn small-gold">تذكير غير المستجيبين</button></div></div>
+ <section class="dash-panel"><div class="panel-head"><div><h2>إدارة الضيوف</h2><p>اختر المدعوين من جوالك أو أضفهم يدويًا أو من ملف.</p></div><div class="panel-actions">${window.HALA_WEB_CONTACTS?.supported()?'<button type="button" id="pickPhoneContactsBtn" class="gold-btn small-gold">☏ اختيار من جهات الاتصال</button>':''}<button type="button" id="importVCardBtn" class="outline-btn dark-outline small-gold">⇧ جهات الاتصال (VCF)</button><button id="importBtn" class="outline-btn dark-outline small-gold">⇧ استيراد Excel / CSV</button><button id="remindBtn" class="gold-btn small-gold">تذكير غير المستجيبين</button></div></div>
  <form id="guestForm" class="guest-form"><input name="name" placeholder="اسم الضيف" required><input name="phone" inputmode="tel" placeholder="رقم الجوال (اختياري)"><button class="gold-btn">+ إضافة ضيف</button></form>
- <div class="import-help"><span>صيغة الملف:</span> عمود للاسم، وعمود اختياري للجوال. نتعرف تلقائيًا على عناوين مثل <b>الاسم / Name</b> و <b>الجوال / Phone</b>.</div>
+ <div class="import-help"><span>من الهاتف:</span> إذا كان المتصفح يدعم الاختيار المباشر سيظهر زره. على الآيفون صدّر جهات الاتصال بصيغة VCF من تطبيق جهات الاتصال، ثم اختر الملف هنا. لا تُضاف الأسماء ولا تُرسل دعوات إلا بعد موافقتك.</div>\n <div class="import-help"><span>صيغة الملف:</span> عمود للاسم، وعمود اختياري للجوال. نتعرف تلقائيًا على عناوين مثل <b>الاسم / Name</b> و <b>الجوال / Phone</b>.</div>
  <div class="guest-tools"><label class="search-box"><span>⌕</span><input id="guestSearch" value="${esc(filters.q)}" placeholder="ابحث بالاسم أو الجوال"></label><select id="statusFilter"><option value="all">كل حالات الرد</option><option value="accepted" ${filters.status==='accepted'?'selected':''}>مؤكد</option><option value="maybe" ${filters.status==='maybe'?'selected':''}>ربما</option><option value="pending" ${filters.status==='pending'?'selected':''}>بانتظار الرد</option><option value="declined" ${filters.status==='declined'?'selected':''}>معتذر</option></select><select id="viewFilter"><option value="all">كل المشاهدات</option><option value="viewed" ${filters.view==='viewed'?'selected':''}>شاهد الدعوة</option><option value="unviewed" ${filters.view==='unviewed'?'selected':''}>لم يفتح</option></select><select id="arrivalFilter"><option value="all">كل حالات الدخول</option><option value="checked" ${filters.arrival==='checked'?'selected':''}>تم الدخول</option><option value="unchecked" ${filters.arrival==='unchecked'?'selected':''}>لم يصل</option></select><span class="result-count">${list.length} ضيف</span></div>
  <div class="table-wrap"><table><thead><tr><th>الضيف</th><th>الرد</th><th>المشاهدة</th><th>المرافقون</th>${isActivity?'<th>أسماء المرافقين</th><th>القطّة</th><th>الدفع</th>':'<th>الأطفال</th><th>ملاحظة</th>'}<th>واتساب</th><th>الإجراءات</th></tr></thead><tbody>${list.length?list.map(g=>{
    const names=parseCompanionNames(g.companion_names);
@@ -199,6 +199,11 @@ function render({event,guests}){
 function bind(event,guests){
  document.getElementById('scanBtn').onclick=openScanner; document.getElementById('refreshBtn').onclick=load; document.getElementById('guestForm').onsubmit=addGuest; document.getElementById('exportBtn').onclick=()=>exportCSV(event,guests); document.getElementById('remindBtn').onclick=()=>openReminderQueue(event,guests); document.getElementById('importBtn').onclick=()=>document.getElementById('bulkGuestFile').click();
  const fileInput=document.getElementById('bulkGuestFile'); fileInput.onchange=async e=>{const file=e.target.files?.[0]; if(file)await parseGuestFile(file); e.target.value=''};
+ const contactButton=document.getElementById('pickPhoneContactsBtn');
+ if(contactButton)contactButton.onclick=pickDeviceContacts;
+ const vcardInput=document.getElementById('contactVCardFile');
+ document.getElementById('importVCardBtn').onclick=()=>vcardInput.click();
+ vcardInput.onchange=async e=>{const file=e.target.files?.[0];if(file)await importVCardFile(file);e.target.value=''};
  document.getElementById('guestSearch').oninput=e=>{filters.q=e.target.value;render(dashboardData)};
  document.getElementById('statusFilter').onchange=e=>{filters.status=e.target.value;render(dashboardData)};
  document.getElementById('viewFilter').onchange=e=>{filters.view=e.target.value;render(dashboardData)};
@@ -345,6 +350,86 @@ function exportCSV(event,guests){
  const rows=guests.map(g=>isActivity?[g.name,g.phone||'',g.attendance_state==='waitlist'?'قائمة انتظار':statusLabel(g),g.viewed_at?'نعم':'لا',g.checked_in_at?'تم الدخول':'لم يصل',g.checked_in_at||'',g.companion_count||0,parseCompanionNames(g.companion_names).join('، '),g.share_total||0,paymentLabel(g),g.note||'',`${location.origin}/i/${g.code}`]:[g.name,g.phone||'',statusLabel(g),g.viewed_at?'نعم':'لا',g.checked_in_at?'تم الدخول':'لم يصل',g.checked_in_at||'',g.companion_count||0,g.children_count||0,g.note||'',`${location.origin}/i/${g.code}`]);
  const csv='\ufeff'+[headers,...rows].map(r=>r.map(csvCell).join(',')).join('\n'); const blob=new Blob([csv],{type:'text/csv;charset=utf-8'}); const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=`hala-${String(event.title||'guests').replace(/[^\p{L}\p{N}-]+/gu,'-')}.csv`;a.click();URL.revokeObjectURL(a.href);toast('تم تصدير قائمة الضيوف');
 }
+
+async function pickDeviceContacts(){
+ const button=document.getElementById('pickPhoneContactsBtn');
+ if(button?.disabled)return;
+ if(button)button.disabled=true;
+ try{
+  const contacts=await window.HALA_WEB_CONTACTS.pick();
+  previewContactCandidates('جهات الاتصال المختارة',contacts,true);
+ }catch(err){
+  if(err?.name!=='AbortError')toast(err?.message||'تعذر فتح جهات الاتصال. استخدم استيراد VCF بدلًا من ذلك.');
+ }finally{if(button)button.disabled=false}
+}
+async function importVCardFile(file){
+ if(file.size>12_000_000)return toast('ملف جهات الاتصال كبير. اختر ملفًا أصغر.');
+ try{
+  const contacts=window.HALA_WEB_CONTACTS.parseVCard(await file.text());
+  previewContactCandidates(file.name,contacts,false);
+ }catch{return toast('تعذر قراءة ملف VCF. تأكد من تصديره من جهات الاتصال.')}
+}
+function previewContactCandidates(source,candidates,preselected){
+ const contacts=window.HALA_WEB_CONTACTS.uniqueNewGuests(candidates,dashboardData?.guests||[],1000);
+ if(!contacts.length)return toast('لم نجد مدعوين جدد بأسماء وأرقام صالحة، أو جميع الأرقام موجودة مسبقًا.');
+ const old=document.getElementById('importModal');old?.remove();
+ const modal=document.createElement('div');
+ modal.id='importModal';modal.className='dash-modal';
+ modal.innerHTML=`<div class="dash-modal-card import-card contact-import-card">
+   <div class="modal-head"><div><span class="eyebrow dark">إضافة مدعوين من الهاتف</span>
+   <h3>${esc(source)}</h3><p>تم العثور على ${contacts.length} جهة اتصال جديدة. اختر الأشخاص الذين تريد إضافتهم إلى مناسبتك.</p>
+   </div><button class="modal-close" type="button" aria-label="إغلاق">×</button></div>
+   <input id="contactImportSearch" class="contact-import-search" type="search" placeholder="ابحث بالاسم أو الرقم" aria-label="البحث في جهات الاتصال">
+   <label class="contact-select-all"><input id="selectVisibleContacts" type="checkbox"> تحديد جميع النتائج المعروضة</label>
+   <div id="contactImportList" class="contact-import-list"></div>
+   <p id="contactImportCount" class="import-more" role="status"></p>
+   <div class="modal-actions"><button class="outline-btn dark-outline cancel-import" type="button">إلغاء</button>
+   <button class="gold-btn confirm-import" type="button">إضافة المدعوين المختارين</button></div>
+   <div class="import-progress hidden"><div><span></span></div><small>جاري إضافة المدعوين فقط، دون إرسال دعوات…</small></div>
+   <p class="import-help">معلومات جهات الاتصال تعالج داخل المتصفح؛ لن تُحفظ على هلا إلا الأسماء والأرقام التي تؤكد إضافتها.</p>
+ </div>`;
+ document.body.appendChild(modal);
+ const selected=new Set(preselected?contacts.map((_,i)=>i):[]);
+ const list=modal.querySelector('#contactImportList');
+ const search=modal.querySelector('#contactImportSearch');
+ const count=modal.querySelector('#contactImportCount');
+ const all=modal.querySelector('#selectVisibleContacts');
+ const submit=modal.querySelector('.confirm-import');
+ let filtered=[];
+ function renderList(){
+  const query=search.value.trim().toLowerCase();
+  filtered=contacts.map((person,index)=>({person,index})).filter(({person})=>(person.name+' '+person.phone).toLowerCase().includes(query));
+  list.innerHTML=filtered.map(({person,index})=>`<label class="contact-import-item">
+    <input type="checkbox" data-contact-index="${index}" ${selected.has(index)?'checked':''}>
+    <span><strong>${esc(person.name)}</strong><small dir="ltr">${esc(person.phone)}</small></span>
+   </label>`).join('')||'<p class="import-more">لا توجد نتائج مطابقة.</p>';
+  all.checked=filtered.length>0&&filtered.every(({index})=>selected.has(index));
+  count.textContent=`تم تحديد ${selected.size} من ${contacts.length} مدعو`;
+  submit.disabled=!selected.size;
+ }
+ list.onchange=e=>{
+  const index=Number(e.target?.dataset?.contactIndex);
+  if(!Number.isInteger(index)||index<0||index>=contacts.length)return;
+  if(e.target.checked)selected.add(index);else selected.delete(index);
+  renderList();
+ };
+ search.oninput=renderList;
+ all.onchange=()=>{
+  for(const {index} of filtered){if(all.checked)selected.add(index);else selected.delete(index)}
+  renderList();
+ };
+ const close=()=>modal.remove();
+ modal.querySelector('.modal-close').onclick=close;
+ modal.querySelector('.cancel-import').onclick=close;
+ modal.onclick=e=>{if(e.target===modal)close()};
+ submit.onclick=async()=>{
+  if(!selected.size)return;
+  const guests=contacts.filter((_,index)=>selected.has(index));
+  await bulkImportGuests(modal,guests);
+ };
+ renderList();
+}
+
 async function parseGuestFile(file){
  try{
   const rows=await readSpreadsheet(file); const parsed=rowsToGuests(rows);
