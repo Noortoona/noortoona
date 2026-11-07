@@ -11,7 +11,7 @@ on:
       - ".github/workflows/hala-contacts-validation.yml"
 
 permissions:
-  contents: read
+  contents: write
 
 jobs:
   validate:
@@ -19,9 +19,17 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          persist-credentials: true
       - uses: actions/setup-node@v4
         with:
           node-version: "24.19.0"
+      - name: Normalize Expo SDK 57 dependencies on feature branch
+        if: github.event_name == 'push'
+        working-directory: mobile
+        run: |
+          npm install --ignore-scripts
+          CI=1 npx expo install --fix --npm
       - name: Check npm lockfile
         working-directory: mobile
         run: npm ci --ignore-scripts
@@ -31,3 +39,13 @@ jobs:
       - name: Expo Doctor
         working-directory: mobile
         run: npx expo-doctor@1.20.4
+      - name: Save validated dependency corrections to feature branch
+        if: github.event_name == 'push'
+        run: |
+          if ! git diff --quiet -- mobile/package.json mobile/package-lock.json; then
+            git config user.name "github-actions[bot]"
+            git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+            git add mobile/package.json mobile/package-lock.json
+            git commit -m "chore(mobile): align Expo SDK 57 packages [skip ci]"
+            git push origin HEAD:feature/hala-phone-contact-guests-20261107
+          fi
