@@ -76,6 +76,14 @@ for(const [index,t]of designs.entries())test(`${t.name}: choose, personalize, re
   expect(errors).toEqual([]);
 });
 
+test('switching back to a legacy wedding template preserves the selected Arabic font',async({page})=>{
+  await startWedding(page);await page.locator('#builderBody [data-template="ملكي عاجي"]').click();await page.locator('#nextBtn').click();
+  await page.locator('#font').selectOption('amiri');await page.locator('#prevBtn').click();
+  await page.locator('#builderBody [data-template="ليلة كحلية"]').click();await page.locator('#nextBtn').click();
+  await expect(page.locator('#font')).toHaveValue('amiri');await expect(page.locator('.host-phone .invite-art-layer')).toBeVisible();
+  await page.locator('#nextBtn').click();await page.locator('#prevBtn').click();await expect(page.locator('#font')).toHaveValue('amiri');
+});
+
 test('gallery filters, image failures, keyboard focus, reduced motion and lazy image budget',async({page})=>{
   const originals=[];page.on('request',req=>{if(/\/wedding-v2\/[^/]+(?<!-thumb)(?<!-mobile)\.(?:webp|jpg)$/.test(req.url()))originals.push(req.url())});
   await page.addInitScript(()=>localStorage.setItem('halaAnalyticsConsent','no'));await page.goto('/');
