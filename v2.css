@@ -250,3 +250,24 @@ button.insight-card:hover, button.insight-card:focus-visible { border-color: #a9
 .lead-form{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px;margin:24px 0}.lead-form>label{display:grid;gap:8px;color:#FBF7EF}.lead-form input:not([type=checkbox]),.lead-form select,.lead-form textarea{width:100%;background:#0A0D13;color:#FBF7EF;border:1px solid #D3A44755;border-radius:12px;padding:12px;font:inherit}.lead-form .journey-check{display:flex;background:#0A0D13;border-color:#D3A44744;align-items:start}.lead-form input[type=checkbox]{flex:none;width:20px;height:20px;accent-color:#D3A447}.lead-form .journey-check,.lead-form>p,.lead-form>button{grid-column:1/-1}.lead-form p{margin:0;color:#B8B3A9}.lead-form>button{justify-self:start}.prelaunch-section h2{color:#F0D08A}.form-help{font-size:13px;line-height:1.8}
 .booking-admin-nav{display:flex;gap:12px;flex-wrap:wrap;margin-bottom:20px}.booking-admin-nav a{padding:12px 16px;border:1px solid #D3A44755;border-radius:12px;color:#F0D08A;text-decoration:none}.booking-table-wrap{overflow-x:auto}.booking-table{width:100%;min-width:850px;border-collapse:collapse;margin-top:20px;font-size:14px;text-align:right}.booking-table th{color:#F0D08A;background:#0A0D13;padding:14px}.booking-table td{padding:15px 12px;border-bottom:1px solid #D3A44722;vertical-align:top}.booking-table td>*{display:block;margin:5px 0;overflow-wrap:anywhere}.booking-table small{color:#B8B3A9}.booking-table a{color:#F0D08A}.followup-dialog{width:min(720px,94vw);max-height:90vh;overflow:auto;border:1px solid #D3A44766;border-radius:24px;background:#11151D;color:#FBF7EF;padding:24px}.followup-dialog::backdrop{background:#000B}.followup-dialog .lead-form{display:flex;flex-direction:column}.followup-dialog .panel-head{display:flex;justify-content:space-between;gap:16px}.followup-dialog input,.followup-dialog textarea,.followup-dialog select{color-scheme:dark}.followup-dialog .event-actions{display:flex;gap:10px;flex-wrap:wrap}.insight-list{list-style:none;padding:0}.insight-list li{display:flex;justify-content:space-between;gap:20px;border-bottom:1px solid #D3A44722;padding:10px 0}.insight-list b{color:#F0D08A}#bookingWorkspace .portal-panel{margin-bottom:24px}#bookingWorkspace input,#bookingWorkspace select{font:inherit;color-scheme:dark}
 @media(max-width:640px){.lead-form,.booking-details{grid-template-columns:1fr}.booking-admin-nav a{flex:1 1 100%;text-align:center}.booking-checkout .journey-form{grid-template-columns:1fr}.booking-success{padding:20px}.booking-success .event-actions>*{width:100%;text-align:center}.followup-dialog{padding:16px}.booking-admin-nav{gap:8px}}
+
+
+/* Guest picker: responsive phone contacts review, no external data is loaded. */
+.contact-import-card { max-width: 620px; width: min(94vw,620px); }
+.contact-import-search { width:100%; border:1px solid #decfc9; border-radius:12px; min-height:46px; padding:10px 14px; background:#fff; color:#30161d; font-family:inherit; margin-bottom:12px; box-sizing:border-box; }
+.contact-select-all { display:flex; align-items:center; gap:10px; font-weight:700; padding:10px 2px; color:#4b0a20; cursor:pointer; }
+.contact-select-all input, .contact-import-item input { accent-color:#4b0a20; min-width:20px; height:20px; }
+.contact-import-list { max-height: min(43vh,390px); overflow-y:auto; border:1px solid #e9ded9; border-radius:13px; background:#fff; margin:8px 0; }
+.contact-import-item { display:flex; align-items:center; gap:12px; padding:12px; border-bottom:1px solid #eee6e1; cursor:pointer; }
+.contact-import-item:last-child { border-bottom:0; }
+.contact-import-item > span { display:flex; flex-direction:column; gap:3px; min-width:0; }
+.contact-import-item strong { color:#31121b; overflow-wrap:anywhere; }
+.contact-import-item small { color:#7a6b71; text-align:right; }
+.contact-import-card .modal-actions { flex-wrap:wrap; }
+.contact-import-card .confirm-import:disabled { opacity:.5; cursor:not-allowed; }
+@media (max-width:650px) {
+  .dash-page .panel-actions { flex-wrap:wrap; gap:8px; }
+  .dash-page .panel-actions button { flex:1 1 45%; }
+  .contact-import-card { padding:18px; }
+  .contact-import-list { max-height:39vh; }
+}
