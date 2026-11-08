@@ -1,7 +1,7 @@
 // Local-only integration harness. Never included in the public build or remote DB.
 import {createServer} from 'node:http';
 import {readFile,readdir} from 'node:fs/promises';
-import {resolve,extname} from 'node:path';
+import {resolve,extname,relative,isAbsolute} from 'node:path';
 import {registerHooks} from 'node:module';
 import {PGlite} from '@electric-sql/pglite';
 registerHooks({resolve(name,context,next){if(name==='@netlify/database')return{url:'data:text/javascript,export function getDatabase(){return globalThis.__BROWSER_DB__}',shortCircuit:true};return next(name,context);}});
@@ -31,7 +31,7 @@ createServer(async(req,res)=>{
    res.writeHead(response.status,Object.fromEntries(response.headers));res.end(Buffer.from(await response.arrayBuffer()));return;
   }
   let pathname=decodeURIComponent(url.pathname);if(pathname==='/')pathname='/index.html';else if(!extname(pathname))pathname+='.html';
-  const file=resolve(root,'.'+pathname);if(!file.startsWith(root+'/')){res.writeHead(403);res.end();return;}
+  const file=resolve(root,'.'+pathname),within=relative(root,file);if(within==='..'||within.startsWith('../')||within.startsWith('..\\')||isAbsolute(within)){res.writeHead(403);res.end();return;}
   const content=await readFile(file);res.setHeader('content-type',types[extname(file)]||'application/octet-stream');res.end(content);
  }catch(e){res.writeHead(404,{'content-type':'application/json'});res.end(JSON.stringify({error:'Local test route failed'}));}
 }).listen(port,'127.0.0.1',()=>console.log('Isolated PostgreSQL browser fixture ready on '+port));

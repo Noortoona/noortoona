@@ -43,4 +43,4 @@ export default async(req:Request)=>{
     return secureJson({user:publicUser(user),...session});
   }catch(error){console.error(error);return secureJson({error:"تعذر التحقق من الرمز"},500)}
 };
-export const config:Config={path:"/api/auth/otp/verify"};
+export const config:Config={path:"/api/auth/otp/verify",rateLimit:{action:'rate_limit',aggregateBy:['ip','domain'],windowSize:60,windowLimit:20}};
