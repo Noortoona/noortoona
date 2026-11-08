@@ -1,0 +1,175 @@
+name: Hala phone-only Expo Go trial
+
+on:
+  push:
+    branches: ["trial/hala-iphone-go58-20261108"]
+    paths: [".github/workflows/hala-phone-go-trial.yml"]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: hala-phone-go58-trial
+  cancel-in-progress: false
+
+jobs:
+  publish-phone-trial:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    defaults:
+      run:
+        working-directory: mobile
+    env:
+      CI: "1"
+      EXPO_NO_TELEMETRY: "1"
+      EAS_BUILD_PROFILE: preview
+      EXPO_PUBLIC_API_URL: https://6aef76abb004bd02270012fe--noortoona.netlify.app
+      EXPO_PUBLIC_PAYMENTS_ENABLED: "false"
+      EXPO_PUBLIC_APPLE_MERCHANT_ID: ""
+      NODE_OPTIONS: --max-old-space-size=4096
+
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          persist-credentials: false
+
+      - uses: actions/setup-node@v6
+        with:
+          node-version: "24.19.0"
+
+      - name: Prepare a compatible SDK 58 phone preview
+        run: |
+          node <<'NODE'
+          const fs = require('node:fs');
+          const manifest = {
+            "name": "hala-phone-trial",
+            "version": "0.1.0",
+            "private": true,
+            "main": "expo-router/entry",
+            "scripts": {
+              "start": "expo start",
+              "ios": "expo run:ios",
+              "android": "expo run:android",
+              "web": "expo start --web",
+              "typecheck": "tsc --noEmit",
+              "ios:credentials": "npx eas-cli@24.10.0 credentials --platform ios",
+              "test": "node --experimental-strip-types --test tests/flows.mjs tests/dependencies.mjs",
+              "sync:preview": "node scripts/sync-invitation-preview.mjs",
+              "pretest": "node scripts/sync-invitation-preview.mjs --check"
+            },
+            "dependencies": {
+              "decode-uri-component": "file:vendor/decode-uri-component-cjs",
+              "expo": "58.0.19",
+              "expo-camera": "~58.0.12",
+              "expo-constants": "~58.0.13",
+              "expo-crypto": "~58.0.7",
+              "expo-document-picker": "~58.0.4",
+              "expo-file-system": "~58.0.11",
+              "expo-image-picker": "~58.0.10",
+              "expo-linking": "~58.0.14",
+              "expo-router": "~58.0.26",
+              "expo-secure-store": "~58.0.2",
+              "expo-splash-screen": "~58.0.11",
+              "expo-status-bar": "~58.0.4",
+              "expo-system-ui": "~58.0.6",
+              "react": "19.3.0",
+              "react-dom": "19.3.0",
+              "react-native": "0.88.1",
+              "react-native-gesture-handler": "~3.3.0",
+              "react-native-reanimated": "4.7.1",
+              "react-native-safe-area-context": "~5.11.1",
+              "react-native-screens": "~4.30.1",
+              "react-native-svg": "15.16.1",
+              "react-native-webview": "14.0.1",
+              "react-native-worklets": "0.13.0",
+              "expo-updates": "~58.0.18",
+              "@expo/metro-runtime": "~58.0.15"
+            },
+            "devDependencies": {
+              "@types/react": "~19.3.0",
+              "typescript": "~6.0.3"
+            },
+            "overrides": {
+              "decode-uri-component": "$decode-uri-component"
+            }
+          };
+          fs.writeFileSync('package.json', JSON.stringify(manifest, null, 2) + '\n');
+          fs.rmSync('package-lock.json', {force:true});
+          const config=JSON.parse(fs.readFileSync('app.json','utf8'));
+          config.expo.name='هلا تجربة';
+          config.expo.ios.bundleIdentifier='com.noortoona.hala.trial';
+          config.expo.runtimeVersion={policy:'sdkVersion'};
+          config.expo.updates={...(config.expo.updates||{}),url:'https://u.expo.dev/5aeba34d-6f95-424b-92b1-5519b5d20197'};
+          fs.writeFileSync('app.json', JSON.stringify(config,null,2)+'\n');
+          // Native payment checkout is excluded from this Expo Go-only trial.
+          fs.writeFileSync('src/payments/CheckoutScreen.tsx',
+            'export { default } from "../BookingCheckout";\n');
+          NODE
+
+      - name: Install and test the compatible preview
+        run: |
+          npm install
+          npm run sync:preview
+          npm run typecheck
+          npm test
+
+      - name: Verify Expo and supported native dependencies
+        run: |
+          npx expo-doctor@1.20.4
+          node <<'NODE'
+          const fs=require('node:fs');
+          const p=JSON.parse(fs.readFileSync('package.json','utf8'));
+          const bundled=require('expo/bundledNativeModules.json');
+          if(p.dependencies['react-native-moyasar-sdk'])throw Error('Native payment SDK is not allowed in this Go trial.');
+          for(const key of Object.keys(p.dependencies).filter(x=>x.startsWith('react-native-'))){
+            if(!bundled[key])throw Error('Unverified Expo Go native library: '+key);
+          }
+          console.log('SDK 58 preview uses only verified Expo Go native libraries.');
+          NODE
+
+      - name: Export and validate the iOS bundle
+        run: |
+          npx expo export --platform ios --output-dir dist
+          test -f dist/metadata.json
+
+      - name: Publish the isolated phone trial
+        env:
+          EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
+        run: |
+          if [ -z "$EXPO_TOKEN" ]; then
+            echo "::error::The existing Expo connection is unavailable."
+            exit 1
+          fi
+          npx eas-cli@24.10.0 update --branch phone-trial-go58-20261108 --platform ios --environment preview --message "HALA phone-only trial $GITHUB_SHA" --skip-bundler --non-interactive --json > phone-update.json
+
+      - name: Record published trial details
+        run: |
+          python3 - <<'PY'
+          import json, os, pathlib, shutil
+          data=json.loads(pathlib.Path('phone-update.json').read_text())
+          records=data if isinstance(data,list) else data.get('updates',[data])
+          assert records and any(item.get('id') or item.get('group') for item in records), 'No published update was returned.'
+          safe={
+            'sdk':'58',
+            'sourceCommit':os.environ['GITHUB_SHA'],
+            'backend':os.environ['EXPO_PUBLIC_API_URL'],
+            'paymentsEnabled':False,
+            'onDeviceVerified':False,
+            'updates':[{key:item.get(key) for key in ('id','group','platform','runtimeVersion','manifestPermalink','createdAt','message')} for item in records],
+          }
+          pathlib.Path('phone-trial-result').mkdir(exist_ok=True)
+          pathlib.Path('phone-trial-result/published-trial.json').write_text(json.dumps(safe,indent=2)+'\n')
+          shutil.copyfile('package-lock.json','phone-trial-result/dependency-lock.json')
+          print(json.dumps(safe,indent=2))
+          with open(os.environ['GITHUB_STEP_SUMMARY'],'a') as summary:
+            summary.write('Phone-only Expo Go trial was published to its own SDK 58 preview branch. Payments are disabled and the backend is an isolated deploy-preview.\n\n')
+            summary.write(json.dumps(safe,indent=2)+'\n')
+          PY
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: Hala-phone-trial-result
+          path: mobile/phone-trial-result/
+          if-no-files-found: error
+          retention-days: 14
