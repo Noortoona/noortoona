@@ -12,12 +12,12 @@ async function boot(){
     try{
       const session=await window.HALA_AUTH.ensureLogin("admin");
       if(!session){
-        root.innerHTML='<div class="portal-empty"><h2>دخول الأدمن</h2><p>سجّل دخولك برقم جوال الأدمن ورمز التحقق.</p><button class="gold-btn" id="adminLoginAgain">تسجيل الدخول</button></div>';
+        root.innerHTML='<div class="portal-empty"><h2>دخول الأدمن</h2><p>سجّل دخولك ببريد الإدارة المعتمد ورمز التحقق.</p><button class="gold-btn" id="adminLoginAgain">تسجيل الدخول</button></div>';
         document.getElementById("adminLoginAgain").onclick=bootLogin;
         return;
       }
       if(!["admin","customer_service"].includes(session.user?.role)){
-        root.innerHTML='<div class="portal-empty"><h2>هذا الحساب ليس أدمن</h2><p>استخدم رقم جوال مسجّلًا بصلاحية الأدمن.</p><button class="gold-btn" id="switchAdminPhone">دخول برقم آخر</button></div>';
+        root.innerHTML='<div class="portal-empty"><h2>هذا الحساب ليس أدمن</h2><p>استخدم بريدًا إلكترونيًا معتمدًا لحساب الإدارة.</p><button class="gold-btn" id="switchAdminPhone">دخول برقم آخر</button></div>';
         document.getElementById("switchAdminPhone").onclick=()=>{localStorage.removeItem("halaSession");location.reload()};
         return;
       }
