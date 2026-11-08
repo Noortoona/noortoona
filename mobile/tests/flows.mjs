@@ -8,8 +8,36 @@ import { readFileSync } from 'node:fs';
 import vm from 'node:vm';
 import { templateCatalog, occasionForApi } from '../src/templateCatalog.ts';
 import { imageDataUri, audioDataUri, MAX_AUDIO_BYTES } from '../src/designMedia.ts';
+import { eventDateValue, eventTimeValue, parseEventDate, parseEventTime, eventDateLabel, eventTimeLabel } from '../src/eventDateTime.ts';
 registerHooks({resolve(specifier,context,next){if(specifier==='./templateCatalog'&&context.parentURL.endsWith('/catalog.ts'))return {url:new URL('./templateCatalog.ts',context.parentURL).href,shortCircuit:true};return next(specifier,context)}});
 const { DEFAULT_PACKAGES, publicCatalog, availableTemplatesFor } = await import('../src/catalog.ts');
+
+test('event picker keeps the selected calendar date without UTC conversion at timezone boundaries', () => {
+  const original = process.env.TZ;
+  try {
+    for (const zone of ['Asia/Riyadh', 'Pacific/Kiritimati', 'America/Los_Angeles']) {
+      process.env.TZ = zone;
+      const selected = new Date(2026, 11, 24, 0, 8);
+      assert.equal(eventDateValue(selected), '2026-12-24');
+      assert.equal(eventTimeValue(selected), '00:08');
+      assert.equal(eventDateValue(parseEventDate('2026-12-24')), '2026-12-24');
+    }
+  } finally {
+    if (original === undefined) delete process.env.TZ;
+    else process.env.TZ = original;
+  }
+  assert.equal(eventDateLabel('2026-12-24'), '24 / 12 / 2026');
+  assert.ok(parseEventDate('2028-02-29'));
+  for (const value of ['2026-02-29', '2026-04-31', '24-12-2026', '']) assert.equal(parseEventDate(value), null);
+});
+
+test('time picker distinguishes midnight, noon and evening and rejects malformed manual times', () => {
+  assert.equal(eventTimeLabel('00:08'), '12:08 صباحًا');
+  assert.equal(eventTimeLabel('12:00'), '12:00 مساءً');
+  assert.equal(eventTimeLabel('20:08'), '8:08 مساءً');
+  assert.equal(eventTimeLabel('23:59'), '11:59 مساءً');
+  for (const value of ['00:08pm', '24:00', '20:60', '8:00', '']) assert.equal(parseEventTime(value), null);
+});
 
 test('Saudi OTP accepts local, international and Arabic input without accepting incomplete numbers', () => {
   for (const value of ['050 000 0001', '+966500000001', '00966500000001', '٥٠٠٠٠٠٠٠١', '۰۵۰۰۰۰۰۰۰۱']) {

@@ -16,6 +16,8 @@ import { audioDataUri, imageDataUri, MAX_AUDIO_BYTES } from "@/designMedia";
 import { InvitationPreview } from "@/InvitationPreview";
 import { track } from "@/prebooking";
 import { ActivityKey, OccasionKey, TemplateArtwork, templatesFor } from "@/templates";
+import { EventDateTimeFields } from "@/EventDateTimeFields";
+import { parseEventDate, parseEventTime } from "@/eventDateTime";
 
 const OCCASIONS: Array<{ key: OccasionKey; label: string; emoji: string; twoNames: boolean }> = [
   { key: "wedding", label: "زواج", emoji: "✦", twoNames: true },
@@ -142,6 +144,7 @@ export default function CreateEvent() {
     if (selected.twoNames && !name2.trim()) return "هذا النوع يحتاج الاسمين.";
     if (mapsUrl.trim() && !isGoogleMapsUrl(mapsUrl.trim())) return "أدخل رابط Google Maps صحيحًا يبدأ بـ https://.";
     if (!date.trim() || !time.trim() || !location.trim()) return "أكمل التاريخ والوقت والموقع.";
+    if (!parseEventDate(date) || !parseEventTime(time)) return "اختر تاريخًا ووقتًا صحيحين للمناسبة.";
     if (occasionKey === "activity" && activityKey === "activityCustom" && !customActivity.trim()) return "اكتب نوع النشاط.";
     if (occasionKey === "activity" && Number(capacity || 0) < 1) return "أدخل عدد المشاركين.";
     return "";
@@ -243,10 +246,7 @@ export default function CreateEvent() {
               </>
             ) : null}
 
-            <View style={styles.row}>
-              <View style={styles.half}><Text style={styles.label}>التاريخ</Text><TextInput value={date} onChangeText={setDate} style={styles.input} textAlign="right" placeholder="2026-12-20" /></View>
-              <View style={styles.half}><Text style={styles.label}>الوقت</Text><TextInput value={time} onChangeText={setTime} style={styles.input} textAlign="right" placeholder="20:30" /></View>
-            </View>
+            <EventDateTimeFields date={date} time={time} onDateChange={setDate} onTimeChange={setTime} />
             <Text style={styles.label}>الموقع</Text>
             <TextInput value={location} onChangeText={setLocation} style={styles.input} textAlign="right" placeholder="اسم القاعة أو الموقع" />
             <TextInput value={mapsUrl} onChangeText={setMapsUrl} style={styles.input} textAlign="right" placeholder="رابط Google Maps (اختياري)" keyboardType="url" autoCapitalize="none" autoCorrect={false} />

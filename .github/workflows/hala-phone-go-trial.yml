@@ -60,6 +60,7 @@ jobs:
             },
             "dependencies": {
               "decode-uri-component": "file:vendor/decode-uri-component-cjs",
+              "@react-native-community/datetimepicker": "9.2.1",
               "expo": "58.0.23",
               "expo-camera": "~58.0.12",
               "expo-constants": "~58.0.13",
@@ -122,6 +123,7 @@ jobs:
           const fs=require('node:fs');
           const p=JSON.parse(fs.readFileSync('package.json','utf8'));
           const bundled=require('expo/bundledNativeModules.json');
+          if(!bundled['@react-native-community/datetimepicker'])throw Error('Date/time picker must be included in Expo Go.');
           if(p.dependencies['react-native-moyasar-sdk'])throw Error('Native payment SDK is not allowed in this Go trial.');
           for(const key of Object.keys(p.dependencies).filter(x=>x.startsWith('react-native-'))){
             if(!bundled[key])throw Error('Unverified Expo Go native library: '+key);
@@ -142,7 +144,7 @@ jobs:
             echo "::error::The existing Expo connection is unavailable."
             exit 1
           fi
-          npx eas-cli@24.10.0 update --branch phone-trial-go58-20261108 --platform ios --environment preview --message "HALA phone-only trial $GITHUB_SHA" --skip-bundler --non-interactive --json > phone-update.json
+          npx eas-cli@24.10.0 update --branch phone-trial-go58-20261108 --platform ios --environment preview --message "HALA calendar and time picker $GITHUB_SHA" --skip-bundler --non-interactive --json > phone-update.json
 
       - name: Record published trial details
         run: |

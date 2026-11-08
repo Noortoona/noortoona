@@ -15,6 +15,7 @@
     "pretest": "node scripts/sync-invitation-preview.mjs --check"
   },
   "dependencies": {
+    "@react-native-community/datetimepicker": "9.1.0",
     "decode-uri-component": "file:vendor/decode-uri-component-cjs",
     "expo": "~57.0.31",
     "expo-camera": "~57.0.6",
