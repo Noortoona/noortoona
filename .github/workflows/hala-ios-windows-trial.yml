@@ -64,7 +64,10 @@ jobs:
       - name: Install dependencies and check TypeScript
         run: |
           npm ci
+          npm install --save-exact expo@57.0.32 expo-constants@57.0.23 expo-image-picker@57.0.21 expo-router@57.0.30 expo-splash-screen@57.0.11
+          npm run sync:preview
           npm run typecheck
+          npm test
 
       - name: Verify Expo dependencies
         run: npx expo-doctor@1.20.4
@@ -156,6 +159,8 @@ jobs:
               "sha256": hashlib.sha256(ipa.read_bytes()).hexdigest(),
               "onDeviceVerified": False,
           }
+          metadata["dependencyLockSha256"] = hashlib.sha256(pathlib.Path("package-lock.json").read_bytes()).hexdigest()
+          shutil.copyfile("package-lock.json", package / "build-dependencies.lock.json")
           (package / "build-info.json").write_text(json.dumps(metadata, indent=2) + "\n", encoding="utf-8")
           guide = """# تجربة هلا على الآيفون من ويندوز
 
