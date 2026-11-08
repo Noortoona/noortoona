@@ -135,6 +135,7 @@ function render(d,users,supData,settings,partners,eventsData,catalog){
     </section>`;
 
   mountBookingWorkspace();
+  mountWhatsAppManagement();
   bindCatalogForms();
   document.getElementById("eventSearch")?.addEventListener("submit",e=>{e.preventDefault();eventQuery=String(new FormData(e.currentTarget).get("q")||"");eventPage=1;load()});
   document.getElementById("previousEvents").onclick=()=>{eventPage=Math.max(1,eventPage-1);load()};
@@ -287,4 +288,44 @@ async function loadInsights(){
     document.getElementById('insightTable').className='';
     document.getElementById('insightTable').innerHTML=`<p class="booking-notice">${esc(d.scope?.visitorEstimateNote||'الزوار الفريدون تقدير وفق المعرفات المسموح بها، وليس عدد أشخاص موثقًا.')} • المنطقة الزمنية: ${esc(d.scope?.timezone||'Asia/Riyadh')}</p><div class="metrics-grid">${card('مشاهدات الصفحات',n(v.pageViews??v.total),'أحداث page_view فعلية')}${card('مشاهدات اليوم',n(v.today))}${card('مشاهدات ٧ أيام',n(v.sevenDays))}${card('مشاهدات ٣٠ يومًا',n(v.thirtyDays))}${card('الجلسات الفعلية',n(v.sessions),'معرفات جلسات مميزة')}${card('زوار فريدون تقديريًا',n(v.estimatedVisitors),'وفق موافقة ومعرف زائر')}${card('أحداث الاهتمام',n(i.events),'قد يصدر أكثر من حدث من العميل نفسه')}${card('عملاء مهتمون معروفون',n(i.knownLeads),'بيانات تواصل مسجلة فعليًا')}${card('طلبات حقيقية',n(b.total),n(b.today)+' اليوم')}${card('الحجوزات المسبقة',n(b.preBookings))}${card('بانتظار الدفع',n(b.pendingPayment))}${card('حجوزات مدفوعة',n(b.paid))}${card('ملغاة',n(b.cancelled))}${card('قيمة حجوزات محتملة',money(b.potentialValueHalalas),'ليست إيرادًا محققًا')}${card('إيرادات فعلية',money(b.realizedRevenueHalalas),'عمليات دفع متحققة')}${card('متوسط قيمة الطلب',money(b.averageOrderHalalas))}${card('زيارة ← بدء حجز',percent(c.visitToBookingStartPercent))}${card('إكمال رحلة الحجز',percent(c.bookingCompletionPercent))}${card('عميل معروف ← حجز',percent(c.knownLeadToBookingPercent))}${card('حجز مبدئي ← دفع',percent(c.prebookingToPaidPercent))}</div><div class="portal-grid"><article><h3>الصفحات الأكثر زيارة</h3>${rows(v.topPages,'path')}</article><article><h3>مصادر الزيارات</h3>${rows(v.sources,'source')}</article><article><h3>الأجهزة</h3>${rows(v.devices,'device_type')}</article><article><h3>أحداث الاهتمام</h3>${rows(i.byEvent,'event_name')}</article></div><details><summary>مصدر كل مؤشر وطريقة حسابه</summary><dl class="booking-details">${Object.entries(d.metricSources||{}).map(([key,value])=>`<div><dt>${esc(key)}</dt><dd>${esc(typeof value==='string'?value:JSON.stringify(value))}</dd></div>`).join('')||'<p>المصادر غير متاحة في هذه الاستجابة.</p>'}</dl></details>`;
   }catch(error){workspaceError('insightTable',error);}
+}
+
+
+function mountWhatsAppManagement(){
+  if(s?.user?.role!=='admin')return;
+  const panel=document.createElement('section');panel.className='portal-panel';panel.id='whatsappManagement';root.prepend(panel);
+  panel.innerHTML='<span class="eyebrow">WhatsApp Management</span><h2>إدارة واتساب</h2><p>الرقم الرسمي المطلوب: +966510654663 • HALA | هلا</p><button type="button" class="outline-btn dark-outline" id="waRefresh">تحديث السجلات</button> <button type="button" class="outline-btn dark-outline" id="waProbe">فحص المزود والقوالب</button><div id="waRecords" aria-live="polite">جاري قراءة البيانات…</div><details><summary>اختبار دعوة واحدة</summary><form id="waTestForm" class="lead-form"><label>معرّف المناسبة<input name="eventId" required maxlength="160"></label><label>معرّف الضيف الموافق على الاختبار<input name="guestId" required maxlength="160"></label><label><input type="checkbox" name="consent" required>حصلت على موافقة الضيف لاستقبال رسالة اختبار</label><button class="gold-btn" type="submit">إرسال دعوة الاختبار</button><p id="waTestResult" role="status"></p></form></details>';
+  document.getElementById('waRefresh').onclick=()=>loadWhatsAppRecords(false);
+  document.getElementById('waProbe').onclick=()=>loadWhatsAppRecords(true);
+  document.getElementById('waTestForm').onsubmit=async event=>{
+    event.preventDefault();const form=event.currentTarget,values=new FormData(form),button=form.querySelector('button'),notice=document.getElementById('waTestResult');button.disabled=true;
+    try{const result=await api('/api/whatsapp/send',{method:'POST',body:JSON.stringify({eventId:values.get('eventId'),guestId:values.get('guestId')})});notice.textContent='قبل المزود الطلب: '+(result.messageId||'—')+'؛ انتظار تأكيد التسليم.';await loadWhatsAppRecords(false);}
+    catch(error){notice.textContent=error.message;}finally{button.disabled=false;}
+  };
+  loadWhatsAppRecords(false);
+}
+async function loadWhatsAppRecords(probe){
+  const host=document.getElementById('waRecords');if(!host)return;
+  try{
+    const d=await api('/api/admin/whatsapp'+(probe?'?probe=true':''));
+    const labels={queued:'قيد الإرسال',sent:'أُرسلت',delivered:'سُلّمت',read:'قُرئت',failed:'فشلت',pending_setup:'بانتظار الإعداد'};
+    const status=value=>esc(labels[value]||value||'غير متحقق');
+    const list=(rows,render)=>rows.length?rows.map(render).join(''):'<p>لا توجد سجلات.</p>';
+    const retryable=(d.invitations||[]).filter(row=>row.status==='failed');
+    host.innerHTML='<div class="mini-metrics">'+card('وضع التشغيل',esc(d.mode))+card('Meta واسم العرض','غير متحقق')+card('آخر حدث Webhook',d.webhook.lastReceivedAt?esc(when(d.webhook.lastReceivedAt)):'لم يُرصد')+'</div>'+
+      '<p>حماية الاستقبال: '+(d.webhook.protected?'مضبوطة':'غير مضبوطة')+' • المرسل المضبوط: '+esc(d.sender.configuredPhone||'غير مضبوط')+' • المرسل المرصود: '+esc(d.sender.observedPhone||'غير مرصود')+'</p>'+
+      '<p>إشعارات الحجوزات: '+(d.notifications.enabled?'مفعّلة بالإعدادات':'معطلة بالإعدادات')+' • القالب: '+(d.notifications.templateConfigured?'مضبوط':'غير مضبوط')+' • المستلم: '+(d.notifications.recipientConfirmed?'مؤكد بالإعدادات':'غير مؤكد')+'</p>'+
+      '<details><summary>اكتمال الإعداد</summary>'+d.configuration.map(item=>'<p>'+esc(item.key)+': '+(item.present?'موجود':'ناقص')+'</p>').join('')+'</details>'+
+      (d.diagnostics?'<details open><summary>نتيجة فحص المزود</summary><p>'+esc(d.diagnostics.status)+' • حالة الرقم والملكية تحتاج تحققًا مستقلًا.</p><p>Webhook: '+esc(d.diagnostics.webhook?.url||'غير متحقق')+'</p>'+list(d.diagnostics.templates?.items||[],t=>'<p>'+esc(t.name)+' • '+esc(t.language)+' • '+esc(t.category)+' • '+esc(t.status)+'</p>')+'</details>':'')+
+      '<details open><summary>رسائل العملاء الواردة</summary>'+list(d.inbox,row=>'<article class="portal-panel"><b>'+esc(row.sender_phone)+'</b><p>'+esc(row.body||'رسالة '+row.message_type)+'</p><small>'+esc(when(row.received_at))+'</small> '+(row.resolved_at?'<span>تمت المعالجة</span>':'<button type="button" class="outline-btn dark-outline" data-wa-resolve="'+esc(row.message_id)+'">تحديد كمعالجة</button>')+'</article>')+'</details>'+
+      '<details><summary>الدعوات والتذكيرات — أحدث 50</summary>'+list(d.invitations,row=>'<p>'+esc(row.message_id||'دون معرّف مزود')+' • '+status(row.status)+' • '+esc(row.kind)+' '+(row.status==='failed'?'<button type="button" class="outline-btn dark-outline" data-wa-retry="'+esc(row.id)+'">إعادة المحاولة</button>':'')+'</p>')+'</details>'+
+      '<details><summary>رموز الدخول — أحدث 50</summary>'+list(d.otp,row=>'<p>'+esc(row.phone)+' • '+status(row.delivery_status)+' • '+esc(when(row.sent_at))+'</p>')+'</details>'+
+      '<details><summary>إشعارات الحجوزات — أحدث 50</summary>'+list(d.bookings,row=>'<p>'+esc(row.booking_id)+' • '+esc(row.event_name)+' • '+status(row.status)+' • '+esc(row.error_code||'')+'</p>')+'</details>'+
+      '<details><summary>أخطاء الدعوات</summary>'+list(d.invitations.filter(row=>row.error),row=>'<p>'+esc(row.message_id||row.id)+' • '+esc(row.error)+'</p>')+'</details>';
+    host.querySelectorAll('[data-wa-resolve]').forEach(button=>button.onclick=async()=>{button.disabled=true;try{await api('/api/admin/whatsapp',{method:'POST',body:JSON.stringify({action:'resolve',messageId:button.dataset.waResolve})});await loadWhatsAppRecords(false);}catch(error){button.disabled=false;alert(error.message);}});
+    host.querySelectorAll('[data-wa-retry]').forEach(button=>button.onclick=async()=>{
+      const row=retryable.find(item=>String(item.id)===button.dataset.waRetry);if(!row)return;button.disabled=true;
+      try{await api('/api/whatsapp/send',{method:'POST',body:JSON.stringify({eventId:row.event_id,guestId:row.guest_id,reminder:row.kind==='reminder'})});await loadWhatsAppRecords(false);}catch(error){button.disabled=false;alert(error.message);}
+    });
+  }catch(error){host.textContent=error.message;}
 }

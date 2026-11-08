@@ -1,7 +1,7 @@
 import { getDatabase } from "@netlify/database";
 import type { Config } from "@netlify/functions";
 import { secureJson } from "./_shared/domain.mjs";
-import { extractStatuses, nextStatus, providerError } from "./_shared/whatsapp.mjs";
+import { extractStatuses, extractIncoming, nextStatus, providerError } from "./_shared/whatsapp.mjs";
 
 export default async (req: Request) => {
   if (req.method === "GET") return secureJson({ ok: true, service: "hala-whatsapp-webhook", version: "delivery-v2" });
@@ -19,18 +19,31 @@ export default async (req: Request) => {
   let payload: any;
   try { payload = JSON.parse(body); } catch { return new Response("Invalid JSON", { status: 400 }); }
   const statuses = extractStatuses(payload).filter((s: any) => typeof s?.id === "string" && ['sent','delivered','read','failed'].includes(s?.status));
-  if (!statuses.length) return new Response("ok");
+  const incoming = extractIncoming(payload);
+  if (!statuses.length && !incoming.length) return new Response("ok");
   const client = await getDatabase().pool.connect();
   try {
     // Persist before acknowledgement so database errors cause provider retries.
     await client.query("BEGIN");
     await client.query("SET LOCAL lock_timeout = '2s'");
     await client.query("SET LOCAL statement_timeout = '3s'");
+    for (const message of incoming) {
+      await client.query(`INSERT INTO whatsapp_inbox(message_id,sender_phone,recipient_phone,message_type,body,provider_at)
+        VALUES($1,$2,$3,$4,$5,$6) ON CONFLICT(message_id) DO NOTHING`,
+        [message.id,message.sender,message.recipient || null,message.type,message.body,message.providerAt]);
+    }
+    await client.query(`INSERT INTO whatsapp_webhook_state(id,last_received_at,observed_phone) VALUES(1,NOW(),$1)
+      ON CONFLICT(id) DO UPDATE SET last_received_at=NOW(),observed_phone=COALESCE(EXCLUDED.observed_phone,whatsapp_webhook_state.observed_phone)`,
+      [incoming.find(message => message.recipient)?.recipient || null]);
     for (const s of statuses) {
       const found = (await client.query("SELECT id, guest_id FROM whatsapp_messages WHERE message_id=$1", [s.id])).rows[0];
       if (!found) {
-        const otp = (await client.query("UPDATE otp_codes SET delivery_status=$1 WHERE message_id=$2 RETURNING id", [s.status,s.id])).rows[0];
-        if (otp) continue;
+        const otp = (await client.query("SELECT id,delivery_status FROM otp_codes WHERE message_id=$1 FOR UPDATE", [s.id])).rows[0];
+        if (otp) {
+          const status = nextStatus(otp.delivery_status || 'queued', s.status);
+          if (status !== otp.delivery_status) await client.query("UPDATE otp_codes SET delivery_status=$1 WHERE id=$2", [status,otp.id]);
+          continue;
+        }
         const notification=(await client.query("SELECT id,status FROM booking_notifications WHERE message_id=$1 FOR UPDATE",[s.id])).rows[0];
         if(notification){
           const status=nextStatus(notification.status,s.status);

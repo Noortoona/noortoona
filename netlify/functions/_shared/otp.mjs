@@ -14,7 +14,9 @@ export async function hashOtp(phone,code){
   return sha256(`${phone}:${code}:${secret}`);
 }
 export function createOtp(){
-  const a=new Uint32Array(1);crypto.getRandomValues(a);
+  // Rejection sampling avoids modulo bias in the six-digit code space.
+  const a=new Uint32Array(1),limit=Math.floor(2**32/900000)*900000;
+  do{crypto.getRandomValues(a);}while(a[0]>=limit);
   return String(100000+(a[0]%900000));
 }
 export async function issueOtp(phone){
@@ -46,6 +48,7 @@ export async function sendOtp(phone,code){
   const apiKey=Netlify.env.get("D360_API_KEY");
   let cfg;try{cfg=providerConfig(name=>Netlify.env.get(name));}catch(e){throw new Error((e).message||"D360_NOT_CONFIGURED")}
   const lang=String(Netlify.env.get("D360_OTP_LANGUAGE")||"ar");
+  if(!Netlify.env.get('D360_WEBHOOK_TOKEN'))throw new Error('D360_WEBHOOK_REQUIRED');
   const template=String(Netlify.env.get("D360_OTP_TEMPLATE")||"");
   const payload=cfg.mode==="production"
     ? (template?{

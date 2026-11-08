@@ -8,7 +8,7 @@
     "build": "node scripts/build-static.mjs",
     "test:build": "node --test tests/build-static.mjs",
     "test:web": "node --test tests/web-safety.mjs tests/guest-insights.mjs tests/domain-routing.mjs tests/web-contacts.mjs",
-    "test:database": "node --test tests/database.mjs tests/migrations.mjs",
+    "test:database": "node --test tests/database.mjs tests/migrations.mjs tests/whatsapp-management.mjs",
     "test:catalog": "node --test tests/catalog.mjs",
     "test:prebooking": "node --experimental-strip-types --test tests/prebookings.mjs tests/prebooking-analytics.mjs"
   },
