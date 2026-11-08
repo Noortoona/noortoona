@@ -24,7 +24,7 @@
 <span class="auth-kicker">إدارة هلا</span><h2>تسجيل الدخول بالبريد</h2>
 <p>أدخل البريد المعتمد لحساب الإدارة.</p>
 <label><span>البريد الإلكتروني</span><input id="authAdminEmail" type="email" autocomplete="email" dir="ltr" placeholder="name@example.com"></label>
-<button id="sendAdminEmailOtpBtn" class="gold-btn auth-main">إرسال رمز التحقق</button>
+<button id="sendAdminEmailOtpBtn" class="gold-btn auth-main">إرسال رمز التحقق</button><button id="adminUsePhoneBtn" class="auth-link" type="button">الدخول عبر واتساب بدلًا من البريد</button>
 </div>
 <div id="authEmailCodeStep" class="hidden">
 <span class="auth-kicker">التحقق من البريد</span><h2>أدخل الرمز</h2>
@@ -55,6 +55,7 @@
     el.querySelector("#sendAdminEmailOtpBtn").onclick=requestAdminEmailOtp;
 el.querySelector("#verifyAdminEmailOtpBtn").onclick=verifyAdminEmailOtp;
 el.querySelector("#changeAdminEmailBtn").onclick=()=>step("email");
+    el.querySelector("#adminUsePhoneBtn").onclick=()=>step("phone");
 el.querySelector("#sendOtpBtn").onclick=requestOtp;
     el.querySelector("#verifyOtpBtn").onclick=verifyOtp;
     return el;
