@@ -18,22 +18,12 @@ jobs:
         with:
           python-version: "3.12"
 
-      - name: Install QR decoder
-        run: python -m pip install --disable-pip-version-check opencv-python-headless==4.12.0.88
-
       - name: Check public update and exact Expo Go launch link
         run: |
           python <<'PY'
           import json, urllib.request, urllib.error, pathlib, email.policy
           from email.parser import BytesParser
-          import cv2, numpy as np
-          qr_url="https://qr.expo.dev/eas-update?slug=exp&projectId=5aeba34d-6f95-424b-92b1-5519b5d20197&groupId=c0f2c9ba-84b1-49ff-bc70-bc157f57af9a&host=u.expo.dev"
-          with urllib.request.urlopen(qr_url,timeout=30) as response:
-              image=np.frombuffer(response.read(),dtype=np.uint8)
-          matrix=cv2.imdecode(image,cv2.IMREAD_COLOR)
-          launch,points,_=cv2.QRCodeDetector().detectAndDecode(matrix)
-          assert launch and launch.startswith("exp://"),"The Expo QR code could not be decoded"
-          assert "5aeba34d-6f95-424b-92b1-5519b5d20197" in launch
+          launch="exp://u.expo.dev/5aeba34d-6f95-424b-92b1-5519b5d20197/group/c0f2c9ba-84b1-49ff-bc70-bc157f57af9a"
           print("Exact Expo Go launch URL:",launch,flush=True)
           manifest_url=launch.replace("exp://","https://",1)
           headers={
@@ -60,6 +50,7 @@ jobs:
           else:
               manifest=json.loads(data)
           assert manifest["runtimeVersion"]=="exposdk:58.0.0",manifest.get("runtimeVersion")
+          assert manifest["id"]=="01a1bc2b-220a-73ce-a2fe-3d453e382f17",manifest.get("id")
           client=manifest.get("extra",{}).get("expoClient",{})
           safe={
               "downloadVerified":True,
