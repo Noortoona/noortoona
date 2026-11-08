@@ -26,18 +26,21 @@ the replacement number is proven ready. No direct Meta sender was added.
 | Item | Observed status |
 | --- | --- |
 | Meta Business Portfolio / WABA | No authenticated account access obtained; unverified |
-| 360dialog account | No authenticated Hub access obtained; account status unverified |
+| 360dialog account | Hub account unverified; a readable development sandbox key authenticated successfully to the sandbox webhook API |
 | Existing production runtime mode | `sandbox` in the readable Netlify site configuration |
-| Stored production channel key | Read-only webhook requests returned HTTP 401 on both the configured sandbox host and the production 360dialog host |
+| Stored production channel key | The connector masks this secret; the actual production key was not available for validation |
 | OTP template | `D360_OTP_TEMPLATE` absent from readable site variables |
 | Webhook authentication | `D360_WEBHOOK_TOKEN` absent from readable site variables |
 | Official number / display name | Ownership, eligibility, coexistence, registration and approval unverified |
 | Existing provider / migration | Unverified; no number migration attempted |
 | Send / receive / OTP delivery | Not live-tested; no provider message ID or delivery receipt obtained |
 
-The environment audit describes site variables returned by the connector; it is
-not proof that no team-shared setting exists. HTTP 401 proves those attempted
-requests were unauthorized, not that the customer account is closed or unpaid.
+The connector returned no team-shared variables. An initial probe mistakenly used
+masked production-key text and returned 401; that result does not validate or
+invalidate the real key and is withdrawn as account evidence. A subsequent
+read-only request using the readable development key returned HTTP 200 from the
+sandbox webhook API and reported `https://noortoona.netlify.app/api/whatsapp/webhook`.
+This does not establish ownership of the requested number or production delivery.
 API keys and OTPs are excluded from this report and source changes.
 
 ## Implemented in this development branch
@@ -76,10 +79,14 @@ API keys and OTPs are excluded from this report and source changes.
   TypeScript no-emit validation.
 - Local `npm test` is not fully green: the existing symlink containment test
   cannot create a symlink on this Windows session (`EPERM`). It was not removed
-  or weakened. Linux CI must run the complete suite.
+  or weakened. The full Linux web workflow subsequently passed.
 - Two iPhone-size browser tests passed against the local real handlers/database:
   actual admin loading/access restrictions and escaped incoming text. These do
   not use a real WhatsApp account or prove delivery.
+- Seven local mobile flow tests passed. The stale generated invitation preview
+  was synchronized; CI now passes mobile typecheck and tests but stops at Expo
+  doctor, before native prebuild/bundling. That remaining failure is not a live
+  WhatsApp integration result.
 - None of these checks demonstrate a real WhatsApp delivery, phone registration,
   live Meta account approval or production database migration.
 
@@ -92,7 +99,8 @@ API keys and OTPs are excluded from this report and source changes.
    coexistence before any registration, migration or webhook change. Use the
    existing account, never create a duplicate or disconnect the Business app.
 3. Provision a valid channel key and independent webhook secret in the intended
-   isolated environment; configure approved invitation, reminder, Authentication
+   isolated environment (the real production key is masked by the connector);
+   configure approved invitation, reminder, Authentication
    and booking templates with their actual language/components.
 4. Apply the additive migration to an isolated database and verify live sender,
    consented single-recipient delivery, inbound message persistence, OTP receipt
