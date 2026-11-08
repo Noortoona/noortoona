@@ -1,0 +1,204 @@
+name: Hala iPhone Windows trial package
+
+on:
+  push:
+    branches: ["trial/hala-ios-windows-20261108"]
+    paths: [".github/workflows/hala-ios-windows-trial.yml"]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: hala-ios-windows-trial
+  cancel-in-progress: false
+
+jobs:
+  unsigned-iphone-package:
+    name: Build device IPA for local personal signing
+    runs-on: macos-26
+    timeout-minutes: 75
+    defaults:
+      run:
+        working-directory: mobile
+    env:
+      CI: "1"
+      EXPO_NO_TELEMETRY: "1"
+      EAS_BUILD_PROFILE: preview
+      EXPO_PUBLIC_API_URL: https://6aef76abb004bd02270012fe--noortoona.netlify.app
+      EXPO_PUBLIC_PAYMENTS_ENABLED: "false"
+      EXPO_PUBLIC_APPLE_MERCHANT_ID: ""
+      NODE_OPTIONS: --max-old-space-size=4096
+
+    steps:
+      - name: Checkout the trial source
+        uses: actions/checkout@v5
+
+      - name: Set up Node
+        uses: actions/setup-node@v6
+        with:
+          node-version: "24.19.0"
+          cache: npm
+          cache-dependency-path: mobile/package-lock.json
+
+      - name: Validate the isolated backend before building
+        run: |
+          python3 - <<'PY'
+          import json, os, urllib.request
+          from urllib.parse import urlparse
+          origin = os.environ["EXPO_PUBLIC_API_URL"]
+          parsed = urlparse(origin)
+          assert parsed.scheme == "https"
+          assert parsed.hostname == "6aef76abb004bd02270012fe--noortoona.netlify.app"
+          assert parsed.path in ("", "/") and not parsed.query and not parsed.fragment
+          for endpoint in ("/api/catalog", "/api/public-settings"):
+              req = urllib.request.Request(origin + endpoint, headers={"Accept": "application/json"})
+              with urllib.request.urlopen(req, timeout=30) as response:
+                  assert response.status == 200, (endpoint, response.status)
+                  assert urlparse(response.url).hostname == parsed.hostname, "Preview redirected to another origin"
+                  data = json.load(response)
+                  assert isinstance(data, dict), endpoint
+              print(endpoint, "responded with valid JSON")
+          PY
+
+      - name: Install dependencies and check TypeScript
+        run: |
+          npm ci
+          npm run typecheck
+
+      - name: Verify Expo dependencies
+        run: npx expo-doctor@1.20.4
+
+      - name: Give this trial its own app identifier
+        run: |
+          node <<'NODE'
+          const fs = require('node:fs');
+          const app = JSON.parse(fs.readFileSync('app.json', 'utf8'));
+          app.expo.name = 'هلا تجربة';
+          app.expo.ios.bundleIdentifier = 'com.noortoona.hala.trial';
+          app.expo.ios.buildNumber = process.env.GITHUB_RUN_NUMBER;
+          fs.writeFileSync('app.json', JSON.stringify(app, null, 2) + '\n');
+          NODE
+
+      - name: Generate native iOS project
+        run: npx expo prebuild --platform ios --clean --no-install
+
+      - name: Install iOS pods
+        working-directory: mobile/ios
+        run: pod install
+
+      - name: Compile an unsigned Release app for physical iPhones
+        run: |
+          python3 - <<'PY'
+          import pathlib, subprocess
+          workspaces = list(pathlib.Path("ios").glob("*.xcworkspace"))
+          assert len(workspaces) == 1, workspaces
+          workspace = workspaces[0]
+          command = [
+              "xcodebuild", "-workspace", str(workspace),
+              "-scheme", workspace.stem, "-configuration", "Release",
+              "-sdk", "iphoneos", "-destination", "generic/platform=iOS",
+              "-derivedDataPath", "/tmp/hala-iphone-trial", "-jobs", "2",
+              "CODE_SIGNING_ALLOWED=NO", "CODE_SIGNING_REQUIRED=NO",
+              "CODE_SIGN_IDENTITY=", "build",
+          ]
+          print("Building a physical-device archive without requesting Apple credentials.", flush=True)
+          with open("ios-trial-build.log", "w", encoding="utf-8") as logfile:
+              process = subprocess.Popen(command, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True)
+              for line in process.stdout:
+                  logfile.write(line)
+                  if any(word in line.lower() for word in ("error:", "warning:", "build succeeded", "build failed", "compile", "phase", "linking")):
+                      print(line, end="", flush=True)
+              status = process.wait()
+          if status:
+              print("\n".join(pathlib.Path("ios-trial-build.log").read_text().splitlines()[-120:]))
+              raise SystemExit(status)
+          PY
+
+      - name: Package and verify the unsigned device IPA
+        run: |
+          python3 - <<'PY'
+          import hashlib, json, os, pathlib, plistlib, shutil, subprocess, zipfile
+          products = pathlib.Path("/tmp/hala-iphone-trial/Build/Products/Release-iphoneos")
+          apps = [p for p in products.glob("*.app") if p.is_dir()]
+          assert len(apps) == 1, apps
+          app = apps[0]
+          info = plistlib.loads((app / "Info.plist").read_bytes())
+          assert info["CFBundleIdentifier"] == "com.noortoona.hala.trial"
+          assert "iPhoneOS" in info.get("CFBundleSupportedPlatforms", [])
+          assert (app / "main.jsbundle").is_file(), "The Release JS bundle is missing"
+          executable = app / info["CFBundleExecutable"]
+          arch = subprocess.check_output(["lipo", "-archs", str(executable)], text=True).strip()
+          assert "arm64" in arch, arch
+          assert not (app / "embedded.mobileprovision").exists()
+          package = pathlib.Path("trial-output")
+          payload = package / "Payload"
+          payload.mkdir(parents=True, exist_ok=True)
+          shutil.copytree(app, payload / app.name, symlinks=True)
+          ipa = package / "Hala-iPhone-Trial-unsigned.ipa"
+          subprocess.run(["/usr/bin/zip", "-qry", ipa.name, "Payload"], cwd=package, check=True)
+          with zipfile.ZipFile(ipa) as archive:
+              assert archive.testzip() is None
+              assert any(n.startswith("Payload/") and n.endswith(".app/Info.plist") for n in archive.namelist())
+          shutil.rmtree(payload)
+          metadata = {
+              "application": "HALA iPhone trial",
+              "bundleIdentifier": info["CFBundleIdentifier"],
+              "version": info["CFBundleShortVersionString"],
+              "buildNumber": info["CFBundleVersion"],
+              "minimumIOSVersion": info.get("MinimumOSVersion"),
+              "architectures": arch,
+              "sourceCommit": os.environ["GITHUB_SHA"],
+              "backend": os.environ["EXPO_PUBLIC_API_URL"],
+              "backendContext": "deploy-preview",
+              "paymentsEnabled": False,
+              "signing": "unsigned; requires local personal signing before installation",
+              "sha256": hashlib.sha256(ipa.read_bytes()).hexdigest(),
+              "onDeviceVerified": False,
+          }
+          (package / "build-info.json").write_text(json.dumps(metadata, indent=2) + "\n", encoding="utf-8")
+          guide = """# تجربة هلا على الآيفون من ويندوز
+
+          الملف Hala-iPhone-Trial-unsigned.ipa يحتاج توقيعًا محليًا بحساب آبل الخاص بك قبل التثبيت.
+          هذه نسخة لجهاز آيفون فعلي وليست نسخة محاكي.
+
+          1. حمّل Sideloadly من موقعه الرسمي https://sideloadly.io/ وثبّت متطلبات آبل الموضحة فيه عند الحاجة.
+          2. صِل الآيفون بالكمبيوتر بكابل، وافتح القفل ووافق على الوثوق بالكمبيوتر.
+          3. افتح Sideloadly وحدد جهازك واسحب ملف IPA إلى نافذته.
+          4. أدخل حساب آبل ورمز التحقق داخل أداة التثبيت على جهازك، ثم ابدأ التوقيع والتثبيت.
+          5. عند ظهور طلب من iOS، فعّل وضع المطور ووثّق ملف حسابك من الإعدادات لإكمال تشغيل نسختك التجريبية.
+          6. افتح التطبيق الذي يظهر باسم هلا تجربة.
+
+          التوقيع بالحساب المجاني صالح لمدة سبعة أيام ويحتاج تجديدًا عبر الكمبيوتر.
+          المصدر: https://sideloadly.io/faq
+
+          النسخة متصلة بخادم تجربة منفصل، والدفع الإلكتروني متوقف.
+          وصول رمز واتساب وتسجيل الدخول يعتمدان على إعداد مزود الرسائل في بيئة التجربة.
+          لم يتم التحقق من تشغيل النسخة على آيفون فعلي بعد. ملف build-info.json يحدد مصدر النسخة وخصائصها.
+          """
+          import textwrap
+          (package / "READ-ME-AR.md").write_text(textwrap.dedent(guide).replace("\n          ", "\n"), encoding="utf-8")
+          print(json.dumps(metadata, indent=2))
+          summary = os.environ.get("GITHUB_STEP_SUMMARY")
+          if summary:
+              with open(summary, "a") as target:
+                  target.write("Built an unsigned physical-iPhone trial package for local personal signing on Windows. No Apple credentials or TestFlight upload were used.\n")
+                  target.write("Backend: isolated deploy-preview. Payments: disabled. On-device verification: pending.\n")
+          PY
+
+      - name: Save the trial package
+        uses: actions/upload-artifact@v4
+        with:
+          name: Hala-iPhone-Windows-Trial
+          path: mobile/trial-output/
+          retention-days: 14
+          if-no-files-found: error
+
+      - name: Save build diagnostics
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: Hala-iPhone-Trial-build-log
+          path: mobile/ios-trial-build.log
+          if-no-files-found: ignore
+          retention-days: 7
