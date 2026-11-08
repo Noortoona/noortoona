@@ -77,9 +77,9 @@ API keys and OTPs are excluded from this report and source changes.
 - Local `npm test` is not fully green: the existing symlink containment test
   cannot create a symlink on this Windows session (`EPERM`). It was not removed
   or weakened. Linux CI must run the complete suite.
-- Two browser tests are added for actual admin loading/access restrictions and
-  escaped incoming text. Their execution outcome must be checked in CI; do not
-  infer success from launching a browser test process.
+- Two iPhone-size browser tests passed against the local real handlers/database:
+  actual admin loading/access restrictions and escaped incoming text. These do
+  not use a real WhatsApp account or prove delivery.
 - None of these checks demonstrate a real WhatsApp delivery, phone registration,
   live Meta account approval or production database migration.
 
