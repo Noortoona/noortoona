@@ -1,0 +1,70 @@
+name: Verify Hala phone preview download
+
+on:
+  push:
+    branches: ["trial/hala-iphone-go58-20261108"]
+    paths: [".github/workflows/hala-phone-preview-check.yml"]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  verify-published-preview:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.12"
+
+      - name: Install QR decoder
+        run: python -m pip install --disable-pip-version-check opencv-python-headless==4.12.0.88
+
+      - name: Check public update and exact Expo Go launch link
+        run: |
+          python <<'PY'
+          import json, urllib.request, pathlib, email.policy
+          from email.parser import BytesParser
+          import cv2, numpy as np
+          manifest_url="https://u.expo.dev/update/01a1bc2b-220a-73ce-a2fe-3d453e382f17"
+          request=urllib.request.Request(manifest_url,headers={"accept":"multipart/mixed"})
+          with urllib.request.urlopen(request,timeout=30) as response:
+              assert response.status==200
+              data=response.read()
+              content_type=response.headers["content-type"]
+          if "multipart" in content_type:
+              message=BytesParser(policy=email.policy.default).parsebytes(
+                  ("Content-Type: "+content_type+"\r\nMIME-Version: 1.0\r\n\r\n").encode()+data)
+              candidates=[json.loads(part.get_payload(decode=True)) for part in message.iter_parts() if part.get_content_type()=="application/json"]
+              manifest=next(item for item in candidates if "launchAsset" in item)
+          else:
+              manifest=json.loads(data)
+          assert manifest["runtimeVersion"]=="exposdk:58.0.0",manifest.get("runtimeVersion")
+          client=manifest.get("extra",{}).get("expoClient",{})
+          qr_url="https://qr.expo.dev/eas-update?slug=exp&projectId=5aeba34d-6f95-424b-92b1-5519b5d20197&groupId=c0f2c9ba-84b1-49ff-bc70-bc157f57af9a&host=u.expo.dev"
+          with urllib.request.urlopen(qr_url,timeout=30) as response:
+              image=np.frombuffer(response.read(),dtype=np.uint8)
+          matrix=cv2.imdecode(image,cv2.IMREAD_COLOR)
+          launch,points,_=cv2.QRCodeDetector().detectAndDecode(matrix)
+          assert launch and launch.startswith("exp://"),"The Expo QR code could not be decoded"
+          assert "5aeba34d-6f95-424b-92b1-5519b5d20197" in launch
+          safe={
+              "downloadVerified":True,
+              "updateId":manifest["id"],
+              "runtimeVersion":manifest["runtimeVersion"],
+              "sdkVersion":client.get("sdkVersion"),
+              "name":client.get("name"),
+              "assetCount":len(manifest.get("assets",[])),
+              "launchUrl":launch,
+          }
+          print(json.dumps(safe,indent=2))
+          pathlib.Path("verified-phone-preview.json").write_text(json.dumps(safe,indent=2)+"\n")
+          PY
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: Hala-verified-phone-preview
+          path: verified-phone-preview.json
+          if-no-files-found: error
+          retention-days: 14
