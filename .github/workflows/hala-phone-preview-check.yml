@@ -24,15 +24,34 @@ jobs:
       - name: Check public update and exact Expo Go launch link
         run: |
           python <<'PY'
-          import json, urllib.request, pathlib, email.policy
+          import json, urllib.request, urllib.error, pathlib, email.policy
           from email.parser import BytesParser
           import cv2, numpy as np
-          manifest_url="https://u.expo.dev/update/01a1bc2b-220a-73ce-a2fe-3d453e382f17"
-          request=urllib.request.Request(manifest_url,headers={"accept":"multipart/mixed"})
-          with urllib.request.urlopen(request,timeout=30) as response:
-              assert response.status==200
-              data=response.read()
-              content_type=response.headers["content-type"]
+          qr_url="https://qr.expo.dev/eas-update?slug=exp&projectId=5aeba34d-6f95-424b-92b1-5519b5d20197&groupId=c0f2c9ba-84b1-49ff-bc70-bc157f57af9a&host=u.expo.dev"
+          with urllib.request.urlopen(qr_url,timeout=30) as response:
+              image=np.frombuffer(response.read(),dtype=np.uint8)
+          matrix=cv2.imdecode(image,cv2.IMREAD_COLOR)
+          launch,points,_=cv2.QRCodeDetector().detectAndDecode(matrix)
+          assert launch and launch.startswith("exp://"),"The Expo QR code could not be decoded"
+          assert "5aeba34d-6f95-424b-92b1-5519b5d20197" in launch
+          print("Exact Expo Go launch URL:",launch,flush=True)
+          manifest_url=launch.replace("exp://","https://",1)
+          headers={
+              "accept":"multipart/mixed",
+              "expo-platform":"ios",
+              "expo-runtime-version":"exposdk:58.0.0",
+              "expo-protocol-version":"1",
+              "expo-client-environment":"EXPOGO",
+          }
+          request=urllib.request.Request(manifest_url,headers=headers)
+          try:
+              with urllib.request.urlopen(request,timeout=30) as response:
+                  assert response.status==200
+                  data=response.read()
+                  content_type=response.headers["content-type"]
+          except urllib.error.HTTPError as error:
+              print("Manifest HTTP error:",error.code,error.read(1500).decode(errors="replace"),flush=True)
+              raise
           if "multipart" in content_type:
               message=BytesParser(policy=email.policy.default).parsebytes(
                   ("Content-Type: "+content_type+"\r\nMIME-Version: 1.0\r\n\r\n").encode()+data)
@@ -42,13 +61,6 @@ jobs:
               manifest=json.loads(data)
           assert manifest["runtimeVersion"]=="exposdk:58.0.0",manifest.get("runtimeVersion")
           client=manifest.get("extra",{}).get("expoClient",{})
-          qr_url="https://qr.expo.dev/eas-update?slug=exp&projectId=5aeba34d-6f95-424b-92b1-5519b5d20197&groupId=c0f2c9ba-84b1-49ff-bc70-bc157f57af9a&host=u.expo.dev"
-          with urllib.request.urlopen(qr_url,timeout=30) as response:
-              image=np.frombuffer(response.read(),dtype=np.uint8)
-          matrix=cv2.imdecode(image,cv2.IMREAD_COLOR)
-          launch,points,_=cv2.QRCodeDetector().detectAndDecode(matrix)
-          assert launch and launch.startswith("exp://"),"The Expo QR code could not be decoded"
-          assert "5aeba34d-6f95-424b-92b1-5519b5d20197" in launch
           safe={
               "downloadVerified":True,
               "updateId":manifest["id"],
