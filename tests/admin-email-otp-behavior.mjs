@@ -87,3 +87,78 @@ test("parallel admin email OTP guesses limit verification to five attempts",asyn
  assert.equal(responses.filter(r=>r.status===429).length,15);
  assert.equal(hashed,5);
 });
+
+
+const normPhone=s=>{
+  let phone=String(s||"").replace(/\D/g,"");
+  if(phone.startsWith("0")&&phone.length===10)phone="966"+phone.slice(1);
+  return phone;
+};
+
+test("allowlisted mailbox may request a code for an existing unlinked active admin approved by phone",async()=>{
+ const env={HALA_ADMIN_EMAILS:"shinko77@gmail.com",HALA_ADMIN_PHONES:"0510654663",
+   RESEND_API_KEY:"fake-test-secret",HALA_AUTH_EMAIL_FROM:"login@halainvites.com"};
+ globalThis.Netlify={env:{get:k=>env[k]}};
+ const queries=[];
+ const client={query:async(sql,args=[])=>{
+  queries.push({sql,args});
+  if(sql.startsWith("SELECT sent_at"))return {rows:[]};
+  if(sql.includes("COUNT(*)"))return {rows:[{n:0}]};
+  return {rows:[]};
+ },release(){}};
+ const db={
+  sql:async(parts,...args)=>{
+   const sql=parts.join("?");
+   if(sql.includes("role IN ('admin','customer_service')"))return [];
+   if(sql.includes("SELECT id FROM users WHERE LOWER(email)"))return [];
+   if(sql.includes("email IS NULL AND role='admin'"))return [{id:"existing-admin",phone:"966510654663"}];
+   throw Error("Unexpected query: "+sql);
+  },
+  pool:{connect:async()=>client}
+ };
+ const saved=globalThis.fetch;
+ globalThis.fetch=async()=>Response.json({id:"test-email"});
+ try{
+  const issue=await loadHandler("auth-admin-email-request",{
+   getDatabase:()=>db,isSameOriginRequest,secureJson,normalizePhone:normPhone,
+   normalizeEmail:s=>s.trim().toLowerCase(),validEmail:()=>true,emailHash:async()=>"hashed",
+   allowedEmail:e=>e==="shinko77@gmail.com"
+  });
+  const response=await issue(req("/api/auth/admin-email/request",{email:"shinko77@gmail.com"}));
+  assert.equal(response.status,200);
+  const insert=queries.find(x=>x.sql.startsWith("INSERT INTO admin_email_otp_codes"));
+  assert.equal(insert?.args?.[1],"existing-admin");
+ }finally{globalThis.fetch=saved}
+});
+
+test("verified mailbox binds to same existing admin with approved phone and never promotes anyone",async()=>{
+ const env={HALA_ADMIN_PHONES:"0510654663"};
+ globalThis.Netlify={env:{get:k=>env[k]}};
+ let usersUpdated=0,sessionsCreated=0;
+ const db={sql:async(parts,...args)=>{
+  const sql=parts.join("?");
+  if(sql.includes("SELECT * FROM admin_email_otp_codes"))return [{id:"otp-link",user_id:"existing-admin",code_hash:"good"}];
+  if(sql.includes("SET attempts=attempts+1"))return [{id:"otp-link"}];
+  if(sql.includes("SET consumed_at=NOW()"))return [{id:"otp-link"}];
+  if(sql.includes("AND LOWER(email)"))return [];
+  if(sql.includes("SELECT id,phone FROM users WHERE id="))return [{id:"existing-admin",phone:"966510654663"}];
+  if(sql.includes("UPDATE users SET email=")){
+    usersUpdated++;assert.equal(args[0],"shinko77@gmail.com");assert.equal(args[1],"existing-admin");
+    return [{id:"existing-admin",name:"مدير هلا",email:"shinko77@gmail.com",phone:"966510654663",role:"admin",status:"active"}];
+  }
+  if(sql.includes("DELETE FROM sessions"))return [];
+  throw Error("Unexpected query: "+sql);
+ }};
+ const verify=await loadHandler("auth-admin-email-verify",{
+  getDatabase:()=>db,createSession:async()=>{sessionsCreated++;return {token:"new-session",expiresAt:"2030-01-01"}},
+  publicUser:u=>u,recordAudit:async()=>{},isSameOriginRequest,normalizeDigits:s=>s,normalizePhone:normPhone,secureJson,
+  normalizeEmail:s=>s,validEmail:()=>true,emailHash:async()=>"good",allowedEmail:()=>true
+ });
+ const response=await verify(req("/api/auth/admin-email/verify",{email:"shinko77@gmail.com",code:"123456"}));
+ assert.equal(response.status,200);
+ assert.equal(usersUpdated,1);
+ assert.equal(sessionsCreated,1);
+ const payload=await response.json();
+ assert.equal(payload.user.role,"admin");
+ assert.equal(payload.user.id,"existing-admin");
+});
