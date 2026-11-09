@@ -20,7 +20,7 @@ export default async (req:Request)=>{
   if(await emailHash(email,code)!==otp.code_hash)return secureJson({error:"الرمز غير صحيح أو منتهي"},401);
   const consumed=await db.sql`UPDATE admin_email_otp_codes SET consumed_at=NOW() WHERE id=${otp.id} AND consumed_at IS NULL AND expires_at>NOW() RETURNING id`;
   if(!consumed[0])return secureJson({error:"الرمز مستخدم أو منتهي"},409);
-  const users=await db.sql`SELECT id,name,email,phone,role,status FROM users WHERE LOWER(email)=${email} AND role IN ('admin','customer_service') AND status='active' LIMIT 1`;
+  const users=await db.sql`SELECT id,name,email,phone,role,status FROM users WHERE id=${otp.user_id} AND LOWER(email)=${email} AND role IN ('admin','customer_service') AND status='active' LIMIT 1`;
   const user:any=users[0];
   if(!user)return secureJson({error:"الحساب لا يملك صلاحية الإدارة"},403);
   await db.sql`DELETE FROM sessions WHERE user_id=${user.id}`;
