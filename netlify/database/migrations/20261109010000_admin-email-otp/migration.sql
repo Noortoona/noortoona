@@ -1,6 +1,5 @@
 CREATE TABLE IF NOT EXISTS admin_email_otp_codes (
  id text PRIMARY KEY,
- user_id text NOT NULL REFERENCES users(id) ON DELETE CASCADE,
  email text NOT NULL,
  code_hash text NOT NULL,
  attempts integer NOT NULL DEFAULT 0,
@@ -9,4 +8,3 @@ CREATE TABLE IF NOT EXISTS admin_email_otp_codes (
  sent_at timestamptz NOT NULL DEFAULT NOW()
 );
 CREATE INDEX IF NOT EXISTS admin_email_otp_lookup_idx ON admin_email_otp_codes(email,sent_at DESC);
-CREATE INDEX IF NOT EXISTS admin_email_otp_user_idx ON admin_email_otp_codes(user_id);
