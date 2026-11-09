@@ -1,0 +1,46 @@
+name: Hala Expo SDK patch repair (review branch only)
+on:
+  push:
+    branches: ["feature/hala-mobile-admin-email-otp-20261109"]
+    paths: [".github/workflows/hala-expo-sdk-repair.yml"]
+
+permissions:
+  contents: write
+
+jobs:
+  repair:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          persist-credentials: true
+          ref: feature/hala-mobile-admin-email-otp-20261109
+      - uses: actions/setup-node@v6
+        with:
+          node-version: "24.19.0"
+          cache: npm
+          cache-dependency-path: mobile/package-lock.json
+      - name: Install reviewed mobile dependencies
+        working-directory: mobile
+        run: npm ci
+      - name: Synchronize compatible SDK 57 patch versions and lockfile
+        working-directory: mobile
+        run: npx expo install --fix --npm
+      - name: Check mobile TypeScript, tests, and Expo SDK compatibility
+        working-directory: mobile
+        run: |
+          npm run typecheck
+          npm test
+          npx expo-doctor@1.20.4
+      - name: Commit ONLY resolved package versions to the review branch
+        run: |
+          if git diff --quiet -- mobile/package.json mobile/package-lock.json; then
+            echo 'Package versions already match Expo SDK.'
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add mobile/package.json mobile/package-lock.json
+          git commit -m "fix(mobile): align Expo SDK 57 patch dependencies"
+          git push origin HEAD:feature/hala-mobile-admin-email-otp-20261109
