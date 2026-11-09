@@ -20,7 +20,20 @@
       <section class="auth-card" dir="rtl">
         <button class="auth-close" data-auth-close>×</button>
         <img src="/assets/brand/hala-logo-dark.svg?v=20261102" alt="هلا" class="auth-logo">
-        <div id="authPhoneStep">
+        <div id="authEmailStep" class="hidden">
+<span class="auth-kicker">إدارة هلا</span><h2>تسجيل الدخول بالبريد</h2>
+<p>أدخل البريد المعتمد لحساب الإدارة.</p>
+<label><span>البريد الإلكتروني</span><input id="authAdminEmail" type="email" autocomplete="email" dir="ltr" placeholder="name@example.com"></label>
+<button id="sendAdminEmailOtpBtn" class="gold-btn auth-main">إرسال رمز التحقق</button><button id="adminUsePhoneBtn" class="auth-link" type="button">الدخول عبر واتساب بدلًا من البريد</button>
+</div>
+<div id="authEmailCodeStep" class="hidden">
+<span class="auth-kicker">التحقق من البريد</span><h2>أدخل الرمز</h2>
+<p>الرمز صالح لمدة خمس دقائق.</p>
+<input id="authAdminEmailCode" class="otp-input" inputmode="numeric" autocomplete="one-time-code" maxlength="6" placeholder="••••••">
+<button id="verifyAdminEmailOtpBtn" class="gold-btn auth-main">تأكيد والدخول</button>
+<button id="changeAdminEmailBtn" class="auth-link">تغيير البريد</button>
+</div>
+<div id="authPhoneStep">
           <span class="auth-kicker">دخول سريع</span><h2>رقم جوالك يكفي</h2>
           <p>نرسل لك رمز تحقق على واتساب، وبعدها تفتح لوحة مناسباتك مباشرة.</p>
           <label><span>رقم الجوال</span><div class="phone-field"><b>+966</b><input id="authPhone" inputmode="tel" autocomplete="tel" placeholder="5XXXXXXXX" maxlength="12"></div></label>
@@ -39,15 +52,22 @@
     document.body.appendChild(el);
     el.querySelectorAll("[data-auth-close]").forEach(b=>b.onclick=()=>close(true));
     el.querySelector("#changePhoneBtn").onclick=()=>step("phone");
-    el.querySelector("#sendOtpBtn").onclick=requestOtp;
+    el.querySelector("#sendAdminEmailOtpBtn").onclick=requestAdminEmailOtp;
+el.querySelector("#verifyAdminEmailOtpBtn").onclick=verifyAdminEmailOtp;
+el.querySelector("#changeAdminEmailBtn").onclick=()=>step("email");
+    el.querySelector("#adminUsePhoneBtn").onclick=()=>step("phone");
+el.querySelector("#sendOtpBtn").onclick=requestOtp;
     el.querySelector("#verifyOtpBtn").onclick=verifyOtp;
     return el;
   }
   function step(which){
-    const m=modal();m.querySelector("#authPhoneStep").classList.toggle("hidden",which!=="phone");m.querySelector("#authCodeStep").classList.toggle("hidden",which!=="code");m.querySelector("#authError").textContent="";
-    setTimeout(()=>m.querySelector(which==="phone"?"#authPhone":"#authCode")?.focus(),100);
+    const m=modal();
+for(const [id,mode] of [["authPhoneStep","phone"],["authCodeStep","code"],["authEmailStep","email"],["authEmailCodeStep","email-code"]])m.querySelector("#"+id).classList.toggle("hidden",which!==mode);
+m.querySelector("#authError").textContent="";
+const field={phone:"#authPhone",code:"#authCode",email:"#authAdminEmail","email-code":"#authAdminEmailCode"}[which];
+setTimeout(()=>m.querySelector(field)?.focus(),100);
   }
-  function open(){const m=modal();m.classList.add("open");step("phone")}
+  function open(){const m=modal();m.classList.add("open");step(purpose==="admin"?"email":"phone")}
   function close(cancel=true){modal().classList.remove("open");if(cancel&&resolver){resolver(null);resolver=null}}
   const digits=value=>String(value||'').replace(/[٠-٩]/g,c=>String(c.charCodeAt(0)-0x660)).replace(/[۰-۹]/g,c=>String(c.charCodeAt(0)-0x6f0));
   function normalizedPhone(){
@@ -70,7 +90,34 @@
     catch(e){m.querySelector("#authError").textContent=e.message}
     finally{btn.disabled=false;btn.textContent="تأكيد والدخول"}
   }
-  function route(user){location.href=["admin","customer_service"].includes(user?.role)?"/admin.html":user?.role==="supervisor"?"/supervisor.html":user?.role==="partner"?"/partner.html":"/customer.html"}
+  async function requestAdminEmailOtp(){
+ const m=modal(),btn=m.querySelector("#sendAdminEmailOtpBtn"),email=m.querySelector("#authAdminEmail").value.trim().toLowerCase();
+ m.querySelector("#authError").textContent="";
+ if(!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)){m.querySelector("#authError").textContent="أدخل بريدًا إلكترونيًا صحيحًا";return}
+ btn.disabled=true;btn.textContent="جاري الإرسال…";
+ try{
+  const r=await fetch("/api/auth/admin-email/request",{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({email})});
+  const d=await r.json();if(!r.ok)throw new Error(d.error||"تعذر إرسال الرمز");
+  m.dataset.adminEmail=email;step("email-code");
+ }catch(e){m.querySelector("#authError").textContent=e.message}
+ finally{btn.disabled=false;btn.textContent="إرسال رمز التحقق"}
+}
+async function verifyAdminEmailOtp(){
+ const m=modal(),btn=m.querySelector("#verifyAdminEmailOtpBtn"),email=m.dataset.adminEmail;
+ const code=digits(m.querySelector("#authAdminEmailCode").value).replace(/\D/g,"");
+ m.querySelector("#authError").textContent="";
+ if(!/^\d{6}$/.test(code)){m.querySelector("#authError").textContent="أدخل الرمز المكوّن من 6 أرقام";return}
+ btn.disabled=true;btn.textContent="جاري التحقق…";
+ try{
+  const r=await fetch("/api/auth/admin-email/verify",{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({email,code})});
+  const d=await r.json();if(!r.ok)throw new Error(d.error||"رمز غير صحيح");
+  if(!["admin","customer_service"].includes(d.user?.role))throw new Error("الحساب ليس ضمن الإدارة");
+  const s={token:d.token,expiresAt:d.expiresAt,user:d.user};save(s);close(false);track("login_verified",{role:d.user.role});
+  if(resolver){resolver(s);resolver=null}else route(d.user);
+ }catch(e){m.querySelector("#authError").textContent=e.message}
+ finally{btn.disabled=false;btn.textContent="تأكيد والدخول"}
+}
+function route(user){location.href=["admin","customer_service"].includes(user?.role)?"/admin.html":user?.role==="supervisor"?"/supervisor.html":user?.role==="partner"?"/partner.html":"/customer.html"}
   async function validSession(){
     const s=session();if(!s?.token)return null;
     try{const r=await fetch("/api/auth/me",{headers:{authorization:`Bearer ${s.token}`}});if(!r.ok){localStorage.removeItem(KEY);return null}const d=await r.json();s.user=d.user;save(s);return s}catch{return s}
