@@ -9,7 +9,7 @@ permissions:
 jobs:
   preview:
     runs-on: ubuntu-24.04
-    timeout-minutes: 25
+    timeout-minutes: 45
     env:
       CI: "1"
       EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
@@ -61,8 +61,12 @@ jobs:
             tail -55 /tmp/hala-sdk58-go.log
             exit 1
           fi
-          echo "Expo Go SDK58 review: $code" >> "$GITHUB_STEP_SUMMARY"
-          gh pr comment 27 --repo Noortoona/noortoona --body "Expo Go SDK58 iPhone review URL (temporary, staging backend, payments disabled): $code. No signed iOS install and no native payment verification." || true
+          manifest_url="http://${code#exp://}"
+          launch_url="exp://?__expo_url=$(node -p 'encodeURIComponent(process.argv[1])' "$manifest_url")"
+          echo "Expo Go SDK58 direct project URL: $code" >> "$GITHUB_STEP_SUMMARY"
+          echo "Expo Go SDK58 launcher URL: $launch_url" >> "$GITHUB_STEP_SUMMARY"
+          echo "Sign into Expo Go as hala.app, select Enter URL manually and paste the direct project URL." >> "$GITHUB_STEP_SUMMARY"
+          gh pr comment 27 --repo Noortoona/noortoona --body "Expo Go SDK58 iPhone review (staging backend, payments disabled). Sign into Expo Go as hala.app; use Enter URL manually and paste: $code. Alternative SDK58 launcher URL: $launch_url. Temporary review, not a TestFlight build." || true
           echo "Temporary Expo Go SDK58 URL: $code"
-          sleep 600
+          sleep 1800
           kill "$pid" 2>/dev/null || true
