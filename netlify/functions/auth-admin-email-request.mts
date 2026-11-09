@@ -28,7 +28,8 @@ export default async (req:Request)=>{
    const random=new Uint32Array(1);crypto.getRandomValues(random);code=String(100000+random[0]%900000);
    id=crypto.randomUUID();
    const hash=await emailHash(email,code);
-   await client.query("INSERT INTO admin_email_otp_codes(id,email,code_hash,expires_at) VALUES($1,$2,$3,NOW()+INTERVAL '5 minutes')",[id,email,hash]);
+   await client.query("UPDATE admin_email_otp_codes SET consumed_at=NOW() WHERE email=$1 AND consumed_at IS NULL",[email]);
+   await client.query("INSERT INTO admin_email_otp_codes(id,user_id,email,code_hash,expires_at) VALUES($1,$2,$3,$4,NOW()+INTERVAL '5 minutes')",[id,users[0].id,email,hash]);
    await client.query("COMMIT");
   }catch(e){await client.query("ROLLBACK").catch(()=>{});throw e}finally{client.release()}
   const resp=await fetch("https://api.resend.com/emails",{method:"POST",headers:{"Authorization":"Bearer "+apiKey,"Content-Type":"application/json"},body:JSON.stringify({from,to:[email],subject:"رمز الدخول إلى إدارة هلا",text:"رمز الدخول إلى لوحة إدارة هلا: "+code+"\nصالح لمدة 5 دقائق. لا تشارك الرمز مع أحد."}),signal:AbortSignal.timeout(15000)});
