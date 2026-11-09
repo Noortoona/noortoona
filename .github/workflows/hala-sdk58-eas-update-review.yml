@@ -1,0 +1,70 @@
+name: HALA SDK58 Cloud Preview on Expo
+on:
+  push:
+    branches: ["feature/hala-expo-sdk58-20261109"]
+    paths: [".github/workflows/hala-sdk58-eas-update-review.yml"]
+  workflow_dispatch:
+permissions:
+  contents: read
+  pull-requests: write
+jobs:
+  cloud-preview:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    defaults:
+      run:
+        working-directory: mobile
+    env:
+      CI: "1"
+      EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
+      EXPO_PUBLIC_API_URL: https://deploy-preview-25--noortoona.netlify.app
+      EXPO_PUBLIC_PAYMENTS_ENABLED: "false"
+      GH_TOKEN: ${{ github.token }}
+      npm_config_legacy_peer_deps: "true"
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v6
+        with:
+          node-version: "24.19.0"
+          cache: npm
+          cache-dependency-path: mobile/package-lock.json
+      - name: Verify SDK58 preview settings
+        run: |
+          test -n "$EXPO_TOKEN" || { echo "::error::Expo token unavailable"; exit 1; }
+          test "$EXPO_PUBLIC_PAYMENTS_ENABLED" = "false"
+          test "$EXPO_PUBLIC_API_URL" = "https://deploy-preview-25--noortoona.netlify.app"
+          npm ci --legacy-peer-deps --no-audit --no-fund
+          npx expo-doctor@latest
+          npm run typecheck
+          npm test
+          npx expo export --platform ios --output-dir dist-sdk58-verify
+      - name: Verify Expo owner and existing linked project
+        run: |
+          npx --yes eas-cli@24.10.0 whoami
+          npx --yes eas-cli@24.10.0 project:info | grep -F '5aeba34d-6f95-424b-92b1-5519b5d20197'
+      - name: Configure EAS Update in isolated CI runner
+        run: |
+          npx expo install expo-updates --npm
+          npx --yes eas-cli@24.10.0 update:configure --non-interactive --environment preview
+          node --input-type=module <<'NODE'
+          import fs from 'node:fs';
+          const expo=JSON.parse(fs.readFileSync('app.json','utf8')).expo;
+          if(expo.extra?.eas?.projectId!=='5aeba34d-6f95-424b-92b1-5519b5d20197')throw Error('Wrong project');
+          if(!expo.updates?.url?.includes(expo.extra.eas.projectId))throw Error('Missing update endpoint');
+          if(!expo.runtimeVersion)throw Error('Missing runtime version');
+          console.log('SDK58 update setup validated for HALA review branch');
+          NODE
+      - name: Publish SDK58 iOS review update under HALA Expo owner
+        run: |
+          npx --yes eas-cli@24.10.0 update --branch sdk58-admin-email-review --platform ios --environment preview --message "HALA SDK58 iOS Expo Go admin email review, payments disabled" --non-interactive --json > /tmp/hala-sdk58-update.json
+          node --input-type=module <<'NODE'
+          import fs from 'node:fs';
+          const output=JSON.parse(fs.readFileSync('/tmp/hala-sdk58-update.json','utf8'));
+          const updates=Array.isArray(output)?output:[output];
+          const publicFields=updates.map(x=>({id:x.id,groupId:x.groupId,platform:x.platform,createdAt:x.createdAt}));
+          if(!publicFields.some(x=>x.id||x.groupId))throw Error('No published update IDs');
+          const url='https://expo.dev/accounts/hala.app/projects/hala/updates';
+          fs.appendFileSync(process.env.GITHUB_STEP_SUMMARY,'SDK58 iOS cloud review published to Expo. No native signed build. Payments disabled.\n\n'+url+'\n\n'+JSON.stringify(publicFields,null,2)+'\n');
+          console.log('Published SDK58 iOS review on Expo. '+url);
+          NODE
+          gh pr comment 27 --repo Noortoona/noortoona --body "✅ Expo SDK 58 iOS review published to the HALA account on branch sdk58-admin-email-review. Open the Expo Updates page and tap Preview in Expo Go while signed in to hala.app: https://expo.dev/accounts/hala.app/projects/hala/updates . Payments disabled, preview backend, no native iOS signing or production release." || true
