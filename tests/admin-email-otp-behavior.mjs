@@ -162,3 +162,23 @@ test("verified mailbox binds to same existing admin with approved phone and neve
  assert.equal(payload.user.role,"admin");
  assert.equal(payload.user.id,"existing-admin");
 });
+
+
+test("forward-only database migration preserves the originally applied migration and safely expires legacy OTPs",async t=>{
+ const {PGlite}=await import("@electric-sql/pglite");
+ const db=new PGlite();
+ t.after(()=>db.close());
+ const old=await readFile(new URL("../netlify/database/migrations/20261109010000_admin-email-otp/migration.sql",import.meta.url),"utf8");
+ const original="CREATE TABLE IF NOT EXISTS admin_email_otp_codes (\n id text PRIMARY KEY,\n email text NOT NULL,\n code_hash text NOT NULL,\n attempts integer NOT NULL DEFAULT 0,\n expires_at timestamptz NOT NULL,\n consumed_at timestamptz,\n sent_at timestamptz NOT NULL DEFAULT NOW()\n);\nCREATE INDEX IF NOT EXISTS admin_email_otp_lookup_idx ON admin_email_otp_codes(email,sent_at DESC);\n";
+ assert.equal(old,original,"Already-applied migration must never change");
+ await db.exec("CREATE TABLE users(id text PRIMARY KEY); INSERT INTO users(id) VALUES('verified-admin');");
+ await db.exec(old);
+ await db.exec("INSERT INTO admin_email_otp_codes(id,email,code_hash,expires_at) VALUES('old-code','shinko77@gmail.com','hash',NOW()+INTERVAL '5 minutes');");
+ const forward=await readFile(new URL("../netlify/database/migrations/20261109020000_admin-email-otp-bind-user/migration.sql",import.meta.url),"utf8");
+ await db.exec(forward);
+ assert.equal((await db.query("SELECT count(*)::int AS count FROM admin_email_otp_codes")).rows[0].count,0,"old unbound OTP must expire");
+ const result=await db.query("SELECT is_nullable FROM information_schema.columns WHERE table_name='admin_email_otp_codes' AND column_name='user_id'");
+ assert.equal(result.rows[0]?.is_nullable,"NO","new codes must be bound to one user");
+ await db.exec("INSERT INTO admin_email_otp_codes(id,user_id,email,code_hash,expires_at) VALUES('new-code','verified-admin','shinko77@gmail.com','hash',NOW()+INTERVAL '5 minutes');");
+ await assert.rejects(db.exec("INSERT INTO admin_email_otp_codes(id,email,code_hash,expires_at) VALUES('bad-code','shinko77@gmail.com','hash',NOW()+INTERVAL '5 minutes');"));
+});
