@@ -26,7 +26,7 @@ export default async (req:Request)=>{
     // Link the mailbox ONLY AFTER OTP verification, and only to the existing admin
     // with an active account and a server-approved phone. Do not create/promote.
     const configuredPhones=String(Netlify.env.get("HALA_ADMIN_PHONES")||"").split(",")
-      .map(value=>normalizePhone(value)).filter(Boolean);
+      .filter(Boolean).map(value=>normalizePhone(value)).filter(Boolean);
     if(configuredPhones.length){
       const candidates=await db.sql`SELECT id,phone FROM users WHERE id=${otp.user_id} AND email IS NULL AND role='admin' AND status='active' LIMIT 1`;
       const candidate:any=candidates[0];
