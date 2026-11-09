@@ -1,6 +1,6 @@
 import type { Config } from "@netlify/functions";
 import { getDatabase } from "@netlify/database";
-import { isSameOriginRequest,secureJson } from "./_shared/domain.mjs";
+import { isSameOriginRequest,normalizePhone,secureJson } from "./_shared/domain.mjs";
 import { normalizeEmail,validEmail,emailHash,allowedEmail } from "./_shared/admin-email-otp.mjs";
 export default async (req:Request)=>{
  if(req.method!=="POST")return new Response("Method Not Allowed",{status:405});
@@ -11,8 +11,23 @@ export default async (req:Request)=>{
   if(!validEmail(email))return secureJson({error:"البريد الإلكتروني غير صالح"},400);
   // Never mint privileges: email must be allowlisted AND belong to an existing privileged account.
   const db=getDatabase();
-  const users=await db.sql`SELECT id FROM users WHERE LOWER(email)=${email} AND role IN ('admin','customer_service') AND status='active' LIMIT 1`;
-  if(!allowedEmail(email)||!users[0])return secureJson({ok:true});
+  // A confirmed allowlisted mailbox may be linked ONLY to an already existing verified
+  // admin identity whose phone is configured server-side. Never create/promote an admin.
+  if(!allowedEmail(email))return secureJson({ok:true});
+  let users=await db.sql`SELECT id FROM users WHERE LOWER(email)=${email} AND role IN ('admin','customer_service') AND status='active' LIMIT 1`;
+  if(!users[0]){
+    // Do not claim an address already belonging to any other account.
+    const claimed=await db.sql`SELECT id FROM users WHERE LOWER(email)=${email} LIMIT 1`;
+    if(claimed[0])return secureJson({ok:true});
+    const configuredPhones=String(Netlify.env.get("HALA_ADMIN_PHONES")||"").split(",")
+      .map(value=>normalizePhone(value)).filter(Boolean);
+    if(configuredPhones.length){
+      const candidates=await db.sql`SELECT id,phone FROM users WHERE email IS NULL AND role='admin' AND status='active'`;
+      const matched=candidates.find(u=>configuredPhones.includes(normalizePhone(u.phone)));
+      if(matched)users=[matched];
+    }
+  }
+  if(!users[0])return secureJson({ok:true});
   const apiKey=Netlify.env.get("RESEND_API_KEY");
   const from=Netlify.env.get("HALA_AUTH_EMAIL_FROM");
   if(!apiKey||!from)return secureJson({error:"إرسال البريد غير مهيأ بعد"},503);
