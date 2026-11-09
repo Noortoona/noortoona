@@ -52,7 +52,7 @@ jobs:
           code=""
           for n in $(seq 1 90); do
             if ! kill -0 "$pid" 2>/dev/null; then break; fi
-            code=$(grep -Eo '(https://[A-Za-z0-9._-]+\\.on\\.expo\\.app|exp://[A-Za-z0-9._:/?&=%~-]+)' /tmp/hala-expo-go.log | head -n1 || true)
+            code=$(grep -Eo '(https://[A-Za-z0-9._-]+[.]on[.]expo[.]app|exp://[A-Za-z0-9._:/?&=%~-]+)' /tmp/hala-expo-go.log | head -n1 || true)
             if [[ "$code" == https://* ]]; then code="exp://${code#https://}"; fi
             [ -n "$code" ] && break
             sleep 2
