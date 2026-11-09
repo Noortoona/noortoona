@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import { createRequire, registerHooks } from 'node:module';
-import { normalizeSaudiPhone, normalizeDigits } from '../src/input.ts';
+import { normalizeSaudiPhone, normalizeDigits, normalizeAdminEmail } from '../src/input.ts';
 import { isGoogleMapsUrl, mapsLinks } from '../src/links.ts';
 import { api, ApiError, BASE_URL } from '../src/api.ts';
 import { readFileSync } from 'node:fs';
@@ -118,4 +118,20 @@ test('mobile consumes admin catalog prices and hides only matching template grou
   const context={window:{},URL};vm.runInNewContext(readFileSync(new URL('../../invitation-renderer.js',import.meta.url),'utf8'),context);
   const web=context.window.NOORTOONA.catalogData(response);
   assert.equal(JSON.stringify(web),JSON.stringify(catalog));
+});
+
+test('staff email input normalizes valid addresses and leaves client unable to grant roles', () => {
+  assert.equal(normalizeAdminEmail('  SHINKO77@GMAIL.COM '), 'shinko77@gmail.com');
+  for(const bad of ['', 'not-an-email', 'foo@@gmail.com', 'a@b', 'A'.repeat(256)+'@gmail.com']) {
+    assert.equal(normalizeAdminEmail(bad),null);
+  }
+  const auth=readFileSync(new URL('../src/auth.tsx',import.meta.url),'utf8');
+  const login=readFileSync(new URL('../app/login.tsx',import.meta.url),'utf8');
+  assert.match(auth,/api\/auth\/admin-email\/request/);
+  assert.match(auth,/api\/auth\/admin-email\/verify/);
+  assert.match(auth,/\["admin", "customer_service"\]\.includes\(data\.user\?\.role\)/);
+  assert.match(login,/entry === "الإدارة" \|\| entry === "خدمة العملاء"/);
+  assert.match(login,/auth\.verifyAdminEmailOtp/);
+  assert.match(login,/auth\.verifyOtp/);
+  assert.match(login,/الدخول برقم الجوال بدل البريد/);
 });

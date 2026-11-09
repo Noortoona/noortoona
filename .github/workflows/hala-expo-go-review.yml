@@ -1,0 +1,67 @@
+name: Hala Expo Go admin email review
+on:
+  push:
+    branches: ["feature/hala-mobile-admin-email-otp-20261109"]
+    paths: [".github/workflows/hala-expo-go-review.yml"]
+permissions:
+  contents: read
+  pull-requests: write
+jobs:
+  expo-go-preview:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 25
+    env:
+      CI: "1"
+      EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
+      EXPO_PUBLIC_API_URL: https://deploy-preview-25--noortoona.netlify.app
+      EXPO_PUBLIC_PAYMENTS_ENABLED: "false"
+      EXPO_UNSTABLE_TUNNEL_V2: "1"
+      GH_TOKEN: ${{ github.token }}
+    defaults:
+      run:
+        working-directory: mobile
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v6
+        with:
+          node-version: "24.19.0"
+          cache: npm
+          cache-dependency-path: mobile/package-lock.json
+      - name: Check Expo access token without logging it
+        run: |
+          if [ -z "$EXPO_TOKEN" ]; then
+            echo "::error::EXPO_TOKEN missing from GitHub Actions secrets. Cannot create Expo Go link."
+            exit 1
+          fi
+      - name: Install dependencies
+        run: npm ci
+      - name: Validate mobile code and generated preview
+        run: |
+          npm run typecheck
+          npm test
+          npx expo-doctor@1.20.4
+      - name: Validate Expo owner and project
+        run: |
+          npx --yes eas-cli@24.10.0 whoami
+          npx --yes eas-cli@24.10.0 project:info | grep -F '5aeba34d-6f95-424b-92b1-5519b5d20197'
+      - name: Start temporary Expo Go tunnel for iPhone review
+        run: |
+          npx expo start --go --tunnel --port 8087 > /tmp/hala-expo-go.log 2>&1 &
+          pid=$!
+          code=""
+          for n in $(seq 1 90); do
+            if ! kill -0 "$pid" 2>/dev/null; then break; fi
+            code=$(grep -Eo 'exp://[A-Za-z0-9._:/?&=%~-]+' /tmp/hala-expo-go.log | head -n1 || true)
+            [ -n "$code" ] && break
+            sleep 2
+          done
+          if [ -z "$code" ]; then
+            echo "::error::Expo Go tunnel did not provide a public preview address."
+            tail -65 /tmp/hala-expo-go.log
+            exit 1
+          fi
+          echo "Temporary Expo Go URL: $code" | tee -a "$GITHUB_STEP_SUMMARY"
+          gh pr comment 26 --repo Noortoona/noortoona --body "🧪 Expo Go preview for HALA mobile admin email OTP (temporary preview backend, payments disabled): \`$code\`. Open Expo Go on iPhone under the hala.app account, then load this address. This runner will close the link after about 15 minutes. No production data or payment processing is used." || true
+          echo "Temporary Metro preview is active for approximately 15 minutes."
+          sleep 900
+          kill "$pid" 2>/dev/null || true
