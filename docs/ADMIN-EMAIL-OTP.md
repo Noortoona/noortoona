@@ -8,7 +8,7 @@ The admin portal defaults to **email verification**. Customer phone/WhatsApp OTP
 2. `RESEND_API_KEY` — secret from the Resend account; never place in GitHub, a frontend bundle, or this document.
 3. `HALA_AUTH_EMAIL_FROM` — verified sender on a domain validated with Resend, such as `HALA <login@halainvites.com>` if that sending address is configured.
 4. Existing `HALA_OTP_SECRET` must remain set to a secret with at least 24 characters.
-5. The `users` table must contain an **existing, active** account with the email `shinko77@gmail.com` AND role `admin` (or `customer_service`). Securely associate the address with the already-verified existing admin account. **Do not insert an admin user or assign admin role using only an email supplied by the visitor.**
+5. The `users` table must contain an **existing, active, privileged account**. It can already have email `shinko77@gmail.com` and role `admin` or `customer_service`, or be an existing `admin` with a null email and a phone that matches the server-managed `HALA_ADMIN_PHONES`. Only after a successful OTP sent to an allowlisted mailbox may that null email be linked to the same existing admin ID. **Never insert a new admin account, grant an admin role, or replace an existing non-empty account email via this flow.** If no such account exists, this flow intentionally cannot grant access.
 6. Apply `20261109010000_admin-email-otp` database migration before deploying serverless functions.
 
 ## Testing and deployment
