@@ -55,7 +55,7 @@ jobs:
           NODE
       - name: Publish non-production update to Expo account
         run: |
-          npx --yes eas-cli@24.10.0 update --branch admin-email-review --message "HALA admin email OTP - Expo review - no payments" --environment preview --non-interactive --json > /tmp/hala-update-result.json
+          npx --yes eas-cli@24.10.0 update --branch admin-email-review --platform ios --message "HALA admin email OTP - Expo review - no payments" --environment preview --non-interactive --json > /tmp/hala-update-result.json
           node --input-type=module <<'NODE'
           import {readFileSync,appendFileSync} from 'node:fs';
           const x=JSON.parse(readFileSync('/tmp/hala-update-result.json','utf8'));
