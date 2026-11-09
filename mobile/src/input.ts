@@ -10,3 +10,9 @@ export function normalizeSaudiPhone(value: string): string | null {
   if (/^5\d{8}$/.test(phone)) phone = `966${phone}`;
   return /^9665\d{8}$/.test(phone) ? phone : null;
 }
+
+/** Admin/staff email is validated client-side for UX; the server authorizes it. */
+export function normalizeAdminEmail(value: string): string | null {
+  const email = value.trim().toLowerCase();
+  return email.length <= 254 && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email) ? email : null;
+}
