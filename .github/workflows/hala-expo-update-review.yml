@@ -1,0 +1,69 @@
+name: Hala Expo Update - admin email review
+on:
+  push:
+    branches: ["main"]
+    paths: [".github/workflows/hala-expo-update-review.yml"]
+  workflow_dispatch:
+permissions:
+  contents: read
+  pull-requests: write
+
+jobs:
+  publish-review:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 25
+    env:
+      CI: "1"
+      EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
+      EXPO_PUBLIC_API_URL: https://deploy-preview-25--noortoona.netlify.app
+      EXPO_PUBLIC_PAYMENTS_ENABLED: "false"
+      GH_TOKEN: ${{ github.token }}
+    defaults:
+      run:
+        working-directory: mobile
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v6
+        with:
+          node-version: "24.19.0"
+          cache: npm
+          cache-dependency-path: mobile/package-lock.json
+      - name: Check safe deployment settings
+        run: |
+          test -n "$EXPO_TOKEN" || { echo "::error::EXPO_TOKEN is missing"; exit 1; }
+          test "$EXPO_PUBLIC_API_URL" = "https://deploy-preview-25--noortoona.netlify.app"
+          test "$EXPO_PUBLIC_PAYMENTS_ENABLED" = "false"
+          npm ci
+          npm run typecheck
+          npm test
+          npx expo-doctor@1.20.4
+      - name: Verify Expo project identity
+        run: |
+          npx --yes eas-cli@24.10.0 whoami
+          npx --yes eas-cli@24.10.0 project:info | grep -F '5aeba34d-6f95-424b-92b1-5519b5d20197'
+      - name: Configure update ONLY in runner workspace
+        run: |
+          npx expo install expo-updates --npm
+          npx --yes eas-cli@24.10.0 update:configure --non-interactive --environment preview
+          node --input-type=module <<'NODE'
+          import { readFileSync } from 'node:fs';
+          const c = JSON.parse(readFileSync('app.json','utf8')).expo;
+          if(c.extra?.eas?.projectId !== '5aeba34d-6f95-424b-92b1-5519b5d20197')throw Error('Wrong Expo project');
+          if(!c.updates?.url?.includes(c.extra.eas.projectId))throw Error('Update URL not configured');
+          if(!c.runtimeVersion)throw Error('Runtime version missing');
+          console.log('Preview update config validated for '+c.slug);
+          NODE
+      - name: Publish non-production update to Expo account
+        run: |
+          npx --yes eas-cli@24.10.0 update --branch admin-email-review --message "HALA admin email OTP - Expo review - no payments" --environment preview --non-interactive --json > /tmp/hala-update-result.json
+          node --input-type=module <<'NODE'
+          import {readFileSync,appendFileSync} from 'node:fs';
+          const x=JSON.parse(readFileSync('/tmp/hala-update-result.json','utf8'));
+          const items=Array.isArray(x)?x:[x];
+          const data=items.map(z=>({id:z.id,groupId:z.groupId,platform:z.platform,createdAt:z.createdAt}));
+          if(!data.length||!data.some(z=>z.id||z.groupId))throw Error('No Expo update IDs returned');
+          const page='https://expo.dev/accounts/hala.app/projects/hala/updates';
+          appendFileSync(process.env.GITHUB_STEP_SUMMARY,'Expo update published in review branch (admin-email-review). No native IPA or App Store/TestFlight submission.\n\n'+page+'\n\n'+JSON.stringify(data,null,2)+'\n');
+          console.log('Expo update publish complete. Review URL: '+page);
+          NODE
+          gh pr comment 26 --repo Noortoona/noortoona --body "Expo review update uploaded to hala.app / hala — branch admin-email-review, backend deploy-preview-25, payments disabled. View: https://expo.dev/accounts/hala.app/projects/hala/updates. This is an EAS Update, not an iOS signed build or TestFlight distribution." || true
