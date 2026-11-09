@@ -20,7 +20,7 @@ export default async (req:Request)=>{
     const claimed=await db.sql`SELECT id FROM users WHERE LOWER(email)=${email} LIMIT 1`;
     if(claimed[0])return secureJson({ok:true});
     const configuredPhones=String(Netlify.env.get("HALA_ADMIN_PHONES")||"").split(",")
-      .map(value=>normalizePhone(value)).filter(Boolean);
+      .filter(Boolean).map(value=>normalizePhone(value)).filter(Boolean);
     if(configuredPhones.length){
       const candidates=await db.sql`SELECT id,phone FROM users WHERE email IS NULL AND role='admin' AND status='active'`;
       const matched=candidates.find(u=>configuredPhones.includes(normalizePhone(u.phone)));
