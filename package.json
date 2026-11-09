@@ -3,7 +3,7 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "test": "node tests/smoke.mjs && node --test tests/whatsapp.mjs tests/payments.mjs tests/moyasar.mjs tests/accounts.mjs tests/partners.mjs && npm run test:build && npm run test:web && npm run test:database && npm run test:catalog && npm run test:prebooking",
+    "test": "node tests/smoke.mjs && node --test tests/whatsapp.mjs tests/payments.mjs tests/moyasar.mjs tests/accounts.mjs tests/admin-email-otp.mjs tests/admin-email-otp-behavior.mjs tests/partners.mjs && npm run test:build && npm run test:web && npm run test:database && npm run test:catalog && npm run test:prebooking",
     "test:e2e": "playwright test",
     "build": "node scripts/build-static.mjs",
     "test:build": "node --test tests/build-static.mjs",
