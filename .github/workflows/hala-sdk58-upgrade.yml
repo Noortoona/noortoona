@@ -1,0 +1,47 @@
+name: HALA Upgrade Expo SDK 58 (isolated)
+on:
+  push:
+    branches: ["feature/hala-expo-sdk58-20261109"]
+    paths: [".github/workflows/hala-sdk58-upgrade.yml"]
+permissions:
+  contents: write
+jobs:
+  migrate:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 35
+    defaults:
+      run:
+        working-directory: mobile
+    steps:
+      - name: Checkout isolated review branch
+        uses: actions/checkout@v5
+        with:
+          ref: feature/hala-expo-sdk58-20261109
+          persist-credentials: true
+      - name: Setup Node for SDK58
+        uses: actions/setup-node@v6
+        with:
+          node-version: "24.19.0"
+          cache: npm
+          cache-dependency-path: mobile/package-lock.json
+      - name: Resolve SDK58 dependencies and regenerate lockfile
+        run: |
+          npm install --no-audit --no-fund
+          npx expo install --check
+          node -e 'const p=require("./package.json"); if(!p.dependencies.expo.startsWith("^58."))throw Error("Not SDK58"); console.log("Expo",p.dependencies.expo,"React",p.dependencies.react,"RN",p.dependencies["react-native"])'
+      - name: Commit upgraded manifest and lockfile, not secrets
+        working-directory: .
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add mobile/package.json mobile/package-lock.json
+          if git diff --staged --quiet; then exit 0; fi
+          git commit -m "build(mobile): upgrade Expo and RN to SDK 58"
+          git push origin HEAD:feature/hala-expo-sdk58-20261109
+      - name: Check SDK58 app and iPhone bundle
+        run: |
+          npx expo-doctor@latest
+          npm run typecheck
+          npm test
+          npx expo export --platform ios --output-dir dist-sdk58-ios
+          npx expo export --platform android --output-dir dist-sdk58-android
