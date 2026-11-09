@@ -11,6 +11,8 @@ type AuthContextValue = {
   token: string | null;
   requestOtp(phone: string): Promise<void>;
   verifyOtp(phone: string, code: string, name?: string): Promise<void>;
+  requestAdminEmailOtp(email: string): Promise<void>;
+  verifyAdminEmailOtp(email: string, code: string): Promise<void>;
   signOut(): Promise<void>;
 };
 
@@ -59,6 +61,24 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     await acceptSession(data);
   }
 
+  async function requestAdminEmailOtp(email: string) {
+    await api("/api/auth/admin-email/request", {
+      method: "POST",
+      body: JSON.stringify({ email })
+    });
+  }
+
+  async function verifyAdminEmailOtp(email: string, code: string) {
+    const data = await api<{ token: string; user: User }>("/api/auth/admin-email/verify", {
+      method: "POST",
+      body: JSON.stringify({ email, code })
+    });
+    if (!["admin", "customer_service"].includes(data.user?.role)) {
+      throw new ApiError("الحساب لا يملك صلاحية الإدارة", 403);
+    }
+    await acceptSession(data);
+  }
+
   async function signOut() {
     try {
       if (token) await api("/api/auth/logout", { method: "POST" }, token);
@@ -69,7 +89,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   }
 
-  const value = useMemo(() => ({ loading, user, token, requestOtp, verifyOtp, signOut }), [loading, user, token]);
+  const value = useMemo(() => ({ loading, user, token, requestOtp, verifyOtp, requestAdminEmailOtp, verifyAdminEmailOtp, signOut }), [loading, user, token]);
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 }
 
