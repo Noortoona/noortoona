@@ -106,13 +106,16 @@ export default async (req: Request) => {
       const rows = await db.sql`
         INSERT INTO payment_orders (id, event_id, user_id, package_code, amount, supervisor_addon_amount, currency, referral_code, referral_partner_id, discount_amount, commission_amount, guest_limit,booking_id,environment,payment_mode)
         VALUES (${id}, ${eventId}, ${auth.user.id}, ${selected.code}, ${total}, ${addon}, ${selected.currency}, ${booking?.referral_code||partner?.code || null}, ${booking?.partner_user_id||partner?.user_id || null}, ${discountAmount}, ${commissionAmount}, ${selected.guestLimit},${booking?.id||null},${analyticsEnvironment()},${features.mode})
+        ON CONFLICT (booking_id) WHERE booking_id IS NOT NULL AND status IN ('pending','paid') DO NOTHING
         RETURNING id, event_id, package_code, guest_limit, amount, supervisor_addon_amount, currency, status, referral_code, discount_amount, created_at
       `;
-      order = rows[0];
+      order = rows[0]||(await db.sql`SELECT id,event_id,package_code,guest_limit,amount,supervisor_addon_amount,currency,status,referral_code,discount_amount,created_at FROM payment_orders WHERE booking_id=${booking.id} AND user_id=${auth.user.id} AND status IN ('pending','paid') LIMIT 1`)[0];
+      if(!order)return secureJson({error:'تغيرت حالة الدفع؛ أعد تحميل الحجز'},409);
     }
 
     return secureJson({
       order,
+      alreadyPaid:order.status==='paid',
       publishableKey: features.publishableKey,
       features: {
         applePay: { enabled: features.applePay.enabled, merchantId: features.applePay.merchantId || null },

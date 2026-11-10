@@ -81,7 +81,7 @@ await test('V2 shared policy, persistence, operations, payment boundaries and sa
   assert.equal((await call('payment-order',{eventId:e.event.id},tokens.customer)).status,409);
   assert.equal((await call('admin-bookings',{id:booking.id,entryStatus:'available'},tokens.staff,'PATCH')).status,403);
   assert.equal((await call('admin-bookings',{id:booking.id,entryStatus:'available'},tokens.admin,'PATCH')).status,200);
-  const p=await call('payment-order',{eventId:e.event.id},tokens.customer);assert.equal(p.status,201,JSON.stringify(p.data));const o=(await pg.query('SELECT * FROM payment_orders WHERE id=$1',[p.data.order.id])).rows[0];await reconcileMoyasarOrder(db,o,{id:o.id,status:'paid',amount:o.amount,currency:'SAR'});
+  const [p,p2]=await Promise.all([call('payment-order',{eventId:e.event.id},tokens.customer),call('payment-order',{eventId:e.event.id},tokens.customer)]);assert.equal(p.status,201,JSON.stringify(p.data));assert.equal(p2.status,201,JSON.stringify(p2.data));assert.equal(p.data.order.id,p2.data.order.id,'concurrent payment setup reuses the same order');const o=(await pg.query('SELECT * FROM payment_orders WHERE id=$1',[p.data.order.id])).rows[0];await reconcileMoyasarOrder(db,o,{id:o.id,status:'paid',amount:o.amount,currency:'SAR'});
   assert.equal((await call('admin-bookings',{id:booking.id,entryStatus:'assigned',organizerIds:['one']},tokens.admin,'PATCH')).status,400);
   assert.equal((await call('admin-bookings',{id:booking.id,entryStatus:'assigned',organizerIds:['one','two']},tokens.admin,'PATCH')).status,200);
   assert.equal((await pg.query("SELECT count(*)::int n FROM event_members WHERE event_id=$1 AND member_role='supervisor'",[e.event.id])).rows[0].n,2);
@@ -90,6 +90,15 @@ await test('V2 shared policy, persistence, operations, payment boundaries and sa
   assert.equal((await call('check-in',{eventId:e.event.id,code:'V2CHECK'},tokens.other)).status,403);
   assert.equal((await call('admin-bookings',{id:booking.id,entryStatus:'available',organizerIds:[]},tokens.admin,'PATCH')).status,200);
   assert.equal((await call('check-in',{eventId:e.event.id,code:'V2CHECK'},tokens.one)).status,403,'revoked organizer loses access immediately');
+ });
+ await t.test('late payment verification cannot revive cancellation or downgrade paid orders',async()=>{
+  const e=await ev(),b=payload(e);const saved=await call('bookings',b,tokens.customer);assert.equal(saved.status,201);
+  const p=await call('payment-order',{eventId:e.event.id},tokens.customer);assert.equal(p.status,201);
+  const order=(await pg.query('SELECT * FROM payment_orders WHERE id=$1',[p.data.order.id])).rows[0];
+  assert.equal((await call('admin-bookings',{id:saved.data.booking.id,bookingStatus:'cancelled'},tokens.admin,'PATCH')).status,200);
+  await reconcileMoyasarOrder(db,order,{id:order.id,status:'paid',amount:order.amount,currency:'SAR'});
+  const state=(await pg.query('SELECT payment_status,booking_status FROM bookings WHERE id=$1',[saved.data.booking.id])).rows[0];assert.equal(state.payment_status,'paid');assert.equal(state.booking_status,'cancelled');
+  const result=await reconcileMoyasarOrder(db,order,{id:order.id,status:'failed',amount:order.amount,currency:'SAR'});assert.equal(result.paid,true);assert.equal((await pg.query('SELECT status FROM payment_orders WHERE id=$1',[order.id])).rows[0].status,'paid');
  });
  await t.test('business/custom requests save in the existing CRM with attribution and idempotency',async()=>{
   const b={kind:'contact',idempotencyKey:key(),name:'مسؤول شركة',phone:'0531234599',attribution:{utm_source:'partner',referral_code:'TEST10'},quoteRequest:{type:'business',organization:'شركة الاختبار',eventType:'مؤتمر',guestCount:1000,eventCount:3,services:'هوية وQR وتقارير'}};
