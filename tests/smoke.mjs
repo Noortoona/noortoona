@@ -80,7 +80,9 @@ assert.match(guestJs, /safeExternalUrl/, 'guest links must be restricted to safe
 assert.ok(guestHtml.indexOf('invitation-renderer.js') < guestHtml.indexOf('guest.js'), 'shared renderer must load before guest app');
 assert.ok(guestHtml.indexOf('invitation-schemas.js') < guestHtml.indexOf('guest.js'), 'type schema must load before guest app');
 assert.match(indexHtml, /https:\/\/halainvites\.com\//, 'official domain metadata');
-assert.match(indexHtml, /هلا \| لحظتك \.\. تبدأ بهلا/, 'HALA public brand metadata');
+assert.match(indexHtml, /دعوات إلكترونية فاخرة للزواج والمناسبات \| هلا HALA/, 'HALA descriptive public search title');
+assert.match(indexHtml, /لحظتك تبدأ بـ/, 'HALA approved visual tagline remains on page');
+assert.match(indexHtml, /hala-hero-wordmark\.svg/, 'Approved Arabic HALA lettering asset is used');
 assert.match(indexHtml, /<h4>هلا أعمال<\/h4>[\s\S]*?تبدأ من 2,999/, 'business informational price preserved');
 assert.match(indexHtml, /<h4>هلا المؤسسات<\/h4>[\s\S]*?يبدأ من 8,999/, 'enterprise informational price preserved');
 assert.match(indexHtml, /<span class="business-status">قريبًا<\/span>/, 'business plans remain coming soon');
