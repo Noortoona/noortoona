@@ -1,2 +1,2 @@
-/* Set only to the measurement ID issued for HALA's approved GA4 web stream. */
-window.HALA_GA4_CONFIG = Object.freeze({ measurementId: null, enabled: false });
+/* Official HALA production web stream; Google SDK requires informed visitor consent. */
+window.HALA_GA4_CONFIG = Object.freeze({ measurementId: "G-Q630WGGXZ5", enabled: true });

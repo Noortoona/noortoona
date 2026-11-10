@@ -1,15 +1,17 @@
 # HALA GA4 activation
 
-Status: prepared and fail-closed until the owner completes Google account terms and a real web measurement ID is issued. No GA4 property existed in the approved Google account at the initial check. Google account creation is staged for HALA | هلا, property HALA Web — halainvites.com, Saudi Arabia timezone (UTC+3), currency SAR, Internet/Telecom category and small-business size. Goals are lead generation and traffic understanding. Optional account data sharing is unchecked.
+Status: the owner completed Google account terms. The approved HALA web stream was created and its issued ID configured for production activation after CI.
 
-## Activation gate
+- Account: `415828502` (HALA | هلا)
+- Property: `563711310` (HALA Web — halainvites.com)
+- Web stream: `16315279411` (HALA Website), `https://halainvites.com`
+- Measurement ID: `G-Q630WGGXZ5`
+- Timezone: Saudi Arabia (UTC+3); currency: SAR.
+- Enhanced Measurement: confirmed OFF in stream details. Optional account data sharing and email subscriptions were not enabled.
 
-1. The account owner reviews and accepts Google's Analytics account terms in the staged wizard. Account creation/terms acceptance is not performed automatically.
-2. Create one Web stream for https://halainvites.com named HALA Website. **Turn off Enhanced Measurement**, including automatic pageviews/history, forms, searches, outbound links, downloads and media. Only the explicitly sanitized events below should be sent. Do not enable Google Signals, advertising personalization, user-provided data collection or Ads links.
-3. Record the actual property ID, stream ID and G- measurement ID supplied by Google. Put the issued measurement ID in ga4-config.js and set enabled:true. Never substitute a fabricated or sample ID. The current null/disabled configuration sends no Google requests.
-4. Run checks and review a preview. Only the real production hostname can load Google; previews and localhost remain disabled. The automated browser tests use isolated production-origin fixtures and a fake Google SDK, never the production database or real Google collection.
-5. Merge after passing CI, verify the Netlify production tag/config and test an explicitly consented public session in GA4 Realtime/DebugView. Do not submit a fabricated production booking to test completion. Use an isolated fixture for booking success/failure flows.
-6. Connect the existing approved Google account to GA4 in OpenSEO, select this exact property, and verify measurement health. Google permission prompts require the owner's consent if they request new account access.
+## Release verification
+
+Merge only after CI passes. Verify the Netlify production configuration, then check an explicitly consented public session in GA4 Realtime. Production completion events must not be tested by submitting fabricated bookings. Automated tests use isolated booking fixtures and an intercepted Google SDK. Previews and localhost never initialize the real SDK. OpenSEO must select this exact property; new Google permission grants require the owner's consent.
 
 ## Consent and privacy
 
