@@ -46,6 +46,15 @@ jobs:
           workspace=$(python3 -c "import glob;print(glob.glob('ios/*.xcworkspace')[0])")
           scheme=$(basename "$workspace" .xcworkspace)
           xcodebuild -workspace "$workspace" -scheme "$scheme" -configuration Release -sdk iphonesimulator -destination 'generic/platform=iOS Simulator' -derivedDataPath ios/build CODE_SIGNING_ALLOWED=NO build > simulator-build.log 2>&1 || { tail -100 simulator-build.log; exit 1; }
+      - name: Preserve compiled simulator app before UI verification
+        run: |
+          app=$(python3 -c "import glob;print(glob.glob('ios/build/Build/Products/Release-iphonesimulator/*.app')[0])")
+          ditto -c -k --sequesterRsrc --keepParent "$app" hala-ios-simulator-app.zip
+      - uses: actions/upload-artifact@v4
+        with:
+          name: hala-ios-simulator-app-${{ github.sha }}
+          path: mobile/hala-ios-simulator-app.zip
+          retention-days: 7
       - name: Launch on iPhone simulator and capture review
         run: |
           device=$(xcrun simctl list devices available -j | python3 -c "import sys,json;print(next(d['udid'] for ds in json.load(sys.stdin)['devices'].values() for d in ds if 'iPhone' in d['name']))")

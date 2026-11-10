@@ -4,16 +4,16 @@ appId: com.noortoona.hala
     clearState: true
 - tapOn: "الباقات والأسعار"
 - extendedWaitUntil:
-    visible: "هلا الأساسية"
+    visible: "(?s).*هلا الأساسية.*"
     timeout: 30000
 - tapOn: "500"
-- assertVisible: ".*(١٬٣٩٩|1,399).*"
+- assertVisible: "(?s).*(١٬٣٩٩|1,399).*"
 - takeScreenshot: pricing-native-ar
 - tapOn: "English"
-- assertVisible: "HALA Essential"
+- assertVisible: "(?s).*HALA Essential.*"
 - scrollUntilVisible:
     element:
-      text: ".*(٤٬٤٩٩|4,499).*"
+      text: "(?s).*(٤٬٤٩٩|4,499).*"
     direction: DOWN
     timeout: 30000
 - takeScreenshot: pricing-native-en
