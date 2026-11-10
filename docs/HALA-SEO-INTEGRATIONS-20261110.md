@@ -59,3 +59,7 @@ Lighthouse is a lab check. Search Console field Core Web Vitals and actual Googl
 - PR CI must pass the web test suite (including iPhone, Desktop and Android browser projects) and mobile checks (typecheck, behavior tests, Expo Doctor, native prebuild, iOS/Android JS bundles).
 - Publish only after the GitHub checks and Netlify Deploy Preview pass. Verify the deployed HTML, schema, seven sitemap entries and HTTP noindex headers afterward.
 - Do not submit test bookings or dispatch messages against production. Protected data checks are anonymous and read-only; behavioral booking tests use isolated local PostgreSQL fixtures in CI.
+
+## Google verification follow-up
+
+Google sign-in for shinko77@gmail.com completed. Search Console supplied an official HTML meta tag for the existing https://halainvites.com/ URL-prefix property. The tag is now included in index.html. Confirming ownership, sitemap submission and the final integration results are recorded in the verification pull request after deployment. Keep the Google tag in place after verification.
