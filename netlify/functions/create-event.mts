@@ -3,7 +3,7 @@ import type { Config } from "@netlify/functions";
 import { boundedInteger, boundedMoney, isSameOriginRequest, secureJson } from "./_shared/domain.mjs";
 import { getAuth, linkEventMember, recordAudit } from "./_shared/auth.mjs";
 import { supervisorAddonHalalas } from "./_shared/settings.mjs";
-import { readCatalog, catalogPackage, availableTemplate } from "./_shared/catalog.mjs";
+import { readCatalog, catalogPackage, availableTemplate, packageSupportsTemplate } from "./_shared/catalog.mjs";
 import { activePartner, normalizeReferralCode } from "./_shared/partners.mjs";
 
 export default async (req: Request) => {
@@ -14,6 +14,8 @@ export default async (req: Request) => {
     const data:any = await req.json();
     const auth = await getAuth(req);
     if (data.requestSupervisor && (!auth || auth.user.role !== "customer")) return secureJson({ error: "سجل دخولك برقم الجوال لإضافة مشرف للمناسبة" }, 401);
+    if(data.date&&(!/^\d{4}-\d{2}-\d{2}$/.test(String(data.date))||!Number.isFinite(Date.parse(data.date+'T00:00:00Z'))||new Date(data.date+'T00:00:00Z').toISOString().slice(0,10)!==data.date))return secureJson({error:'تاريخ المناسبة غير صالح'},400);
+    if(data.time&&!/^([01]\d|2[0-3]):[0-5]\d$/.test(String(data.time)))return secureJson({error:'وقت المناسبة غير صالح'},400);
     const id = crypto.randomUUID();
     const ownerToken = crypto.randomUUID().replaceAll("-", "") + crypto.randomUUID().slice(0, 8);
     const title = String(data.title || `${data.occasion || "مناسبة"} ${data.name1 || ""}`).trim().slice(0, 220);
@@ -29,6 +31,7 @@ export default async (req: Request) => {
     const catalog=await readCatalog(db);
     const selectedPackage=catalogPackage(catalog,data.package||'hala_plus');
     if(!selectedPackage)return secureJson({error:'اختر باقة متاحة'},400);
+    if(!packageSupportsTemplate(selectedPackage,data.design,data.template))return secureJson({error:'القالب المختار حصري لباقة بلس وبريميوم؛ اختر قالبًا أساسيًا أو غيّر الباقة'},400);
     if(!availableTemplate(catalog,data.design,data.template))return secureJson({error:'القالب غير متاح؛ اختر قالبًا آخر'},400);
     const referralCode = normalizeReferralCode(data.referralCode);
     if (data.referralCode && !referralCode) return secureJson({ error: "كود الإحالة غير صالح" }, 400);

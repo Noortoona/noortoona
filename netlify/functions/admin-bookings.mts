@@ -53,6 +53,7 @@ export default async(req:Request)=>{
    const target=body.entryStatus||row.entry_status;
    if(target==='assigned'&&(ids.length!==entry?.organizers||row.payment_status!=='paid'))throw bookingError('يلزم السداد وتعيين العدد المطلوب كاملًا');
    for(const id of ids){if(!(await client.query("SELECT id FROM users WHERE id=$1 AND role='supervisor' AND status='active'",[id])).rows[0])throw bookingError('المنظم غير متاح');}
+   for(const previousId of row.organizer_ids||[])if(target!=='assigned'||!ids.includes(previousId))await client.query("DELETE FROM event_members WHERE event_id=$1 AND user_id=$2 AND member_role='supervisor'",[row.event_id,previousId]);
    await client.query('UPDATE bookings SET entry_status=$1,organizer_ids=$2::jsonb WHERE id=$3',[target,JSON.stringify(ids),row.id]);
    if(target==='assigned')for(const id of ids)await client.query("INSERT INTO event_members(event_id,user_id,member_role) VALUES($1,$2,'supervisor') ON CONFLICT(event_id,user_id) DO UPDATE SET member_role='supervisor'",[row.event_id,id]);
    Object.assign(updated,{entry_status:target,organizer_ids:ids});

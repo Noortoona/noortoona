@@ -1,6 +1,6 @@
 import {DateTimeField} from "@/DateTimeField";
 import {PackagePicker} from "@/PackagePicker";
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import { Alert, Image, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from "react-native";
 import { useRouter } from "expo-router";
 import * as ImagePicker from "expo-image-picker";
@@ -80,6 +80,7 @@ export default function CreateEvent() {
   const [supervisorPrice, setSupervisorPrice] = useState(599);
   const [supervisorPreference, setSupervisorPreference] = useState<"male" | "female" | "both" | null>(null);
   const [busy, setBusy] = useState(false);
+  const createLock=useRef(false);
   const [catalog, setCatalog] = useState<PublicCatalog>({ packages: DEFAULT_PACKAGES, hiddenTemplateKeys: [], services: [] });
 
   const selected = useMemo(() => OCCASIONS.find(o => o.key === occasionKey)!, [occasionKey]);
@@ -153,16 +154,17 @@ export default function CreateEvent() {
   }
 
   async function create() {
-    if (busy) return;
+    if (busy||createLock.current) return;
     const error = validateDetails();
     if (!selectedTemplate) return Alert.alert(t("القوالب"), t("لا توجد قوالب متاحة لهذا النوع حاليًا."));
     if (error) return Alert.alert(t("أكمل البيانات"), t(error));
     if (requestSupervisor && !supervisorPreference) return Alert.alert(t("اختيار المشرف"), t("اختر مشرفًا أو مشرفة أولًا"));
-    setBusy(true);
+    createLock.current=true;setBusy(true);
     try {
       const occasion = occasionForApi(occasionKey, selected.label);
       const activityType = occasionKey === "activity" ? (activityKey === "activityCustom" ? customActivity.trim() : activity.label) : "";
       const pkg = packages.find(p => p.code === packageCode)!;
+      if(pkg.code==="hala_basic"&&templatesFor(occasionKey,activityKey).findIndex(t=>t.name===selectedTemplate?.name)>=2)throw new Error(t("هذا القالب يتطلب بلس أو بريميوم. اختر قالبًا أساسيًا أو غيّر الباقة."));
       const result = await api<{ event: { id: string }; ownerToken: string }>("/api/events", {
         method: "POST",
         body: JSON.stringify({
@@ -199,7 +201,7 @@ export default function CreateEvent() {
     } catch (e: any) {
       Alert.alert(t("تعذر إنشاء المناسبة"), e?.message || t("حاول مرة أخرى"));
     } finally {
-      setBusy(false);
+      createLock.current=false;setBusy(false);
     }
   }
 

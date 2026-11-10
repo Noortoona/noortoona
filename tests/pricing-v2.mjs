@@ -11,7 +11,7 @@ const db={sql:async(p,...v)=>{const release=await lock();try{return(await pg.que
 globalThis.__PRICING_DB__=db;
 const env={CONTEXT:'deploy-preview',DEPLOY_ID:'pricing-v2-fixture',HALA_PAYMENT_MODE:'test',MOYASAR_PUBLISHABLE_KEY:'pk_test_fixture',MOYASAR_SECRET_KEY:'sk_test_fixture'};globalThis.Netlify={env:{get:k=>env[k]}};
 let externalCalls=0;globalThis.fetch=async()=>{externalCalls++;throw Error('External calls forbidden in isolated pricing tests');};
-const h={};for(const name of ['catalog','admin-catalog','booking-quote','bookings','create-event','admin-bookings','leads','admin-leads','payment-order','check-in'])h[name]=(await import('../netlify/functions/'+name+'.mts')).default;
+const h={};for(const name of ['catalog','admin-catalog','booking-quote','bookings','create-event','admin-bookings','leads','admin-leads','payment-order','check-in','whatsapp-send'])h[name]=(await import('../netlify/functions/'+name+'.mts')).default;
 const {createSession}=await import('../netlify/functions/_shared/auth.mjs');
 const {reconcileMoyasarOrder}=await import('../netlify/functions/_shared/moyasar.mjs');
 const req=(path,body,token='',method=body?'POST':'GET',extra={})=>new Request('https://preview.example'+path,{method,headers:{origin:'https://preview.example','content-type':'application/json',...(token?{authorization:'Bearer '+token}:{}),...extra},...(body===undefined?{}:{body:JSON.stringify(body)})});
@@ -88,6 +88,8 @@ await test('V2 shared policy, persistence, operations, payment boundaries and sa
   await pg.query("INSERT INTO guests(id,event_id,name,code,rsvp_status) VALUES('guest-checkin',$1,'Guest','V2CHECK','accepted')",[e.event.id]);
   const scans=await Promise.all([call('check-in',{eventId:e.event.id,code:'V2CHECK'},tokens.one),call('check-in',{eventId:e.event.id,code:'V2CHECK'},tokens.two)]);assert.ok(scans.every(r=>r.status===200));assert.equal(scans.filter(r=>r.data.alreadyCheckedIn).length,1);
   assert.equal((await call('check-in',{eventId:e.event.id,code:'V2CHECK'},tokens.other)).status,403);
+  assert.equal((await call('admin-bookings',{id:booking.id,entryStatus:'available',organizerIds:[]},tokens.admin,'PATCH')).status,200);
+  assert.equal((await call('check-in',{eventId:e.event.id,code:'V2CHECK'},tokens.one)).status,403,'revoked organizer loses access immediately');
  });
  await t.test('business/custom requests save in the existing CRM with attribution and idempotency',async()=>{
   const b={kind:'contact',idempotencyKey:key(),name:'مسؤول شركة',phone:'0531234599',attribution:{utm_source:'partner',referral_code:'TEST10'},quoteRequest:{type:'business',organization:'شركة الاختبار',eventType:'مؤتمر',guestCount:1000,eventCount:3,services:'هوية وQR وتقارير'}};
@@ -96,6 +98,13 @@ await test('V2 shared policy, persistence, operations, payment boundaries and sa
   assert.equal((await call('leads',{...b,quoteRequest:{...b.quoteRequest,guestCount:2000}})).status,409);
   assert.equal((await call('leads',{...b,idempotencyKey:key(),quoteRequest:{...b.quoteRequest,type:'enterprise'}})).status,200);
   assert.equal((await pg.query('SELECT requests_json FROM leads WHERE id=$1',[lead.id])).rows[0].requests_json.length,2);
+ });
+ await t.test('template tiers and automatic messaging are enforced by the server',async()=>{
+  const denied=await call('create-event',{name1:'عميل',package:'hala_basic',template:'أقواس ذهبية',design:{occasionKey:'wedding'}},tokens.customer);assert.equal(denied.status,400);
+  const e=await ev();const b=payload(e);const saved=await call('bookings',b,tokens.customer);assert.equal(saved.status,201);
+  await pg.query("INSERT INTO guests(id,event_id,name,phone,code) VALUES('automation-guest',$1,'Guest','966501112211','AUTO1')",[e.event.id]);
+  Object.assign(env,{D360_MODE:'sandbox',D360_API_KEY:'synthetic',D360_WEBHOOK_TOKEN:'synthetic'});
+  const blocked=await call('whatsapp-send',{eventId:e.event.id,guestId:'automation-guest'},tokens.customer);assert.equal(blocked.status,403);assert.equal(blocked.data.code,'PACKAGE_AUTOMATION_NOT_INCLUDED');assert.equal(externalCalls,0);
  });
  await t.test('price changes can be scheduled, audited and cannot be overwritten by stale revisions',async()=>{
   const before=(await call('admin-catalog',undefined,tokens.admin)).data;

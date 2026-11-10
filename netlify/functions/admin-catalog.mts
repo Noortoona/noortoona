@@ -1,3 +1,4 @@
+import {capabilities} from './_shared/capabilities.mjs';
 import { getDatabase } from '@netlify/database';
 import type { Config } from '@netlify/functions';
 import { requireRole } from './_shared/auth.mjs';
@@ -9,7 +10,7 @@ export default async(req: Request)=>{
   if(!['GET','PATCH'].includes(req.method))return new Response('Method Not Allowed',{status:405});
   const db=getDatabase();
   if(req.method==='GET'){
-    try{const history=await db.sql`SELECT id,created_at,metadata FROM audit_log WHERE action='admin.catalog_updated' ORDER BY created_at DESC LIMIT 50`;return secureJson({...await readCatalog(db),templateKeys:TEMPLATE_KEYS,history})}
+    try{const history=await db.sql`SELECT id,created_at,metadata FROM audit_log WHERE action='admin.catalog_updated' ORDER BY created_at DESC LIMIT 50`;return secureJson({...await readCatalog(db),templateKeys:TEMPLATE_KEYS,history,capabilities:capabilities()})}
     catch(error){console.error(error);return secureJson({error:'تعذر تحميل الكتالوج'},503)}
   }
   if(!isSameOriginRequest(req))return secureJson({error:'طلب غير مسموح'},403);

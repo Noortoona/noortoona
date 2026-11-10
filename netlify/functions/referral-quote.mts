@@ -11,7 +11,7 @@ export default async (req: Request) => {
   if (!auth.ok) return secureJson({ error: auth.error }, auth.status);
   const url = new URL(req.url);
   const code = normalizeReferralCode(url.searchParams.get("code"));
-  const db=getDatabase(),pkg = catalogPackage(await readCatalog(db),url.searchParams.get("package"));
+  const db=getDatabase(),pkg = catalogPackage(await readCatalog(db),url.searchParams.get("package"),Number(url.searchParams.get("guests")||100));
   if (!code || !pkg) return secureJson({ error: "تحقق من الكود والباقة" }, 400);
   const profile = await activePartner(db, code, auth.user.id);
   if (!profile) return secureJson({ error: "كود الإحالة غير متاح" }, 404);

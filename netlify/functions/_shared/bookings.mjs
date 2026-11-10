@@ -1,4 +1,4 @@
-import { readCatalog, catalogPackage } from './catalog.mjs';
+import { readCatalog, catalogPackage, packageSupportsTemplate } from './catalog.mjs';
 import { activePartner, normalizeReferralCode, referralAmounts } from './partners.mjs';
 import { supervisorAddonHalalas } from './settings.mjs';
 import { POLICY_VERSION, entryQuote, taxQuote } from '../../../shared/pricing-policy.mjs';
@@ -17,10 +17,11 @@ export async function bookingSettings(db){
 }
 export async function quoteBooking(db,body,userId='',event=null){
  const catalog=await readCatalog(db);
- if(!event&&body.eventId)event=(await db.sql`SELECT package_name,referral_code FROM events WHERE id=${String(body.eventId)} LIMIT 1`)[0];
+ if(!event&&body.eventId)event=(await db.sql`SELECT package_name,referral_code,template,design_json FROM events WHERE id=${String(body.eventId)} LIMIT 1`)[0];
  const selected=catalogPackage(catalog,body.packageCode||event?.package_name||'hala_plus',body.guestCount);
  const guestCount=Number(body.guestCount),services=body.services||[];
  if(!selected||!Number.isInteger(guestCount)||guestCount<1||guestCount>selected.guestLimit)throw bookingError('اختر 100 أو 250 أو 500 مدعو؛ للأعداد الأخرى اطلب عرض سعر مخصص',422);
+ if(!packageSupportsTemplate(selected,event?.design_json||body.design,event?.template||body.template))throw bookingError('القالب المختار يتطلب بلس أو بريميوم؛ اختر قالبًا أساسيًا أو غيّر الباقة');
  if(!Array.isArray(services)||services.length>1||services.some(id=>id!=='supervisor'))throw bookingError('الخدمة الإضافية غير متاحة للتسعير');
  const entry=services.includes('supervisor')?entryQuote(catalog.entry,guestCount,{...body.entryDetails,preference:body.supervisorPreference||body.entryDetails?.preference}):null;
  if(entry?.error)throw bookingError(entry.error);

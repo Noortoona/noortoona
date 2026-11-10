@@ -1,5 +1,5 @@
 export type PackageFeature={id:string;ar:string;en:string;status:'included'|'assisted'|'external'};
-export type PricingPackage={code:string;name:string;nameEn:string;tagline:string;taglineEn:string;amount:number;amountSar:number;guestLimit:number;currency:string;enabled:boolean;recommended?:boolean;priceTiers:Record<number,number>;features:PackageFeature[]};
+export type PricingPackage={code:string;name:string;nameEn:string;tagline:string;taglineEn:string;amount:number;amountSar:number;guestLimit:number;currency:string;enabled:boolean;recommended?:boolean;priceTiers:Record<number,number>;features:PackageFeature[];includedFeatures?:PackageFeature[]};
 export const POLICY_VERSION:string;
 export const GUEST_COUNTS:number[];
 export const PACKAGE_DEFAULTS:PricingPackage[];

@@ -1,5 +1,5 @@
 import { publicPackages } from './payments.mjs';
-import { POLICY_VERSION, GUEST_COUNTS, ENTRY_DEFAULTS, TAX_DEFAULTS, BUSINESS_DEFAULTS, tierFor } from '../../../shared/pricing-policy.mjs';
+import { POLICY_VERSION, GUEST_COUNTS, ENTRY_DEFAULTS, TAX_DEFAULTS, BUSINESS_DEFAULTS, tierFor, featuresFor } from '../../../shared/pricing-policy.mjs';
 import { TEMPLATE_KEYS } from './template-registry.mjs';
 
 export const CATALOG_KEY = 'catalog_config_v1';
@@ -92,7 +92,7 @@ export async function readCatalog(db) {
 }
 
 export function publicCatalog(catalog) {
-  const {scheduled,...safe}=catalog;return {...safe,packages:catalog.packages.filter(p=>p.enabled!==false),services:catalog.services.filter(s=>s.enabled)};
+  const {scheduled,...safe}=catalog;return {...safe,packages:catalog.packages.filter(p=>p.enabled!==false).map(p=>({...p,includedFeatures:featuresFor(p,catalog.packages)})),services:catalog.services.filter(s=>s.enabled)};
 }
 
 export function catalogPackage(catalog, code, count) {
@@ -109,4 +109,11 @@ export function availableTemplate(catalog, design={}, template='') {
   return templateSet.has(key)&&!catalog.hiddenTemplateKeys.includes(key);
 }
 
+export function templateMinimumPackage(design={},template=''){
+ const group=design.occasionKey==='activity'?design.activityKey:design.occasionKey;
+ const templates=TEMPLATE_KEYS.filter(t=>t.group===group);
+ const index=templates.findIndex(t=>t.name===template);
+ return index>=2?'hala_plus':'hala_basic';
+}
+export function packageSupportsTemplate(pkg,design={},template=''){return pkg?.code!=='hala_basic'||templateMinimumPackage(design,template)==='hala_basic';}
 export { TEMPLATE_KEYS };
