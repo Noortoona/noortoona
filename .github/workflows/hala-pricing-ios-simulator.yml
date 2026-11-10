@@ -1,8 +1,8 @@
 name: HALA pricing iOS simulator review
 on:
   push:
-    branches: [feature/hala-pricing-packages-v2]
-    paths: [.github/workflows/hala-pricing-ios-simulator.yml]
+    branches: [feature/hala-pricing-packages-v2, feature/hala-mobile-production-build]
+    paths: [.github/workflows/hala-pricing-ios-simulator.yml, mobile/e2e/pricing.yaml]
 permissions:
   contents: read
 concurrency:
@@ -11,7 +11,7 @@ concurrency:
 jobs:
   simulator:
     runs-on: macos-latest
-    timeout-minutes: 45
+    timeout-minutes: 60
     env:
       CI: '1'
       EXPO_PUBLIC_API_URL: https://deploy-preview-29--noortoona.netlify.app
@@ -28,6 +28,17 @@ jobs:
           cache-dependency-path: mobile/package-lock.json
       - run: npm ci
       - run: npm run typecheck && npm test
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+      - name: Install pinned native UI test runner
+        run: |
+          curl -fL https://github.com/mobile-dev-inc/Maestro/releases/download/cli-2.12.1/maestro.zip -o maestro.zip
+          echo "54dbb0716425626604973cbb374c585ca30272375d9ce15177a1152765ddd9d7  maestro.zip" | shasum -a 256 -c -
+          unzip -q maestro.zip -d "$RUNNER_TEMP/maestro"
+          chmod +x "$RUNNER_TEMP/maestro/maestro/bin/maestro"
+          echo "$RUNNER_TEMP/maestro/maestro/bin" >> "$GITHUB_PATH"
       - name: Generate native iOS app with simulator dependencies
         run: npx expo prebuild --platform ios
       - name: Compile without Apple distribution credentials
@@ -35,6 +46,15 @@ jobs:
           workspace=$(python3 -c "import glob;print(glob.glob('ios/*.xcworkspace')[0])")
           scheme=$(basename "$workspace" .xcworkspace)
           xcodebuild -workspace "$workspace" -scheme "$scheme" -configuration Release -sdk iphonesimulator -destination 'generic/platform=iOS Simulator' -derivedDataPath ios/build CODE_SIGNING_ALLOWED=NO build > simulator-build.log 2>&1 || { tail -100 simulator-build.log; exit 1; }
+      - name: Preserve compiled simulator app before UI verification
+        run: |
+          app=$(python3 -c "import glob;print(glob.glob('ios/build/Build/Products/Release-iphonesimulator/*.app')[0])")
+          ditto -c -k --sequesterRsrc --keepParent "$app" hala-ios-simulator-app.zip
+      - uses: actions/upload-artifact@v4
+        with:
+          name: hala-ios-simulator-app-${{ github.sha }}
+          path: mobile/hala-ios-simulator-app.zip
+          retention-days: 7
       - name: Launch on iPhone simulator and capture review
         run: |
           device=$(xcrun simctl list devices available -j | python3 -c "import sys,json;print(next(d['udid'] for ds in json.load(sys.stdin)['devices'].values() for d in ds if 'iPhone' in d['name']))")
@@ -43,8 +63,7 @@ jobs:
           app=$(python3 -c "import glob;print(glob.glob('ios/build/Build/Products/Release-iphonesimulator/*.app')[0])")
           xcrun simctl install "$device" "$app"
           xcrun simctl launch "$device" com.noortoona.hala
-          xcrun simctl openurl "$device" hala://packages
-          sleep 8
+          maestro --device "$device" test e2e/pricing.yaml
           xcrun simctl io "$device" screenshot pricing-iphone.png
           echo 'Unsigned simulator review only. This is not TestFlight or an installable iPhone distribution build.' >> "$GITHUB_STEP_SUMMARY"
       - uses: actions/upload-artifact@v4
@@ -53,5 +72,8 @@ jobs:
           name: hala-pricing-ios-simulator
           path: |
             mobile/pricing-iphone.png
+            mobile/pricing-native-ar.png
+            mobile/pricing-native-en.png
+            ~/.maestro/tests
             mobile/simulator-build.log
           retention-days: 14

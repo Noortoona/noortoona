@@ -11,7 +11,7 @@ const db={sql:async(p,...v)=>{const release=await lock();try{return(await pg.que
 globalThis.__PRICING_DB__=db;
 const env={CONTEXT:'deploy-preview',DEPLOY_ID:'pricing-v2-fixture',HALA_PAYMENT_MODE:'test',MOYASAR_PUBLISHABLE_KEY:'pk_test_fixture',MOYASAR_SECRET_KEY:'sk_test_fixture'};globalThis.Netlify={env:{get:k=>env[k]}};
 let externalCalls=0;globalThis.fetch=async()=>{externalCalls++;throw Error('External calls forbidden in isolated pricing tests');};
-const h={};for(const name of ['catalog','admin-catalog','booking-quote','bookings','create-event','admin-bookings','leads','admin-leads','payment-order','check-in','whatsapp-send'])h[name]=(await import('../netlify/functions/'+name+'.mts')).default;
+const h={};for(const name of ['catalog','admin-catalog','booking-quote','bookings','create-event','admin-bookings','leads','admin-leads','payment-order','check-in','whatsapp-send','supervisor-addon','admin-supervisors','admin-event-members','admin-overview'])h[name]=(await import('../netlify/functions/'+name+'.mts')).default;
 const {createSession}=await import('../netlify/functions/_shared/auth.mjs');
 const {reconcileMoyasarOrder}=await import('../netlify/functions/_shared/moyasar.mjs');
 const req=(path,body,token='',method=body?'POST':'GET',extra={})=>new Request('https://preview.example'+path,{method,headers:{origin:'https://preview.example','content-type':'application/json',...(token?{authorization:'Bearer '+token}:{}),...extra},...(body===undefined?{}:{body:JSON.stringify(body)})});
@@ -78,6 +78,9 @@ await test('V2 shared policy, persistence, operations, payment boundaries and sa
   await patch({tax:{status:'not_registered'}});
   const e=await ev(),b={...payload(e),guestCount:500,services:['supervisor'],supervisorPreference:'both',entryDetails:{entrances:2,durationHours:3,startTime:'18:30',city:'الرياض',notes:'مدخلان منفصلان'}};
   const r=await call('bookings',b,tokens.customer);assert.equal(r.status,201,JSON.stringify(r.data));const booking=r.data.booking;assert.equal(booking.entry_status,'pending_review');assert.equal(booking.addon_amount,119800);assert.equal(booking.services_json[0].organizers,2);
+  const entryView=await call('supervisor-addon',undefined,tokens.customer,'GET','/api/events/supervisor?eventId='+e.event.id);assert.equal(entryView.data.source,'booking');assert.equal(entryView.data.request.organizers,2);assert.equal(entryView.data.request.amount,119800);
+  assert.equal((await call('supervisor-addon',{eventId:e.event.id,requested:false},tokens.customer)).status,409,'legacy mutation must not desynchronize the saved booking');
+
   assert.equal((await call('payment-order',{eventId:e.event.id},tokens.customer)).status,409);
   assert.equal((await call('admin-bookings',{id:booking.id,entryStatus:'available'},tokens.staff,'PATCH')).status,403);
   assert.equal((await call('admin-bookings',{id:booking.id,entryStatus:'available'},tokens.admin,'PATCH')).status,200);
@@ -85,11 +88,23 @@ await test('V2 shared policy, persistence, operations, payment boundaries and sa
   assert.equal((await call('admin-bookings',{id:booking.id,entryStatus:'assigned',organizerIds:['one']},tokens.admin,'PATCH')).status,400);
   assert.equal((await call('admin-bookings',{id:booking.id,entryStatus:'assigned',organizerIds:['one','two']},tokens.admin,'PATCH')).status,200);
   assert.equal((await pg.query("SELECT count(*)::int n FROM event_members WHERE event_id=$1 AND member_role='supervisor'",[e.event.id])).rows[0].n,2);
+  await pg.query("INSERT INTO supervisor_requests(id,event_id,user_id,amount,status) VALUES('legacy-v2',$1,'customer',59900,'requested')",[e.event.id]);
+  assert.equal((await call('admin-supervisors',{requestId:'legacy-v2',supervisorId:'one'},tokens.admin)).status,409,'old assignment API cannot bypass the two-person booking team');
+  assert.equal((await call('admin-event-members',{eventId:e.event.id,userId:'one',action:'remove'},tokens.admin)).status,409,'old member screen cannot leave the booking assignment inconsistent');
+  const overview=await call('admin-overview',undefined,tokens.admin);assert.equal(overview.status,200);assert.equal(overview.data.stats.supervisorRequests.assigned,1);assert.equal(overview.data.stats.supervisorRequests.total,1,'legacy mirror is not counted twice');
+
   await pg.query("INSERT INTO guests(id,event_id,name,code,rsvp_status) VALUES('guest-checkin',$1,'Guest','V2CHECK','accepted')",[e.event.id]);
   const scans=await Promise.all([call('check-in',{eventId:e.event.id,code:'V2CHECK'},tokens.one),call('check-in',{eventId:e.event.id,code:'V2CHECK'},tokens.two)]);assert.ok(scans.every(r=>r.status===200));assert.equal(scans.filter(r=>r.data.alreadyCheckedIn).length,1);
   assert.equal((await call('check-in',{eventId:e.event.id,code:'V2CHECK'},tokens.other)).status,403);
   assert.equal((await call('admin-bookings',{id:booking.id,entryStatus:'available',organizerIds:[]},tokens.admin,'PATCH')).status,200);
   assert.equal((await call('check-in',{eventId:e.event.id,code:'V2CHECK'},tokens.one)).status,403,'revoked organizer loses access immediately');
+ });
+ await t.test('historical standalone entry amounts and paid assignments remain usable',async()=>{
+  const e=await ev();
+  await pg.query("INSERT INTO supervisor_requests(id,event_id,user_id,amount,status) VALUES('historic-request',$1,'customer',29900,'requested')",[e.event.id]);
+  const view=await call('supervisor-addon',undefined,tokens.customer,'GET','/api/events/supervisor?eventId='+e.event.id);assert.equal(view.status,200);assert.equal(view.data.request.amount,29900,'historical amount is not replaced by the current 599 rate');
+  await pg.query("INSERT INTO payment_orders(id,event_id,user_id,package_code,amount,guest_limit,status,supervisor_addon_amount) VALUES('historic-paid',$1,'customer','hala_basic',39800,100,'paid',29900)",[e.event.id]);
+  const assigned=await call('admin-supervisors',{requestId:'historic-request',supervisorId:'one'},tokens.admin);assert.equal(assigned.status,200);assert.equal(assigned.data.request.amount,29900);
  });
  await t.test('late payment verification cannot revive cancellation or downgrade paid orders',async()=>{
   const e=await ev(),b=payload(e);const saved=await call('bookings',b,tokens.customer);assert.equal(saved.status,201);
