@@ -97,6 +97,96 @@
     ["هلا — منصة دعوات رقمية راقية لإنشاء الدعوات وإرسالها وإدارة الضيوف والحضور بكل أناقة.", "HALA — premium digital invitations and guest management."],
     ["أنشئ دعوتك الرقمية وأدر الضيوف والحضور والروابط الفريدة من مكان واحد.", "Create digital invitations and manage guests, RSVPs and personal invitation links in one place."]
   ]);
+
+  Object.assign(translations, {
+    "اسم المناسبة": "Event name",
+    "اكتب اسم مناسبتك": "Enter your event name",
+    "اختر النشاط": "Choose an activity",
+    "اختر النشاط المناسب لدعوتك": "Choose an activity for your invitation",
+    "اسم النشاط": "Activity name",
+    "اكتب اسم النشاط": "Enter an activity name",
+    "هذه الحقول مخصصة لهذا النوع من الدعوات ولن نطلب معلومات لا تخصها": "These fields are tailored to your event type; we won't ask for irrelevant details.",
+    "اخترنا لك الأنسب أولًا، ويمكنك مقارنة أربعة تصاميم واضحة": "We've selected suitable designs first. Compare four distinct styles.",
+    "اختيار هلا": "HALA's pick",
+    "التخصيص بسيط؛ القالب هو الهوية واللون مجرد لمسة": "Personalize easily: the template sets the style, while color adds a finishing touch.",
+    "دعوة معلوماتية بدون تأكيد حضور": "Informational invitation without RSVP",
+    "تأكيد حضور مخصص": "Custom RSVP",
+    "بدون طلب مرافقين": "No companions requested",
+    "يمكن إدارة المرافقين حسب هذا النوع": "Companions can be managed for this event type",
+    "• بدون QR افتراضيًا": "• QR off by default",
+    "• QR متاح": "• QR available",
+    "معاينة كضيف بالحجم الكامل": "Full-size guest preview",
+    "النص الرئيسي": "Headline",
+    "رقعة أنيق": "Elegant Ruqaa",
+    "تجوال": "Tajawal",
+    "كلاسيكي": "Classic",
+    "اللون الرئيسي": "Accent color",
+    "تغيير القالب": "Change template",
+    "استخدام صورتك كخلفية": "Use your photo as the background",
+    "موسيقى الدعوة (اختياري، حتى 600 كيلوبايت)": "Invitation audio (optional, up to 600 KB)",
+    "معاينة موسيقى الدعوة": "Preview invitation audio",
+    "إزالة الموسيقى": "Remove audio",
+    "تعمل الموسيقى باختيار الضيف. أعد اختيار الملفات عند استعادة المسودة.": "Audio plays only when a guest chooses to play it. Re-select files when resuming a draft.",
+    "عدد المدعوين وقائمتهم": "Guest count and list",
+    "حدّد العدد المطلوب للتسعير؛ يمكنك إضافة أسماء الضيوف لاحقًا": "Set your guest count for pricing; add guest names later.",
+    "عدد المدعوين المطلوب": "Required guest count",
+    "يمكنك أيضًا الإضافة والاستيراد من لوحة المضيف بعد الإنشاء.": "You can also add and import guests later from the host dashboard.",
+    "راجع دعوتك": "Review your invitation",
+    "هذه المعاينة تستخدم نفس الرسم الذي سيصل للضيف": "This preview uses the same design guests will receive.",
+    "معاينة كضيف": "View as guest",
+    "النوع": "Type",
+    "القطّة": "Shared contribution",
+    "ر.س للفرد": "SAR per person",
+    "تفضيلك لخدمة الاستقبال": "Supervisor preference",
+    "مشرف": "Male supervisor",
+    "مشرفة": "Female supervisor",
+    "يُراجع التوفر حسب المدينة والموعد قبل تأكيد التكليف.": "Availability is checked for your city and date before assignment.",
+    "راجع السعر وأدخل بيانات التواصل. لا يتم تحصيل أي مبلغ الآن.": "Review the price and enter contact details. Nothing is charged now.",
+    "إضافة مشرف أو مشرفة": "Add an event supervisor",
+    "يُراجع التوفر قبل التأكيد النهائي": "Availability is checked before final confirmation.",
+    "كود القاعة أو المؤثر (اختياري)": "Venue or influencer code (optional)",
+    "تحديث السعر وتطبيق الكود": "Refresh price and apply code",
+    "جاري حساب السعر من هلا…": "HALA is calculating your price...",
+    "البريد الإلكتروني (اختياري)": "Email (optional)",
+    "أوافق اختياريًا على استقبال أخبار وعروض هلا. الحجز متاح دون هذه الموافقة.": "I optionally agree to receive HALA news and offers. Booking is available without consent.",
+    "هذه خطوة تأكيد طلب حجز مبدئي دون دفع. سيُحفظ الطلب أولًا ثم يتواصل معك الفريق لاستكمال الدفع والتأكيد النهائي.": "This is a preliminary booking request without payment. We'll save your request and contact you to complete payment and final confirmation.",
+    "تحتاج مساعدة؟ تواصل مع خدمة العملاء — اختياري": "Need help? Contact support (optional)",
+    "الباقة": "Package",
+    "الخدمات": "Services",
+    "الخصم": "Discount",
+    "الإجمالي النهائي": "Final total",
+    "لا يتم الدفع الآن — تأكيد نهائي بعد التواصل": "No payment now — final confirmation after contact",
+    "اختر نوع المناسبة": "Choose an occasion",
+    "كل لحظة تستحق دعوة أجمل": "Every moment deserves a beautiful invitation",
+    "✓ محفوظ تلقائيًا": "✓ Autosaved",
+    "التالي ←": "Next →",
+    "اختيار اللون": "Choose color",
+    "تسجيل الطلب لا يعني إتمام الدفع أو اعتماد الحجز النهائي.": "Submitting your request is not payment or final booking confirmation.",
+    "عرض حجزي": "View my booking",
+    "حُفظ الحجز. يمكنك إكمال إضافة المدعوين من لوحة المناسبة لاحقًا.": "Booking saved. You can complete your guest list from your dashboard later.",
+    "ابدأ الآن": "Start now",
+    "قوالب دعوات قابلة للتخصيص": "Customizable invitation templates",
+    "رابط الدعوة وموقع المناسبة": "Invitation link and venue details",
+    "إدارة التأكيد والاعتذار": "Manage RSVPs",
+    "كل مزايا الأساسية": "All Basic features",
+    "إرسال واتساب عند تفعيل الخدمة": "WhatsApp delivery when enabled",
+    "QR لكل ضيف": "QR code for each guest",
+    "لوحة متابعة المدعوين": "Guest tracking dashboard",
+    "كل مزايا بلس": "All Plus features",
+    "تخصيصات متقدمة": "Advanced customization",
+    "قوائم انتظار وتقارير حضور": "Waitlists and attendance reports",
+    "أولوية الدعم حسب التوفر": "Priority support when available",
+    "خيارنا المقترح": "Recommended",
+    "السعر السابق الموثق": "Documented previous price",
+    "السعر بعد التخفيض المرخّص": "Price after authorized discount",
+    "اختر الباقة": "Choose package",
+    "لا توجد خدمات إضافية متاحة حاليًا.": "No add-on services are available yet.",
+    "تم الحجز وسيتم التواصل للدفع": "Booking recorded — we will contact you for payment",
+    "مناسبتي": "My event",
+    "الرياض": "Riyadh",
+    "السعودية": "Saudi Arabia",
+    "أدخل اسم العميل ورقم جواله": "Enter the customer name and mobile number"
+  });
   var originals = new WeakMap();
   var originalAttributes = new WeakMap();
   var locale = "ar";
@@ -108,7 +198,12 @@
   function translate(value, language) {
     var raw = String(value == null ? "" : value);
     if ((language || locale) !== "en") return raw;
-    return translations[raw] || raw;
+    if (translations[raw]) return translations[raw];
+    if (/^الخطوة ([0-9]+) من ([0-9]+)$/.test(raw)) return raw.replace(/^الخطوة ([0-9]+) من ([0-9]+)$/, "Step $1 of $2");
+    if (/^حتى ([0-9]+) ضيف$/.test(raw)) return raw.replace(/^حتى ([0-9]+) ضيف$/, "Up to $1 guests");
+    if (/^([0-9]+) ضيف$/.test(raw)) return raw.replace(/^([0-9]+) ضيف$/, "$1 guests");
+    if (raw.startsWith("اختر قالب ")) return "Choose a " + translate(raw.slice(9), "en") + " template";
+    return raw;
   }
   function translateText(node) {
     if (!node || !node.parentElement) return;
@@ -118,8 +213,10 @@
     if (!originals.has(node)) originals.set(node, node.nodeValue);
     var original = originals.get(node);
     var trimmed = original.trim();
-    if (!trimmed || !translations[trimmed]) return;
-    var next = locale === "en" ? original.replace(trimmed, translations[trimmed]) : original;
+    if (!trimmed) return;
+    var translated = translate(trimmed, "en");
+    if (translated === trimmed) return;
+    var next = locale === "en" ? original.replace(trimmed, translated) : original;
     if (node.nodeValue !== next) node.nodeValue = next;
   }
   function translateElement(element) {
