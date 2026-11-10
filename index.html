@@ -3,14 +3,18 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <meta name="theme-color" content="#0A0D13" />
-  <title>هلا | لحظتك .. تبدأ بهلا</title>
-  <meta name="description" content="هلا — منصة دعوات رقمية راقية لإنشاء الدعوات وإرسالها وإدارة الضيوف والحضور بكل أناقة." />
+  <meta name="theme-color" content="#2A0713" />
+  <title>دعوات إلكترونية فاخرة للزواج والمناسبات | هلا HALA</title>
+  <meta name="description" content="صمّم دعوة زواج إلكترونية أو دعوة ملكة وتخرج مع هلا. قوالب فاخرة، روابط شخصية للضيوف، تأكيد حضور RSVP، وإدارة الدخول برمز QR من مكان واحد." />
+  <meta name="robots" content="index,follow,max-image-preview:large" />
   <link rel="canonical" href="https://halainvites.com/" />
   <meta property="og:type" content="website" />
   <meta property="og:url" content="https://halainvites.com/" />
-  <meta property="og:title" content="هلا | لحظتك .. تبدأ بهلا" />
-  <meta property="og:description" content="أنشئ دعوتك الرقمية وأدر الضيوف والحضور والروابط الفريدة من مكان واحد." />
+  <meta property="og:title" content="هلا | تصميم دعوات إلكترونية فاخرة وإدارة المناسبات" />
+  <meta property="og:description" content="لحظتك تبدأ بهلا. صمّم دعوة إلكترونية للزواج والملكة والتخرج، وشاركها مع ضيوفك وتابع تأكيد الحضور والدخول عبر QR." />
+  <meta property="og:locale" content="ar_SA" />
+  <meta name="twitter:title" content="هلا | دعوات إلكترونية فاخرة للمناسبات" />
+  <meta name="twitter:description" content="دعوات زواج وملكة وتخرج بتصميم فاخر، مع تأكيد الحضور وإدارة الضيوف." />
   <meta property="og:image" content="https://halainvites.com/assets/brand/hala-og.png" />
   <meta name="twitter:card" content="summary_large_image" />
   <link rel="icon" type="image/svg+xml" href="/assets/brand/hala-icon.svg?v=20261102" />
@@ -20,6 +24,8 @@
   <link href="https://fonts.googleapis.com/css2?family=Aref+Ruqaa:wght@400;700&family=Tajawal:wght@400;500;600;700;800&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="styles.css" />
   <link rel="stylesheet" href="v2.css" />
+  <link rel="stylesheet" href="/home-luxury.css" />
+  <script type="application/ld+json">{"@context":"https://schema.org","@graph":[{"@type":"WebSite","@id":"https://halainvites.com/#website","url":"https://halainvites.com/","name":"هلا | HALA","inLanguage":"ar","description":"منصة لإنشاء الدعوات الإلكترونية وإدارة ضيوف المناسبات"},{"@type":"Organization","@id":"https://halainvites.com/#organization","name":"هلا | HALA","url":"https://halainvites.com/","logo":"https://halainvites.com/assets/brand/hala-logo-dark.png","sameAs":["https://www.instagram.com/halainvites/"]}]}</script>
 <link rel="stylesheet" href="/i18n.css"><script src="/i18n.js"></script></head>
 <body>
   <header class="topbar">
@@ -46,12 +52,13 @@
       <div class="hero-noise"></div><div class="hero-orb orb-a"></div><div class="hero-orb orb-b"></div>
       <div class="container hero-grid">
         <div class="hero-copy">
-          <span class="eyebrow">من الفكرة إلى الدعوة… ومن الدعوة إلى لحظة لا تُنسى</span>
-          <h1>لحظتك ..<br><span>تبدأ بهلا</span></h1>
-          <p>أنشئ دعوتك، صمّمها بطابعك، أرسلها لضيوفك، وتابع الحضور من مكان واحد — قبل المناسبة وأثناءها وبعدها.</p>
+          <span class="eyebrow">دعوات إلكترونية بتصميم يليق بلحظتك</span>
+          <h1 class="luxury-title"><span class="luxury-title-top">لحظتك تبدأ بـ</span><img class="luxury-wordmark" src="/assets/brand/hala-hero-wordmark.svg" width="480" height="224" alt="هلا" /></h1>
+          <div class="luxury-signature-rule" aria-hidden="true"><span></span><img src="/assets/brand/hala-icon-foreground.svg" width="30" height="30" alt="" /><span></span></div>
+          <p class="luxury-intro">منصة دعوات إلكترونية فاخرة للزواج والملكة والتخرج والمناسبات، تجمع تصميم الدعوة وإدارة المدعوين وتأكيد الحضور في مكان واحد.</p>
           <div class="hero-actions">
-            <button class="gold-btn" data-start>ابدأ مناسبتك الآن</button>
-            <a class="outline-btn" href="#how">اكتشف التجربة</a>
+            <button class="gold-btn" data-start>ابدأ دعوتك الآن</button>
+            <a class="outline-btn" href="#templates">استعرض القوالب</a>
           </div>
           <button id="resumeDraft" class="resume-draft hidden" type="button"><span>لديك دعوة غير مكتملة</span><b>أكمل من حيث توقفت ←</b></button>
           <div class="trust-row">
@@ -61,31 +68,10 @@
           </div>
         </div>
 
-        <div class="hero-scene" aria-label="معاينة تجربة هلا">
-          <div class="ambient-lamp"></div>
-          <div class="silk silk-one"></div><div class="silk silk-two"></div>
-          <div class="floral"><span>✦</span><span>❀</span><span>✧</span></div>
-          <div class="invite-card-visual light-sweep">
-            <div class="card-logo"><span class="mini-mark">✦</span><strong>هلا</strong><small>HALA</small></div>
-            <div class="card-frame">
-              <small>بكل الحب ندعوكم</small>
-              <h3>ليلة العمر</h3>
-              <p>أحمد & سارة</p>
-              <span>14 ديسمبر 2026</span>
-            </div>
-          </div>
-          <div class="phone-visual">
-            <div class="phone-notch"></div>
-            <div class="phone-screen">
-              <span class="mini-brand">✦ هلا</span>
-              <div class="phone-invite">
-                <small>دعوة خاصة</small><h4>أحمد & سارة</h4><p>يسرّنا حضوركم ومشاركتنا فرحتنا</p><span>الرياض • 8:00 مساءً</span>
-              </div>
-              <button>عرض الدعوة</button>
-            </div>
-          </div>
-          <div class="scene-badge badge-one"><span>✓</span> RSVP مباشر</div>
-          <div class="scene-badge badge-two"><span>⌁</span> QR دخول</div>
+        <div class="hero-scene luxury-photo-stage" aria-label="بطاقة دعوة إلكترونية فاخرة من هلا">
+          <div class="luxury-stage-photo" role="img" aria-label="تصميم بطاقة دعوة هلا عاجية بزخرفة ذهبية مع زهور وإضاءة دافئة"></div>
+          <div class="luxury-scene-glow" aria-hidden="true"></div>
+          <div class="luxury-scene-credit" aria-hidden="true">HALA • هلا</div>
         </div>
       </div>
       <div class="hero-bottom-line"></div>
@@ -93,14 +79,28 @@
 
     <section class="feature-ribbon">
       <div class="container ribbon-grid">
-        <div><span>✦</span><b>تصاميم فاخرة</b><small>لكل نوع مناسبة</small></div>
-        <div><span>⚙</span><b>تخصيص كامل</b><small>على ذوقك</small></div>
-        <div><span>◉</span><b>إدارة الضيوف</b><small>حضور واعتذار</small></div>
-        <div><span>↗</span><b>إرسال عبر واتساب</b><small>لكل ضيف رابط</small></div>
-        <div><span>⌁</span><b>QR للدخول</b><small>تسجيل أسرع</small></div>
+        <div><span aria-hidden="true">✧</span><b>قوالب دعوات فاخرة</b><small>تصميم حسب مناسبتك</small></div>
+        <div><span aria-hidden="true">✎</span><b>تخصيص مرن</b><small>ألوان وخطوط وصور</small></div>
+        <div><span aria-hidden="true">♧</span><b>إدارة المدعوين</b><small>روابط شخصية</small></div>
+        <div><span aria-hidden="true">✓</span><b>تأكيد الحضور</b><small>RSVP واعتذار</small></div>
+        <div><span aria-hidden="true">▣</span><b>دخول برمز QR</b><small>تسجيل الحضور</small></div>
+        <div><span aria-hidden="true">↗</span><b>مشاركة عبر واتساب</b><small>حسب توفر الخدمة</small></div>
       </div>
     </section>
 
+    <section class="luxury-seo-intro" id="digital-invitations" aria-labelledby="luxurySeoTitle">
+      <div class="container luxury-seo-grid">
+        <div>
+          <span class="eyebrow">دعوات رقمية بطابع هلا</span>
+          <h2 id="luxurySeoTitle">تصميم دعوات زواج إلكترونية ودعوات ملكة وتخرج بأسلوب فاخر</h2>
+        </div>
+        <div>
+          <p>مع هلا يمكنك إنشاء <strong>دعوة زواج إلكترونية</strong> أو دعوة ملكة أو تخرج أو مناسبة خاصة، واختيار القالب المناسب ثم تخصيص النص والخط والألوان. شارك رابط الدعوة مع ضيوفك وتابع ردودهم من لوحة واحدة.</p>
+          <p>تساعدك أدوات <strong>تأكيد الحضور RSVP</strong> وروابط المدعوين الشخصية ورموز <strong>QR لتنظيم الدخول</strong> على إدارة مناسبتك من بداية الدعوة حتى استقبال الضيوف. تتوفر بعض خدمات الإرسال والإضافات حسب حالة التفعيل والتوفر.</p>
+          <a href="#occasions" class="luxury-text-link">تعرّف على أنواع المناسبات</a>
+        </div>
+      </div>
+    </section>
     <section id="occasions" class="section night-section">
       <div class="container">
         <div class="section-head split-head">
