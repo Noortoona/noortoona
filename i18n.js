@@ -3,6 +3,18 @@
   "use strict";
   var STORAGE_KEY = "hala.locale";
   var translations = Object.fromEntries([
+    ["تفاصيل الحجز", "Booking details"],
+    ["لم تُطلب الخدمة ضمن الحجز", "Entry organization was not requested with this booking"],
+    ["بانتظار مراجعة التوفر", "Awaiting availability review"],
+    ["متاح بعد المراجعة", "Available after review"],
+    ["غير متاح", "Unavailable"],
+    ["تم توزيع الفريق", "Team assigned"],
+    ["اكتملت الخدمة", "Service completed"],
+    ["اطلب عرضًا لتنظيم الدخول", "Request an entry organization quote"],
+    ["تم تعيين منظم الدخول", "Entry organizer assigned"],
+    ["بانتظار تعيين منظم الدخول", "Awaiting organizer assignment"],
+    ["اكتملت خدمة تنظيم الدخول", "Entry organization completed"],
+    ["لم تُطلب الخدمة", "Service not requested"],
     ["عدد المدعوين للأسعار", "Pricing guest count"],
     ["عدد المدعوين", "Guest count"],
     ["تنظيم الدخول", "Entry organization"],
@@ -227,6 +239,7 @@
     if (/^الخطوة ([0-9]+) من ([0-9]+)$/.test(raw)) return raw.replace(/^الخطوة ([0-9]+) من ([0-9]+)$/, "Step $1 of $2");
     if (/^حتى ([0-9]+) ضيف$/.test(raw)) return raw.replace(/^حتى ([0-9]+) ضيف$/, "Up to $1 guests");
     if (/^([0-9]+) ضيف$/.test(raw)) return raw.replace(/^([0-9]+) ضيف$/, "$1 guests");
+    if (/^([0-9]+) منظم • (.+) • (.+)$/.test(raw)) return raw.replace(/^([0-9]+) منظم • (.+) • (.+)$/, function (_, n, amount, status) { return n + " organizer(s) • " + amount + " • " + translate(status, "en"); });
     if (raw.startsWith("اختر قالب ")) return "Choose a " + translate(raw.slice(9), "en") + " template";
     return raw;
   }

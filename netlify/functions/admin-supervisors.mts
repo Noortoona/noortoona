@@ -22,7 +22,7 @@ export default async(req:Request)=>{
  try{const b:any=await req.json(),requestId=String(b.requestId||""),supervisorId=String(b.supervisorId||"");
  if(!requestId||!supervisorId)return secureJson({error:"اختر الطلب والمشرف"},400);
  const sup=await db.sql`SELECT id FROM users WHERE id=${supervisorId} AND role='supervisor' AND status='active' LIMIT 1`;if(!sup[0])return secureJson({error:"المشرف غير متاح"},404);
- const rows=await db.sql`UPDATE supervisor_requests SET assigned_supervisor_id=${supervisorId},status='assigned',updated_at=NOW() WHERE id=${requestId} AND status='requested' AND EXISTS (SELECT 1 FROM payment_orders p WHERE p.event_id=supervisor_requests.event_id AND p.status='paid' AND p.supervisor_addon_amount>=supervisor_requests.amount) RETURNING *`;
+ const rows=await db.sql`UPDATE supervisor_requests SET assigned_supervisor_id=${supervisorId},status='assigned',updated_at=NOW() WHERE id=${requestId} AND status='requested' AND NOT EXISTS (SELECT 1 FROM bookings b WHERE b.event_id=supervisor_requests.event_id AND b.pricing_snapshot IS NOT NULL) AND EXISTS (SELECT 1 FROM payment_orders p WHERE p.event_id=supervisor_requests.event_id AND p.status='paid' AND p.supervisor_addon_amount>=supervisor_requests.amount) RETURNING *`;
  const r:any=rows[0];if(!r)return secureJson({error:"الطلب غير مدفوع أو لم يعد قابلًا للتعيين"},409);
  await linkEventMember(r.event_id,supervisorId,"supervisor");
  await recordAudit(auth.user.id,"supervisor.assigned","event",r.event_id,{requestId,supervisorId});

@@ -27,7 +27,11 @@ export default async(req:Request)=>{
       db.sql`SELECT COUNT(*)::int count FROM guests WHERE checked_in_at IS NOT NULL`,
       db.sql`SELECT COUNT(*)::int total,COUNT(*) FILTER(WHERE status='sent')::int sent,COUNT(*) FILTER(WHERE status='delivered')::int delivered,COUNT(*) FILTER(WHERE status='read')::int read,COUNT(*) FILTER(WHERE status='failed')::int failed FROM whatsapp_messages`,
       db.sql`SELECT COALESCE(SUM(amount) FILTER(WHERE status='paid'),0)::bigint revenue,COUNT(*) FILTER(WHERE status='paid')::int paid FROM payment_orders WHERE environment=${environment} AND payment_mode='live'`,
-      db.sql`SELECT COUNT(*)::int total,COUNT(*) FILTER(WHERE status='requested')::int requested,COUNT(*) FILTER(WHERE status='assigned')::int assigned,COUNT(*) FILTER(WHERE status='completed')::int completed FROM supervisor_requests`,
+      db.sql`SELECT COUNT(*)::int total,COUNT(*) FILTER(WHERE status='requested')::int requested,COUNT(*) FILTER(WHERE status='assigned')::int assigned,COUNT(*) FILTER(WHERE status='completed')::int completed FROM (
+        SELECT sr.status FROM supervisor_requests sr WHERE NOT EXISTS (SELECT 1 FROM bookings b WHERE b.event_id=sr.event_id AND b.pricing_snapshot IS NOT NULL)
+        UNION ALL
+        SELECT CASE WHEN entry_status IN ('pending_review','available') THEN 'requested' ELSE entry_status END status FROM bookings WHERE environment=${environment} AND pricing_snapshot IS NOT NULL AND entry_status<>'not_requested'
+      ) entry_requests`,
       db.sql`SELECT COUNT(*)::int count FROM guests WHERE viewed_at IS NOT NULL`,
       db.sql`SELECT a.action,a.entity_type,a.entity_id,a.metadata,a.created_at,u.name actor_name,u.role actor_role FROM audit_log a LEFT JOIN users u ON u.id=a.actor_user_id ORDER BY a.created_at DESC LIMIT 80`,
       db.sql`SELECT id,title,occasion,city,event_date,created_at FROM events ORDER BY created_at DESC LIMIT 12`,
