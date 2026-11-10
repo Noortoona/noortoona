@@ -9,6 +9,7 @@ import { useAuth } from "@/auth";
 import * as SecureStore from "expo-secure-store";
 import { BrandHeader, PrimaryButton, Screen } from "@/ui";
 import { theme } from "@/theme";
+import { useI18n } from "@/i18n";
 import { isGoogleMapsUrl } from "@/links";
 import { occasionForApi } from "@/templateCatalog";
 import { DEFAULT_PACKAGES, availableTemplatesFor, publicCatalog, type PublicCatalog } from "@/catalog";
@@ -48,6 +49,7 @@ const ACTIVITIES: Array<{ key: ActivityKey; label: string }> = [
 export default function CreateEvent() {
   const auth = useAuth();
   const router = useRouter();
+  const { t, isRTL } = useI18n();
   const [step, setStep] = useState(1);
   const [occasionKey, setOccasionKey] = useState<OccasionKey>("wedding");
   const [activityKey, setActivityKey] = useState<ActivityKey>("padel");
@@ -103,7 +105,7 @@ export default function CreateEvent() {
       const asset = result.assets[0];
       if (!asset.base64) throw new Error("تعذر قراءة الصورة. اختر صورة أخرى.");
       setImage(imageDataUri(asset.base64));
-    } catch (error) { Alert.alert("الصورة", error instanceof Error ? error.message : "تعذر فتح الصور."); }
+    } catch (error) { Alert.alert(t("الصورة"), error instanceof Error ? error.message : t("تعذر فتح الصور.")); }
     finally { setMediaBusy(false); }
   }
 
@@ -119,7 +121,7 @@ export default function CreateEvent() {
         setAudio(audioDataUri(await file.base64(), asset.mimeType, asset.name));
         setAudioName(asset.name);
       } finally { try { file.delete(); } catch {} }
-    } catch (error) { Alert.alert("موسيقى الدعوة", error instanceof Error ? error.message : "تعذر فتح الملف."); }
+    } catch (error) { Alert.alert(t("موسيقى الدعوة"), error instanceof Error ? error.message : t("تعذر فتح الملف.")); }
     finally { setMediaBusy(false); }
   }
 
@@ -150,9 +152,9 @@ export default function CreateEvent() {
   async function create() {
     if (busy) return;
     const error = validateDetails();
-    if (!selectedTemplate) return Alert.alert("القوالب", "لا توجد قوالب متاحة لهذا النوع حاليًا.");
-    if (error) return Alert.alert("أكمل البيانات", error);
-    if (requestSupervisor && !supervisorPreference) return Alert.alert("اختيار المشرف", "اختر مشرفًا أو مشرفة أولًا");
+    if (!selectedTemplate) return Alert.alert(t("القوالب"), t("لا توجد قوالب متاحة لهذا النوع حاليًا."));
+    if (error) return Alert.alert(t("أكمل البيانات"), t(error));
+    if (requestSupervisor && !supervisorPreference) return Alert.alert(t("اختيار المشرف"), t("اختر مشرفًا أو مشرفة أولًا"));
     setBusy(true);
     try {
       const occasion = occasionForApi(occasionKey, selected.label);
@@ -191,7 +193,7 @@ export default function CreateEvent() {
         params: { eventId: result.event.id },
       });
     } catch (e: any) {
-      Alert.alert("تعذر إنشاء المناسبة", e?.message || "حاول مرة أخرى");
+      Alert.alert(t("تعذر إنشاء المناسبة"), e?.message || t("حاول مرة أخرى"));
     } finally {
       setBusy(false);
     }
@@ -201,65 +203,65 @@ export default function CreateEvent() {
     <Screen>
       <BrandHeader
         title={step === 1 ? "تفاصيل الدعوة" : step === 2 ? "اختر القالب" : "راجع واختر الباقة"}
-        subtitle={`الخطوة ${step} من 3 — كل نوع دعوة له حقوله الخاصة`}
+        subtitle={isRTL ? `الخطوة ${step} من 3 — كل نوع دعوة له حقوله الخاصة` : `Step ${step} of 3 — each occasion has its own fields`}
       />
       <ScrollView contentContainerStyle={styles.body} keyboardShouldPersistTaps="handled">
-        <View style={styles.progress}>
+        <View style={[styles.progress, { flexDirection: isRTL ? "row-reverse" : "row" }]}>
           {[1, 2, 3].map(n => <View key={n} style={[styles.progressDot, n <= step && styles.progressDotActive]} />)}
         </View>
 
         {step === 1 ? (
           <>
-            <Text style={styles.label}>نوع الدعوة</Text>
-            <View style={styles.grid}>
+            <Text style={[styles.label, { textAlign: isRTL ? "right" : "left", writingDirection: isRTL ? "rtl" : "ltr" }]}>{t("نوع الدعوة")}</Text>
+            <View style={[styles.grid, { flexDirection: isRTL ? "row-reverse" : "row" }]}>
               {OCCASIONS.map(o => (
                 <Pressable key={o.key} onPress={() => chooseOccasion(o.key)} style={[styles.choice, occasionKey === o.key && styles.choiceActive]}>
                   <Text style={styles.choiceIcon}>{o.emoji}</Text>
-                  <Text style={[styles.choiceText, occasionKey === o.key && styles.choiceTextActive]}>{o.label}</Text>
+                  <Text style={[styles.choiceText, occasionKey === o.key && styles.choiceTextActive]}>{t(o.label)}</Text>
                 </Pressable>
               ))}
             </View>
 
             {occasionKey === "activity" ? (
               <>
-                <Text style={styles.label}>نوع النشاط</Text>
-                <View style={styles.activityChoices}>
+                <Text style={[styles.label, { textAlign: isRTL ? "right" : "left", writingDirection: isRTL ? "rtl" : "ltr" }]}>{t("نوع النشاط")}</Text>
+                <View style={[styles.activityChoices, { flexDirection: isRTL ? "row-reverse" : "row" }]}>
                   {ACTIVITIES.map(a => (
                     <Pressable key={a.key} onPress={() => chooseActivity(a.key)} style={[styles.activityChoice, activityKey === a.key && styles.activityChoiceActive]}>
-                      <Text style={[styles.activityChoiceText, activityKey === a.key && styles.activityChoiceTextActive]}>{a.label}</Text>
+                      <Text style={[styles.activityChoiceText, activityKey === a.key && styles.activityChoiceTextActive]}>{t(a.label)}</Text>
                     </Pressable>
                   ))}
                 </View>
-                {activityKey === "activityCustom" ? <TextInput value={customActivity} onChangeText={setCustomActivity} style={styles.input} textAlign="right" placeholder="اكتب نوع النشاط" /> : null}
+                {activityKey === "activityCustom" ? <TextInput value={customActivity} onChangeText={setCustomActivity} style={[styles.input, { writingDirection: isRTL ? "rtl" : "ltr" }]} textAlign={isRTL ? "right" : "left"} placeholder={t("اكتب نوع النشاط")} /> : null}
               </>
             ) : null}
 
-            <Text style={styles.label}>{occasionKey === "activity" ? "اسم النشاط" : occasionKey === "graduation" ? "اسم الخريج / الخريجة" : occasionKey === "birthday" ? "اسم صاحب المناسبة" : selected.twoNames ? "الاسم الأول" : "اسم المناسبة"}</Text>
-            <TextInput value={name1} onChangeText={setName1} style={styles.input} textAlign="right" placeholder="اكتب هنا" />
+            <Text style={[styles.label, { textAlign: isRTL ? "right" : "left", writingDirection: isRTL ? "rtl" : "ltr" }]}>{t(occasionKey === "activity" ? "اسم النشاط" : occasionKey === "graduation" ? "اسم الخريج / الخريجة" : occasionKey === "birthday" ? "اسم صاحب المناسبة" : selected.twoNames ? "الاسم الأول" : "اسم المناسبة")}</Text>
+            <TextInput value={name1} onChangeText={setName1} style={[styles.input, { writingDirection: isRTL ? "rtl" : "ltr" }]} textAlign={isRTL ? "right" : "left"} placeholder={t("اكتب هنا")} />
             {selected.twoNames ? (
               <>
-                <Text style={styles.label}>{occasionKey === "wedding" ? "اسم العروس / الطرف الثاني" : "الاسم الثاني"}</Text>
-                <TextInput value={name2} onChangeText={setName2} style={styles.input} textAlign="right" placeholder="اكتب هنا" />
+                <Text style={[styles.label, { textAlign: isRTL ? "right" : "left", writingDirection: isRTL ? "rtl" : "ltr" }]}>{t(occasionKey === "wedding" ? "اسم العروس / الطرف الثاني" : "الاسم الثاني")}</Text>
+                <TextInput value={name2} onChangeText={setName2} style={[styles.input, { writingDirection: isRTL ? "rtl" : "ltr" }]} textAlign={isRTL ? "right" : "left"} placeholder={t("اكتب هنا")} />
               </>
             ) : null}
 
-            <View style={styles.row}>
-              <View style={styles.half}><Text style={styles.label}>التاريخ</Text><TextInput value={date} onChangeText={setDate} style={styles.input} textAlign="right" placeholder="2026-12-20" /></View>
-              <View style={styles.half}><Text style={styles.label}>الوقت</Text><TextInput value={time} onChangeText={setTime} style={styles.input} textAlign="right" placeholder="20:30" /></View>
+            <View style={[styles.row, { flexDirection: isRTL ? "row-reverse" : "row" }]}>
+              <View style={styles.half}><Text style={[styles.label, { textAlign: isRTL ? "right" : "left", writingDirection: isRTL ? "rtl" : "ltr" }]}>{t("التاريخ")}</Text><TextInput value={date} onChangeText={setDate} style={[styles.input, { writingDirection: isRTL ? "rtl" : "ltr" }]} textAlign={isRTL ? "right" : "left"} placeholder="2026-12-20" /></View>
+              <View style={styles.half}><Text style={[styles.label, { textAlign: isRTL ? "right" : "left", writingDirection: isRTL ? "rtl" : "ltr" }]}>{t("الوقت")}</Text><TextInput value={time} onChangeText={setTime} style={[styles.input, { writingDirection: isRTL ? "rtl" : "ltr" }]} textAlign={isRTL ? "right" : "left"} placeholder="20:30" /></View>
             </View>
-            <Text style={styles.label}>الموقع</Text>
-            <TextInput value={location} onChangeText={setLocation} style={styles.input} textAlign="right" placeholder="اسم القاعة أو الموقع" />
-            <TextInput value={mapsUrl} onChangeText={setMapsUrl} style={styles.input} textAlign="right" placeholder="رابط Google Maps (اختياري)" keyboardType="url" autoCapitalize="none" autoCorrect={false} />
-            {(["meeting", "conference", "formal"] as OccasionKey[]).includes(occasionKey) ? <><Text style={styles.label}>{occasionKey === "meeting" ? "جدول الأعمال" : occasionKey === "conference" ? "محاور المؤتمر والمتحدثون" : "تفاصيل المناسبة الرسمية"}</Text><TextInput value={occasionDetails} onChangeText={setOccasionDetails} style={styles.input} textAlign="right" multiline placeholder="التفاصيل الخاصة بهذا النوع" /></> : null}
+            <Text style={[styles.label, { textAlign: isRTL ? "right" : "left", writingDirection: isRTL ? "rtl" : "ltr" }]}>{t("الموقع")}</Text>
+            <TextInput value={location} onChangeText={setLocation} style={[styles.input, { writingDirection: isRTL ? "rtl" : "ltr" }]} textAlign={isRTL ? "right" : "left"} placeholder={t("اسم القاعة أو الموقع")} />
+            <TextInput value={mapsUrl} onChangeText={setMapsUrl} style={[styles.input, { writingDirection: isRTL ? "rtl" : "ltr" }]} textAlign={isRTL ? "right" : "left"} placeholder={t("رابط Google Maps (اختياري)")} keyboardType="url" autoCapitalize="none" autoCorrect={false} />
+            {(["meeting", "conference", "formal"] as OccasionKey[]).includes(occasionKey) ? <><Text style={[styles.label, { textAlign: isRTL ? "right" : "left", writingDirection: isRTL ? "rtl" : "ltr" }]}>{t(occasionKey === "meeting" ? "جدول الأعمال" : occasionKey === "conference" ? "محاور المؤتمر والمتحدثون" : "تفاصيل المناسبة الرسمية")}</Text><TextInput value={occasionDetails} onChangeText={setOccasionDetails} style={[styles.input, { writingDirection: isRTL ? "rtl" : "ltr" }]} textAlign={isRTL ? "right" : "left"} multiline placeholder={t("التفاصيل الخاصة بهذا النوع")} /></> : null}
 
             {occasionKey === "activity" ? (
               <View style={styles.activityBox}>
-                <Text style={styles.activityTitle}>إعدادات النشاط</Text>
-                <Text style={styles.activityHelp}>لا يوجد اسم شخص ثانٍ هنا. نركز على المشاركين والقطّة وقائمة الانتظار.</Text>
-                <Text style={styles.label}>العدد الأقصى</Text>
-                <TextInput value={capacity} onChangeText={setCapacity} style={styles.input} textAlign="right" keyboardType="number-pad" placeholder="20" />
-                <Text style={styles.label}>القطّة للشخص — اختياري</Text>
-                <TextInput value={shareAmount} onChangeText={setShareAmount} style={styles.input} textAlign="right" keyboardType="decimal-pad" placeholder="0" />
+                <Text style={[styles.activityTitle, { textAlign: isRTL ? "right" : "left", writingDirection: isRTL ? "rtl" : "ltr" }]}>{t("إعدادات النشاط")}</Text>
+                <Text style={[styles.activityHelp, { textAlign: isRTL ? "right" : "left", writingDirection: isRTL ? "rtl" : "ltr" }]}>{t("لا يوجد اسم شخص ثانٍ هنا. نركز على المشاركين والقطّة وقائمة الانتظار.")}</Text>
+                <Text style={[styles.label, { textAlign: isRTL ? "right" : "left", writingDirection: isRTL ? "rtl" : "ltr" }]}>{t("العدد الأقصى")}</Text>
+                <TextInput value={capacity} onChangeText={setCapacity} style={[styles.input, { writingDirection: isRTL ? "rtl" : "ltr" }]} textAlign={isRTL ? "right" : "left"} keyboardType="number-pad" placeholder="20" />
+                <Text style={[styles.label, { textAlign: isRTL ? "right" : "left", writingDirection: isRTL ? "rtl" : "ltr" }]}>{t("القطّة للشخص — اختياري")}</Text>
+                <TextInput value={shareAmount} onChangeText={setShareAmount} style={[styles.input, { writingDirection: isRTL ? "rtl" : "ltr" }]} textAlign={isRTL ? "right" : "left"} keyboardType="decimal-pad" placeholder="0" />
               </View>
             ) : null}
 
@@ -273,29 +275,29 @@ export default function CreateEvent() {
 
         {step === 2 ? (
           <>
-            <Text style={styles.sectionTitle}>اختر الشكل المناسب</Text>
-            <Text style={styles.help}>القوالب المعروضة مخصصة لنوع دعوتك الحالي.</Text>
-            <View style={styles.templateGrid}>
+            <Text style={[styles.sectionTitle, { textAlign: isRTL ? "right" : "left", writingDirection: isRTL ? "rtl" : "ltr" }]}>{t("اختر الشكل المناسب")}</Text>
+            <Text style={[styles.help, { textAlign: isRTL ? "right" : "left", writingDirection: isRTL ? "rtl" : "ltr" }]}>{t("القوالب المعروضة مخصصة لنوع دعوتك الحالي.")}</Text>
+            <View style={[styles.templateGrid, { flexDirection: isRTL ? "row-reverse" : "row" }]}>
               {currentTemplates.map(t => (
                 <Pressable key={t.name} onPress={() => { setTemplate(t.name); void track("template_selected", "/mobile/customer/create", { template: t.name }); }} style={styles.templateCard}>
                   <TemplateArtwork template={t} label={occasionKey === "activity" ? activity.label : selected.label} selected={template === t.name} />
-                  <Text style={styles.templateName}>{t.name}</Text>
+                  <Text style={[styles.templateName, { textAlign: isRTL ? "right" : "left", writingDirection: isRTL ? "rtl" : "ltr" }]}>{t.name}</Text>
                 </Pressable>
               ))}
             </View>
-            <Text style={styles.label}>العبارة الرئيسية</Text>
-            <TextInput value={headline} onChangeText={setHeadline} style={styles.input} textAlign="right" maxLength={70} />
-            <Text style={styles.label}>نص الدعوة</Text>
-            <TextInput value={message} onChangeText={setMessage} style={styles.input} textAlign="right" multiline maxLength={1000} />
-            <Text style={styles.label}>الخط</Text>
-            <View style={styles.activityChoices}>{[{ key: "ruqaa", label: "رقعة" }, { key: "tajawal", label: "تجوال" }, { key: "serif", label: "كلاسيكي" }].map(option => <Pressable key={option.key} accessibilityRole="button" accessibilityState={{ selected: font === option.key }} onPress={() => setFont(option.key)} style={[styles.activityChoice, font === option.key && styles.activityChoiceActive]}><Text style={[styles.activityChoiceText, font === option.key && styles.activityChoiceTextActive]}>{option.label}</Text></Pressable>)}</View>
-            <Text style={styles.label}>اللون الرئيسي</Text>
-            <View style={styles.activityChoices}>{["#E3BD64", "#11151D", "#9A7434", "#246A4A", "#FFFFFF"].map(color => <Pressable key={color} accessibilityRole="button" accessibilityLabel={`اختيار اللون ${color}`} accessibilityState={{ selected: accent === color }} onPress={() => setAccent(color)} style={{ width: 42, height: 42, borderRadius: 21, backgroundColor: color, borderWidth: accent === color ? 4 : 1, borderColor: theme.colors.ink }} />)}</View>
+            <Text style={[styles.label, { textAlign: isRTL ? "right" : "left", writingDirection: isRTL ? "rtl" : "ltr" }]}>{t("العبارة الرئيسية")}</Text>
+            <TextInput value={headline} onChangeText={setHeadline} style={[styles.input, { writingDirection: isRTL ? "rtl" : "ltr" }]} textAlign={isRTL ? "right" : "left"} maxLength={70} />
+            <Text style={[styles.label, { textAlign: isRTL ? "right" : "left", writingDirection: isRTL ? "rtl" : "ltr" }]}>{t("نص الدعوة")}</Text>
+            <TextInput value={message} onChangeText={setMessage} style={[styles.input, { writingDirection: isRTL ? "rtl" : "ltr" }]} textAlign={isRTL ? "right" : "left"} multiline maxLength={1000} />
+            <Text style={[styles.label, { textAlign: isRTL ? "right" : "left", writingDirection: isRTL ? "rtl" : "ltr" }]}>{t("الخط")}</Text>
+            <View style={[styles.activityChoices, { flexDirection: isRTL ? "row-reverse" : "row" }]}>{[{ key: "ruqaa", label: "رقعة" }, { key: "tajawal", label: "تجوال" }, { key: "serif", label: "كلاسيكي" }].map(option => <Pressable key={option.key} accessibilityRole="button" accessibilityState={{ selected: font === option.key }} onPress={() => setFont(option.key)} style={[styles.activityChoice, font === option.key && styles.activityChoiceActive]}><Text style={[styles.activityChoiceText, font === option.key && styles.activityChoiceTextActive]}>{t(option.label)}</Text></Pressable>)}</View>
+            <Text style={[styles.label, { textAlign: isRTL ? "right" : "left", writingDirection: isRTL ? "rtl" : "ltr" }]}>{t("اللون الرئيسي")}</Text>
+            <View style={[styles.activityChoices, { flexDirection: isRTL ? "row-reverse" : "row" }]}>{["#E3BD64", "#11151D", "#9A7434", "#246A4A", "#FFFFFF"].map(color => <Pressable key={color} accessibilityRole="button" accessibilityLabel={`اختيار اللون ${color}`} accessibilityState={{ selected: accent === color }} onPress={() => setAccent(color)} style={{ width: 42, height: 42, borderRadius: 21, backgroundColor: color, borderWidth: accent === color ? 4 : 1, borderColor: theme.colors.ink }} />)}</View>
             <PrimaryButton label={image ? "تغيير الصورة / التصميم" : "رفع صورة أو تصميم خاص"} onPress={pickImage} loading={mediaBusy} secondary />
             {image ? <><Image source={{ uri: image }} style={{ width: "100%", height: 220, borderRadius: 14 }} resizeMode="cover" /><PrimaryButton label="إزالة الصورة" onPress={() => setImage("")} secondary /></> : null}
             <PrimaryButton label={audio ? "تغيير موسيقى الدعوة" : "إضافة موسيقى (حتى 600 كيلوبايت)"} onPress={pickAudio} loading={mediaBusy} secondary />
-            {audio ? <><Text style={styles.help}>{audioName} — يبدأ تشغيل الصوت باختيار الضيف.</Text><PrimaryButton label="إزالة الموسيقى" onPress={() => { setAudio(""); setAudioName(""); }} secondary /></> : null}
-            <Text style={styles.help}>تُحفظ الصورة والموسيقى ضمن تصميم الدعوة. استخدم ملفات تملك حق مشاركتها.</Text>
+            {audio ? <><Text style={[styles.help, { textAlign: isRTL ? "right" : "left", writingDirection: isRTL ? "rtl" : "ltr" }]}>{audioName} — {isRTL ? "يبدأ تشغيل الصوت باختيار الضيف." : "Audio plays when a guest chooses to play it."}</Text><PrimaryButton label="إزالة الموسيقى" onPress={() => { setAudio(""); setAudioName(""); }} secondary /></> : null}
+            <Text style={[styles.help, { textAlign: isRTL ? "right" : "left", writingDirection: isRTL ? "rtl" : "ltr" }]}>{t("تُحفظ الصورة والموسيقى ضمن تصميم الدعوة. استخدم ملفات تملك حق مشاركتها.")}</Text>
             <View style={styles.actions}><PrimaryButton label="التالي: الباقة" onPress={() => setStep(3)} /><PrimaryButton label="رجوع" onPress={() => setStep(1)} secondary /></View>
           </>
         ) : null}
@@ -304,21 +306,21 @@ export default function CreateEvent() {
           <>
             <InvitationPreview data={{ occasionKey, activityKey, occasion: occasionForApi(occasionKey, selected.label), activityType: occasionKey === "activity" ? (activityKey === "activityCustom" ? customActivity : activity.label) : "", name1, name2, date, time, location, message, template: selectedTemplate?.name || "", design: { headline, accent, font, image, audio } }} />
 
-            <Text style={styles.sectionTitle}>اختر الباقة</Text>
+            <Text style={[styles.sectionTitle, { textAlign: isRTL ? "right" : "left", writingDirection: isRTL ? "rtl" : "ltr" }]}>{t("اختر الباقة")}</Text>
             {packages.map(p => (
-              <Pressable key={p.code} onPress={() => setPackageCode(p.code)} style={[styles.package, packageCode === p.code && styles.packageActive]}>
-                <View style={styles.packageCopy}><Text style={[styles.packageName, packageCode === p.code && styles.packageNameActive]}>{p.name}</Text><Text style={[styles.packageGuests, packageCode === p.code && styles.packageGuestsActive]}>{`حتى ${p.guestLimit} مدعو`}</Text></View>
-                <View>{p.promoLicenseId && Number.isFinite(p.referenceAmountSar) && p.referenceAmountSar! > p.amountSar ? <Text style={{ textDecorationLine: "line-through", color: theme.colors.muted, fontSize: 12 }}>{p.referenceAmountSar} ر.س</Text> : null}<Text style={[styles.price, packageCode === p.code && styles.priceActive]}>{p.amountSar} ر.س</Text></View>
+              <Pressable key={p.code} onPress={() => setPackageCode(p.code)} style={[styles.package, packageCode === p.code && styles.packageActive, { flexDirection: isRTL ? "row-reverse" : "row" }]}>
+                <View style={styles.packageCopy}><Text style={[styles.packageName, packageCode === p.code && styles.packageNameActive]}>{p.name}</Text><Text style={[styles.packageGuests, packageCode === p.code && styles.packageGuestsActive]}>{isRTL ? `حتى ${p.guestLimit} مدعو` : `Up to ${p.guestLimit} guests`}</Text></View>
+                <View>{p.promoLicenseId && Number.isFinite(p.referenceAmountSar) && p.referenceAmountSar! > p.amountSar ? <Text style={{ textDecorationLine: "line-through", color: theme.colors.muted, fontSize: 12 }}>{p.referenceAmountSar} {t("ر.س")}</Text> : null}<Text style={[styles.price, packageCode === p.code && styles.priceActive]}>{p.amountSar} {t("ر.س")}</Text></View>
               </Pressable>
             ))}
-            <Pressable onPress={() => setRequestSupervisor(value => !value)} style={[styles.package, requestSupervisor && styles.packageActive]} accessibilityRole="checkbox" accessibilityState={{ checked: requestSupervisor }}>
-              <Text style={[styles.packageName, requestSupervisor && styles.packageNameActive]}>{requestSupervisor ? "☑" : "□"} إضافة مشرف أو مشرفة للمناسبة</Text>
-              <Text style={[styles.price, requestSupervisor && styles.priceActive]}>+{supervisorPrice} ر.س</Text>
+            <Pressable onPress={() => setRequestSupervisor(value => !value)} style={[styles.package, requestSupervisor && styles.packageActive, { flexDirection: isRTL ? "row-reverse" : "row" }]} accessibilityRole="checkbox" accessibilityState={{ checked: requestSupervisor }}>
+              <Text style={[styles.packageName, requestSupervisor && styles.packageNameActive]}>{requestSupervisor ? "☑" : "□"} {t("إضافة مشرف أو مشرفة للمناسبة")}</Text>
+              <Text style={[styles.price, requestSupervisor && styles.priceActive]}>+{supervisorPrice} {t("ر.س")}</Text>
             </Pressable>
-            {requestSupervisor ? <View style={{ gap: 8 }}><Text style={styles.label}>تفضيل خدمة الاستقبال</Text><View style={styles.activityChoices}>{([{ key: "male", label: "مشرف" }, { key: "female", label: "مشرفة" }] as const).map(option => <Pressable key={option.key} accessibilityRole="radio" accessibilityState={{ checked: supervisorPreference === option.key }} onPress={() => setSupervisorPreference(option.key)} style={[styles.activityChoice, supervisorPreference === option.key && styles.activityChoiceActive]}><Text style={[styles.activityChoiceText, supervisorPreference === option.key && styles.activityChoiceTextActive]}>{option.label}</Text></Pressable>)}</View><Text style={styles.help}>حسب توفر الكادر في مدينة المناسبة وموعدها.</Text></View> : null}
-            <Text style={styles.trial}>الإجمالي: {packages.find(p => p.code === packageCode)!.amountSar + (requestSupervisor ? supervisorPrice : 0)} ر.س</Text>
-            {catalog.services.length ? <><Text style={styles.sectionTitle}>خدمات المناسبة</Text>{catalog.services.map(service => <View key={service.id} style={styles.previewCard}><Text style={styles.label}>{service.name}</Text><Text style={styles.help}>{service.description}</Text></View>)}</> : null}
-            <Text style={styles.trial}>قبل الدفع لديك إرسال تجريبي مجاني واحد للتأكد من شكل الدعوة ووصولها.</Text>
+            {requestSupervisor ? <View style={{ gap: 8 }}><Text style={[styles.label, { textAlign: isRTL ? "right" : "left", writingDirection: isRTL ? "rtl" : "ltr" }]}>{t("تفضيل خدمة الاستقبال")}</Text><View style={[styles.activityChoices, { flexDirection: isRTL ? "row-reverse" : "row" }]}>{([{ key: "male", label: "مشرف" }, { key: "female", label: "مشرفة" }] as const).map(option => <Pressable key={option.key} accessibilityRole="radio" accessibilityState={{ checked: supervisorPreference === option.key }} onPress={() => setSupervisorPreference(option.key)} style={[styles.activityChoice, supervisorPreference === option.key && styles.activityChoiceActive]}><Text style={[styles.activityChoiceText, supervisorPreference === option.key && styles.activityChoiceTextActive]}>{option.label}</Text></Pressable>)}</View><Text style={[styles.help, { textAlign: isRTL ? "right" : "left", writingDirection: isRTL ? "rtl" : "ltr" }]}>{t("حسب توفر الكادر في مدينة المناسبة وموعدها.")}</Text></View> : null}
+            <Text style={[styles.trial, { textAlign: isRTL ? "right" : "left", writingDirection: isRTL ? "rtl" : "ltr" }]}>{t("الإجمالي:")} {packages.find(p => p.code === packageCode)!.amountSar + (requestSupervisor ? supervisorPrice : 0)} {t("ر.س")}</Text>
+            {catalog.services.length ? <><Text style={[styles.sectionTitle, { textAlign: isRTL ? "right" : "left", writingDirection: isRTL ? "rtl" : "ltr" }]}>{t("خدمات المناسبة")}</Text>{catalog.services.map(service => <View key={service.id} style={styles.previewCard}><Text style={[styles.label, { textAlign: isRTL ? "right" : "left", writingDirection: isRTL ? "rtl" : "ltr" }]}>{service.name}</Text><Text style={[styles.help, { textAlign: isRTL ? "right" : "left", writingDirection: isRTL ? "rtl" : "ltr" }]}>{service.description}</Text></View>)}</> : null}
+            <Text style={[styles.trial, { textAlign: isRTL ? "right" : "left", writingDirection: isRTL ? "rtl" : "ltr" }]}>{t("قبل الدفع لديك إرسال تجريبي مجاني واحد للتأكد من شكل الدعوة ووصولها.")}</Text>
             <PrimaryButton label="إنشاء المناسبة وتجربتها" onPress={create} loading={busy} disabled={mediaBusy} />
             <PrimaryButton label="رجوع للقالب" onPress={() => setStep(2)} secondary />
           </>
