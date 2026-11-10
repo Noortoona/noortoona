@@ -60,7 +60,7 @@ test("sitemap, robots and static publishing inventory are aligned",()=>{
  for(const url of ["https://halainvites.com/",...expected.map(p=>"https://halainvites.com/"+p.file)]){
    assert.ok(sitemap.includes("<loc>"+url+"</loc>"),url);
  }
- assert.equal((sitemap.match(/<url>/g)||[]).length,4);
+ assert.equal((sitemap.match(/<url>/g)||[]).length,7);
  for(const f of ["seo-pages.css","robots.txt","sitemap.xml",...expected.map(x=>x.file)]){
    assert.ok(build.includes("'"+f+"'"),"static builder must deploy "+f);
  }
