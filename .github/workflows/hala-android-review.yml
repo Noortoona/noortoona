@@ -1,4 +1,5 @@
 name: Hala Android review APK
+# Build the final pricing client, including template entitlement and retry guards.
 
 on:
   push:
