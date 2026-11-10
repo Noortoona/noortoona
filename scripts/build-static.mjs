@@ -3,10 +3,10 @@ import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 export const publicFiles = [
-  'index.html', 'wedding-invitations.html', 'engagement-invitations.html', 'graduation-invitations.html', 'robots.txt', 'sitemap.xml', 'admin.html', 'customer.html', 'dashboard.html', 'guest.html', 'partner.html', 'supervisor.html',
+  'index.html', 'wedding-invitations.html', 'engagement-invitations.html', 'graduation-invitations.html', 'wedding-invitations-en.html', 'engagement-invitations-en.html', 'graduation-invitations-en.html', 'robots.txt', 'sitemap.xml', 'admin.html', 'customer.html', 'dashboard.html', 'guest.html', 'partner.html', 'supervisor.html',
   'account.js', 'admin.js', 'app.js', 'customer.js', 'dashboard.js', 'web-contacts.js', 'guest.js', 'guest-insights.js',
   'invitation-renderer.js', 'invitation-schemas.js', 'partner.js', 'supervisor.js',
-  'styles.css', 'v2.css', 'seo-pages.css', 'i18n.css', 'i18n.js', 'analytics.js', 'booking-client.js', 'booking.html', 'booking.js', 'prelaunch.js',
+  'styles.css', 'v2.css', 'seo-pages.css', 'social-links.css', 'i18n.css', 'i18n.js', 'analytics.js', 'booking-client.js', 'booking.html', 'booking.js', 'prelaunch.js',
 ];
 
 async function assertRegularTree(path) {

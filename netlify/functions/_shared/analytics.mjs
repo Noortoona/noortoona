@@ -1,4 +1,5 @@
-export const CLIENT_EVENTS=new Set(['page_view','booking_started','occasion_selected','package_viewed','template_selected','price_viewed','contact_started']);
+export const CLIENT_EVENTS=new Set(['page_view','booking_started','occasion_selected','package_viewed','template_selected','price_viewed','contact_started','invitation_cta_clicked']);
+export const isPrivateAnalyticsPath=path=>/^\/(?:i(?:\/|$)|(?:guest|dashboard|admin|customer|partner|supervisor)(?:\.html|\/|$))/.test(path);
 export const SERVER_EVENTS=new Set(['prebooking_completed','contact_requested','launch_subscribed']);
 export const analyticsId=value=>/^[A-Za-z0-9_-]{12,80}$/.test(String(value||''))?String(value):'';
 const clean=(value,max=120)=>String(value||'').trim().replace(/[\u0000-\u001f\u007f]/g,'').slice(0,max);

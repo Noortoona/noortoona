@@ -1,7 +1,7 @@
 import type {Config} from '@netlify/functions';
 import {getDatabase} from '@netlify/database';
 import {isSameOriginRequest,secureJson} from './_shared/domain.mjs';
-import {analyticsEnvironment,analyticsId,CLIENT_EVENTS,normalizeAttribution,safeMetadata} from './_shared/analytics.mjs';
+import {analyticsEnvironment,analyticsId,CLIENT_EVENTS,normalizeAttribution,safeMetadata,isPrivateAnalyticsPath} from './_shared/analytics.mjs';
 export default async(req:Request)=>{
  if(req.method!=='POST')return new Response('Method Not Allowed',{status:405});if(!isSameOriginRequest(req))return secureJson({ok:false},403);
  if(Number(req.headers.get('content-length')||0)>6000)return secureJson({ok:false},413);
@@ -9,6 +9,7 @@ export default async(req:Request)=>{
  let client:any;try{const b:any=await req.json();if(JSON.stringify(b).length>6000)return secureJson({ok:false},413);if(b.consent!==true)return secureJson({ok:true,ignored:true},202);
  const sid=analyticsId(b.sessionId),visitor=analyticsId(b.visitorId),eid=analyticsId(b.eventId),event=String(b.event||''),path=String(b.path||'/').split(/[?#]/)[0].slice(0,240);
  if(!sid||!eid||!CLIENT_EVENTS.has(event)||!/^\/[a-zA-Z0-9/_\.\-]*$/.test(path))return secureJson({ok:false},400);
+ if(isPrivateAnalyticsPath(path))return secureJson({ok:true,ignored:true},202);
  const ua=req.headers.get('user-agent')||'',device=/ipad|tablet/i.test(ua)?'tablet':/mobile|android|iphone|reactnative|expo/i.test(ua)?'mobile':ua?'desktop':'unknown',environment=analyticsEnvironment();
  client=await getDatabase().pool.connect();await client.query('BEGIN');await client.query('SELECT pg_advisory_xact_lock(hashtext($1))',[`analytics:${environment}:${sid}`]);
  if((await client.query('SELECT id FROM page_views WHERE event_id=$1 LIMIT 1',[eid])).rows[0]){await client.query('COMMIT');return secureJson({ok:true,duplicate:true});}

@@ -13,7 +13,10 @@ export default defineConfig({
     trace: 'retain-on-failure',
     screenshot: 'only-on-failure',
   },
-  projects: [{ name: 'iPhone', use: { ...devices['iPhone 13'], browserName: 'chromium' } }],
+  projects: [
+    { name: 'iPhone', use: { ...devices['iPhone 13'], browserName: 'chromium' } },
+    { name: 'desktop-seo', testMatch: 'seo.spec.js', use: { ...devices['Desktop Chrome'] } },
+  ],
   webServer: {
     command: `npm run build && node --experimental-strip-types tests/prebooking-browser-server.mjs`,
     url: `http://127.0.0.1:${port}`,

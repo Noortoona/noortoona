@@ -34,6 +34,12 @@ await test('real PostgreSQL analytics, CRM and permission boundaries',async t=>{
   assert.equal((await handlers['analytics-track'](request('/api/analytics/track',track('prebooking_completed')))).status,400);
   assert.equal((await pg.query('SELECT COUNT(*)::int count FROM page_views')).rows[0].count,0);
  });
+ await t.test('private invitation tokens and portal paths are ignored before database writes',async()=>{
+  for(const path of ['/i/PRIVATE_GUEST_TOKEN','/guest.html?code=PRIVATE_GUEST_TOKEN','/admin.html','/dashboard','/customer.html']){
+   assert.equal((await handlers['analytics-track'](request('/api/analytics/track',track('page_view','session_private_0001',{path})))).status,202);
+  }
+  assert.equal((await pg.query('SELECT COUNT(*)::int count FROM page_views')).rows[0].count,0);
+ });
  await t.test('real events deduplicate by event id, strip PII and distinguish browser visitors from sessions',async()=>{
   const first=track('page_view');assert.equal((await handlers['analytics-track'](request('/api/analytics/track',first))).status,201);
   assert.equal((await handlers['analytics-track'](request('/api/analytics/track',first))).status,200);
@@ -73,5 +79,13 @@ await test('real PostgreSQL analytics, CRM and permission boundaries',async t=>{
   for(let i=0;i<30;i++)assert.equal((await handlers['analytics-track'](request('/api/analytics/track',track('package_viewed','session_rate_limit_0001',{environment:'production'})))).status,201);
   assert.equal((await handlers['analytics-track'](request('/api/analytics/track',track('package_viewed','session_rate_limit_0001')))).status,429);
   assert.equal((await pg.query("SELECT count(*)::int count FROM page_views WHERE session_id='session_rate_limit_0001' AND environment=$1",[environment])).rows[0].count,30);
+ });
+ await t.test('marketing invitation clicks retain the source page without personal query data',async()=>{
+  const body=track('invitation_cta_clicked','session_marketing_0001',{path:'/wedding-invitations-en.html?email=private@example.com',metadata:{occasion:'wedding',service:'invitation_builder',email:'private@example.com',guest:'Private Guest'}});
+  assert.equal((await handlers['analytics-track'](request('/api/analytics/track',body))).status,201);
+  const row=(await pg.query('SELECT path,metadata FROM page_views WHERE session_id=$1',['session_marketing_0001'])).rows[0];
+  assert.equal(row.path,'/wedding-invitations-en.html');
+  assert.deepEqual(row.metadata,{occasion:'wedding',service:'invitation_builder'});
+  assert.ok(!JSON.stringify(row).includes('private@example.com'));
  });
 });
