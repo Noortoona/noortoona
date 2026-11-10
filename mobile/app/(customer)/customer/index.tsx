@@ -39,7 +39,7 @@ export default function CustomerHome() {
           <Text style={[styles.eyebrow, { textAlign: isRTL ? "right" : "left", writingDirection: isRTL ? "rtl" : "ltr" }]}>{t("مساحتك الخاصة")}</Text>
           <Text style={[styles.heroTitle, { textAlign: isRTL ? "right" : "left", writingDirection: isRTL ? "rtl" : "ltr" }]}>{t("من الفكرة إلى وصول الضيف")}</Text>
           <Text style={[styles.heroText, { textAlign: isRTL ? "right" : "left", writingDirection: isRTL ? "rtl" : "ltr" }]}>{t("أنشئ الدعوة، أرسلها، وتابع التأكيد والدخول من تطبيق واحد.")}</Text>
-          <PrimaryButton label="+ إنشاء دعوة جديدة" onPress={() => router.push("/customer/create" as never)} />
+          <PrimaryButton label="الباقات والأسعار" secondary onPress={()=>router.push("/packages" as never)}/><PrimaryButton label="+ إنشاء دعوة جديدة" onPress={() => router.push("/customer/create" as never)} />
         </View>
         <PrimaryButton label="حجوزاتي ومتابعة الطلبات" onPress={() => router.push("/customer/bookings" as never)} secondary />
         <PrimaryButton label="كن من أوائل عملاء هلا" onPress={() => router.push("/launch" as never)} secondary />

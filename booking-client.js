@@ -18,7 +18,7 @@
     if (!response.ok) throw Object.assign(new Error(data.error || 'تعذر إكمال الطلب. حاول مرة أخرى.'), {status:response.status});
     return data;
   }
-  const labels = {pre_booking_received:'تم استلام الحجز المبدئي',confirmed:'مؤكد',cancelled:'ملغي',canceled:'ملغي',pending_payment:'بانتظار الدفع',paid:'مدفوع',new:'جديد',contacted:'تم التواصل',follow_up:'متابعة لاحقة',awaiting_confirmation:'بانتظار التأكيد',awaiting_customer:'بانتظار العميل',closed:'مغلق',queued:'في قائمة الإرسال',sent:'أُرسل',delivered:'تم التسليم',read:'تمت القراءة',pending_setup:'بانتظار إعداد واتساب',awaiting_setup:'بانتظار إعداد واتساب',failed:'فشل الإرسال'};
+  const labels = {completed:'مكتمل',not_requested:'غير مطلوبة',pending_review:'قيد مراجعة التوفر',available:'التوفر مراجع',unavailable:'غير متاحة',assigned:'تم التكليف',pre_booking_received:'تم استلام الحجز المبدئي',confirmed:'مؤكد',cancelled:'ملغي',canceled:'ملغي',pending_payment:'بانتظار الدفع',paid:'مدفوع',new:'جديد',contacted:'تم التواصل',follow_up:'متابعة لاحقة',awaiting_confirmation:'بانتظار التأكيد',awaiting_customer:'بانتظار العميل',closed:'مغلق',queued:'في قائمة الإرسال',sent:'أُرسل',delivered:'تم التسليم',read:'تمت القراءة',pending_setup:'بانتظار إعداد واتساب',awaiting_setup:'بانتظار إعداد واتساب',failed:'فشل الإرسال'};
   const label = value => labels[value] || value || '—';
   const money = value => (Number(value || 0)/100).toLocaleString('ar-SA',{maximumFractionDigits:2}) + ' ر.س';
   window.HALA_BOOKING = {api,esc,read,session,secret,remember,access,context,track,whatsapp,settingsReady,label,money};

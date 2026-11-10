@@ -1,6 +1,7 @@
-import { readCatalog, catalogPackage } from './catalog.mjs';
+import { readCatalog, catalogPackage, packageSupportsTemplate } from './catalog.mjs';
 import { activePartner, normalizeReferralCode, referralAmounts } from './partners.mjs';
 import { supervisorAddonHalalas } from './settings.mjs';
+import { POLICY_VERSION, entryQuote, taxQuote } from '../../../shared/pricing-policy.mjs';
 import { normalizePhone } from './domain.mjs';
 export const bookingError=(message,status=400)=>Object.assign(new Error(message),{status});
 export const validPhone=value=>/^9665\d{8}$/.test(normalizePhone(value));
@@ -16,19 +17,25 @@ export async function bookingSettings(db){
 }
 export async function quoteBooking(db,body,userId='',event=null){
  const catalog=await readCatalog(db);
- if(!event&&body.eventId)event=(await db.sql`SELECT package_name,referral_code FROM events WHERE id=${String(body.eventId)} LIMIT 1`)[0];
- const selected=catalogPackage(catalog,body.packageCode||event?.package_name||'hala_plus');
+ if(!event&&body.eventId)event=(await db.sql`SELECT package_name,referral_code,template,design_json FROM events WHERE id=${String(body.eventId)} LIMIT 1`)[0];
+ const selected=catalogPackage(catalog,body.packageCode||event?.package_name||'hala_plus',body.guestCount);
  const guestCount=Number(body.guestCount),services=body.services||[];
- if(!selected||!Number.isInteger(guestCount)||guestCount<1||guestCount>selected.guestLimit)throw bookingError('اختر باقة تناسب عدد المدعوين');
+ if(!selected||!Number.isInteger(guestCount)||guestCount<1||guestCount>selected.guestLimit)throw bookingError('اختر 100 أو 250 أو 500 مدعو؛ للأعداد الأخرى اطلب عرض سعر مخصص',422);
+ if(!packageSupportsTemplate(selected,event?.design_json||body.design,event?.template||body.template))throw bookingError('القالب المختار يتطلب بلس أو بريميوم؛ اختر قالبًا أساسيًا أو غيّر الباقة');
  if(!Array.isArray(services)||services.length>1||services.some(id=>id!=='supervisor'))throw bookingError('الخدمة الإضافية غير متاحة للتسعير');
- const addon=services.includes('supervisor')?await supervisorAddonHalalas(db):0;
+ const entry=services.includes('supervisor')?entryQuote(catalog.entry,guestCount,{...body.entryDetails,preference:body.supervisorPreference||body.entryDetails?.preference}):null;
+ if(entry?.error)throw bookingError(entry.error);
+ if(entry&&(!catalog.entry.enabled||entry.customQuoteRequired))throw bookingError('تفاصيل تنظيم الدخول تتطلب عرض سعر مخصص',422);
+ const addon=entry?.amount||0;
  const rawCode=body.referralCode===undefined?event?.referral_code||'':body.referralCode;
  const code=normalizeReferralCode(rawCode);
  if(rawCode&&!code)throw bookingError('كود الإحالة غير صالح');
  const partner=code?await activePartner(db,code,userId||'guest'):null;
  if(code&&!partner)throw bookingError('كود الإحالة غير متاح');
  const amounts=referralAmounts(selected.amount,addon,partner);
- return {quote:{baseAmount:selected.amount,addonAmount:addon,discountAmount:amounts.discountAmount,total:amounts.total,currency:'SAR',packageCode:selected.code,packageName:selected.name,guestLimit:selected.guestLimit},partner,commissionAmount:amounts.commissionAmount,services:services.map(id=>({id,name:'مشرف المناسبة',amount:addon}))};
+ const tax=taxQuote(amounts.total,catalog.tax);
+ const policySnapshot={version:POLICY_VERSION,revision:catalog.revision,packageCode:selected.code,guestCount,priceTiers:{...selected.priceTiers},tax:{...catalog.tax},entry:entry?{...catalog.entry,...entry}:null,discount:{code:partner?.code||null,discountAmount:amounts.discountAmount}};
+ return {quote:{baseAmount:selected.amount,addonAmount:addon,discountAmount:amounts.discountAmount,...tax,currency:'SAR',packageCode:selected.code,packageName:selected.name,guestLimit:selected.guestLimit,guestCount,entry,policyVersion:POLICY_VERSION,catalogRevision:catalog.revision,policySnapshot,paymentEligible:!tax.provisional&&!entry},partner,commissionAmount:amounts.commissionAmount,services:entry?[{id:'supervisor',name:'تنظيم الدخول',amount:addon,...entry}]:[]};
 }
 export function customerBooking(row){
  if(!row)return null;

@@ -1,3 +1,4 @@
+import {selectPhoneContact} from "@/phoneContact";
 import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { Alert, Linking, Pressable, RefreshControl, ScrollView, StyleSheet, Text, TextInput, View } from "react-native";
 import { useLocalSearchParams, useRouter } from "expo-router";
@@ -156,7 +157,7 @@ export default function CustomerEvent() {
           <Text style={styles.cardTitle}>إضافة ضيف</Text>
           <TextInput value={name} onChangeText={setName} style={styles.input} placeholder="اسم الضيف" textAlign="right" />
           <TextInput value={phone} onChangeText={setPhone} style={styles.input} placeholder="رقم الجوال" textAlign="right" keyboardType="phone-pad" />
-          <PrimaryButton label="+ إضافة الضيف" onPress={addGuest} loading={busy} disabled={!name.trim()} />
+          <PrimaryButton label="اختيار مدعو من جهات الاتصال" secondary onPress={()=>{void selectPhoneContact().then(c=>{if(c){setName(c.name);setPhone(c.phone)}}).catch(e=>Alert.alert("جهات الاتصال",e.message));}}/><PrimaryButton label="+ إضافة الضيف" onPress={addGuest} loading={busy} disabled={!name.trim()} />
         </Card>
 
         <View style={styles.sectionRow}><Text style={styles.sectionTitle}>الضيوف</Text><Text style={styles.count}>{stats.total}</Text></View>

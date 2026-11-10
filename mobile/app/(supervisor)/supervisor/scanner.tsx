@@ -1,4 +1,5 @@
-import React, { useRef, useState } from "react";
+import {pendingScans,queueScan,syncScans} from "@/checkinQueue";
+import React, { useEffect, useRef, useState } from "react";
 import { Alert, StyleSheet, Text, View } from "react-native";
 import { CameraView, useCameraPermissions } from "expo-camera";
 import { useLocalSearchParams, useRouter } from "expo-router";
@@ -15,6 +16,8 @@ export default function ScannerScreen() {
   const [locked, setLocked] = useState(false);
   const scanning = useRef(false);
   function unlock() { scanning.current = false; setLocked(false); }
+  const [pending,setPending]=useState(0),[syncing,setSyncing]=useState(false);
+  useEffect(()=>{if(auth.user&&params.eventId)void pendingScans(auth.user.id,params.eventId).then(v=>setPending(v.length));},[auth.user?.id,params.eventId]);
   const [last, setLast] = useState<string>("");
 
   if (auth.loading || !auth.user) return null;
@@ -33,6 +36,9 @@ export default function ScannerScreen() {
         { cancelable: false }
       );
     } catch (e: any) {
+      if(!e.status||e.status===408){
+       try{setPending(await queueScan(auth.user!.id,params.eventId,data));Alert.alert("بانتظار الاتصال — لم يُعتمد الدخول", "حُفظ المسح للتحقق من الخادم عند عودة الشبكة. لا تسمح بالدخول قبل التحقق. / Saved for server verification; entry is not approved.",[{text:"متابعة",onPress:unlock}],{cancelable:false});return;}catch{}
+      }
       Alert.alert("تعذر تسجيل الدخول", e?.message || "الرمز غير صالح", [{ text: "إعادة المحاولة", onPress: unlock }], { cancelable: false });
     }
   }
@@ -50,6 +56,7 @@ export default function ScannerScreen() {
       <View style={styles.footer}>
         <Text style={styles.hint}>{locked ? "جارٍ التحقق من الرمز…" : "ضع رمز QR داخل الإطار"}</Text>
         {last ? <Text style={styles.last}>آخر ضيف: {last}</Text> : null}
+        {pending?<><Text style={styles.hint}>{pending} مسح معلق — الدخول غير معتمد</Text><PrimaryButton label="التحقق من المسح المعلق" loading={syncing} disabled={locked} onPress={()=>{if(syncing||!auth.token)return;setSyncing(true);void syncScans(auth.user!.id,params.eventId,auth.token).then(rows=>Alert.alert("نتيجة التحقق",rows.map(r=>`${r.guest?.name||"ضيف"}: ${r.alreadyCheckedIn?"سُجل سابقًا — لا تكرر الدخول":"تم تسجيل الدخول"}`).join("\n"))).catch(e=>Alert.alert("لم تكتمل المزامنة",e.message)).finally(()=>{setSyncing(false);void pendingScans(auth.user!.id,params.eventId).then(v=>setPending(v.length));});}}/></>:null}
         <PrimaryButton label="رجوع للمناسبات" onPress={() => router.back()} secondary />
       </View>
     </Screen>

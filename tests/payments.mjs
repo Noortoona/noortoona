@@ -5,9 +5,9 @@ import { normalizeCatalog, applyCatalogPatch } from "../netlify/functions/_share
 
 test("Hala packages have server-owned prices and guest limits", () => {
   assert.deepEqual(publicPackages().map(p => [p.code, p.amount, p.guestLimit]), [
-    ["hala_basic", 44900, 100],
-    ["hala_plus", 109900, 250],
-    ["hala_premium", 179900, 500],
+    ["hala_basic", 39900, 500],
+    ["hala_plus", 84900, 500],
+    ["hala_premium", 129900, 500],
   ]);
   assert.equal(packageFor("hala_plus")?.currency, "SAR");
   assert.equal(packageFor("basic"), null, "legacy package codes cannot create newly priced orders");
@@ -15,24 +15,12 @@ test("Hala packages have server-owned prices and guest limits", () => {
   assert.equal(packageForPaidOrder("basic")?.guestLimit, 200);
   assert.equal(packageForPaidOrder("royal")?.guestLimit, 500);
   assert.equal(packageForPaidOrder("hala_plus")?.guestLimit, 250);
-  assert.equal(packageFor("هلا بريميوم")?.amount, 179900);
+  assert.equal(packageFor("هلا بريميوم")?.amount, 129900);
   assert.equal(packageFor("unknown"), null);
 });
 
-test('reference prices require both verification gates and track configured current amounts',()=>{
-  const previous=globalThis.Netlify;
-  try{
-    for(const env of [{},{HALA_PROMO_LICENSE_ID:'synthetic-license'},{HALA_PROMO_PRIOR_PRICES_VERIFIED:'true'},{HALA_PROMO_LICENSE_ID:' ',HALA_PROMO_PRIOR_PRICES_VERIFIED:'true'}]){
-      globalThis.Netlify={env:{get:key=>env[key]}};
-      for(const pkg of publicPackages()){assert.equal(pkg.referenceAmount,undefined);assert.equal(pkg.promoLicenseId,undefined)}
-    }
-    globalThis.Netlify={env:{get:key=>({HALA_PROMO_LICENSE_ID:'synthetic-license',HALA_PROMO_PRIOR_PRICES_VERIFIED:'true'})[key]}};
-    const catalog=normalizeCatalog();assert.equal(catalog.packages[0].referenceAmount,89900);assert.equal(catalog.packages[0].promoLicenseId,'synthetic-license');
-    const updated=applyCatalogPatch(catalog,{packages:[{code:'hala_basic',amount:59900,guestLimit:100}]});
-    assert.equal(updated.packages[0].savingsPercent,33);
-    const noSaving=applyCatalogPatch(catalog,{packages:[{code:'hala_basic',amount:89900,guestLimit:100}]});
-    assert.equal(noSaving.packages[0].referenceAmount,undefined);assert.equal(noSaving.packages[0].promoLicenseId,undefined);
-  }finally{globalThis.Netlify=previous}
+test('V2 never exposes crossed-out reference prices or manufactured discounts',()=>{
+ for(const pkg of publicPackages()){assert.equal(pkg.referenceAmount,undefined);assert.equal(pkg.promoLicenseId,undefined)}
 });
 
 import { moyasarFeatures } from "../netlify/functions/_shared/payments.mjs";

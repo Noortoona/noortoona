@@ -25,7 +25,8 @@
   <link href="https://fonts.googleapis.com/css2?family=Aref+Ruqaa:wght@400;700&family=Tajawal:wght@400;500;600;700;800&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="styles.css" />
   <link rel="stylesheet" href="v2.css" />
-<link rel="stylesheet" href="/i18n.css"><script src="/i18n.js"></script></head>
+<link rel="stylesheet" href="/i18n.css"><script src="/i18n.js"></script><link rel="stylesheet" href="/pricing-v2.css">
+</head>
 <body>
   <header class="topbar">
     <div class="container nav-wrap">
@@ -212,15 +213,14 @@
     <section id="pricing" class="section pricing-luxe">
       <div class="container">
         <div class="section-head center-head inverse"><span class="eyebrow">الباقات</span><h2>اختر حسب حجم مناسبتك</h2><p>خيارات واضحة بحسب عدد المدعوين واحتياج المناسبة.</p></div>
-        <div class="price-grid" id="priceGrid"></div>
+        <label class="pricing-count-control">عدد المدعوين<select id="pricingGuestCount" aria-label="عدد المدعوين للأسعار"><option value="100">100</option><option value="250">250</option><option value="500">500</option></select></label><p id="taxNotice" class="pricing-disclaimer" role="status"></p><div class="price-grid" id="priceGrid"></div>
         <div class="business-pricing" aria-label="خدمات الأعمال والإضافات">
-          <div class="business-pricing-head"><h3>هلا للأعمال والمؤسسات</h3><p>تسعير استرشادي لخدمات الشركات القادمة، ويُعتمد نطاق الخدمة النهائي بعرض سعر وعقد مستقل.</p></div>
-          <div class="business-price-grid">
-            <article class="business-price-card"><span class="business-status">قريبًا</span><h4>هلا أعمال</h4><p>فعالية واحدة حتى 500 مدعو، مع هوية خاصة وتقارير حضور.</p><strong>تبدأ من 2,999 <small>ريال / فعالية</small></strong></article>
-            <article class="business-price-card"><span class="business-status">قريبًا</span><h4>هلا المؤسسات</h4><p>اشتراك شهري، مع تحديد نطاق المدعوين والخدمات في العقد.</p><strong>يبدأ من 8,999 <small>ريال / شهر</small></strong></article>
-          </div>
-          <p class="pricing-extras">خدمات إضافية: <b>مشرف أو مشرفة +599 ريالًا</b> • <b>تصميم حصري ابتداءً من 149 ريالًا</b> (حسب التوفر وعرض السعر).</p>
-          <p class="pricing-disclaimer">الباقات التجارية والإضافات غير المفعلة تُطلب بعد التعاقد. يتم تأكيد الرسوم قبل الدفع.</p>
+          <div class="business-pricing-head"><h3>هلا للأعمال والمؤسسات</h3><p>خدمات الجهات والفعاليات المهنية وفق نطاق عمل متفق عليه.</p></div>
+          <div class="business-price-grid" id="businessPriceGrid"></div>
+          <p class="pricing-disclaimer">سعر ابتدائي للخدمة أو الفعالية وفق نطاق العمل، ويُعتمد بعرض سعر مستقل.</p>
+        </div>
+        <article id="entry-organization" class="portal-panel entry-organization"><h3 id="entryPriceHeading">تنظيم الدخول — يبدأ من 599 ر.س</h3><p>استقبل ضيوفك بكل أناقة مع خدمة تنظيم الدخول من هلا، والتي تشمل مشرفًا أو مشرفة لاستقبال المدعوين، وطاولة استقبال أنيقة، والتحقق من الدعوات باستخدام رمز QR.</p><p id="entryPriceDetails">حتى 250 مدعوًا: منظم واحد بسعر مبدئي 599 ر.س. 500 مدعو: منظمان بسعر مبدئي 1,198 ر.س. المشرف والمشرفة معًا يُحسبان شخصين.</p><p>تُراجع المداخل والمدة والموقع والطاقة التشغيلية قبل تأكيد التوفر. الخدمة مستقلة عن جميع الباقات.</p><button class="gold-btn" data-start>أضفها أثناء الحجز</button></article>
+        <section id="quoteRequest" class="portal-panel"><h3>اطلب عرض سعر</h3><p>للأعمال والمؤسسات أو للأعداد والخدمات المخصصة.</p><form data-lead-form="contact" data-quote-request class="lead-form"><label>نوع العرض<select name="quoteType" id="quoteRequestType"><option value="business">هلا أعمال</option><option value="enterprise">هلا المؤسسات</option><option value="custom">مناسبة أو عدد مخصص</option></select></label><label>اسم المؤسسة أو المناسبة<input name="organization" required minlength="2" maxlength="180"></label><label>اسم مسؤول التواصل<input name="name" required minlength="2" maxlength="120"></label><label>رقم الجوال<input name="phone" type="tel" autocomplete="tel"></label><label>البريد الإلكتروني<input name="email" type="email" autocomplete="email"></label><label>نوع الحدث<input name="eventType" required maxlength="160"></label><label>عدد الضيوف<input name="guestCount" type="number" required min="1" max="1000000" step="1"></label><label>عدد الفعاليات<input name="eventCount" type="number" value="1" required min="1" max="10000" step="1"></label><label>الخدمات المطلوبة<textarea name="requestedServices" maxlength="2000" rows="3"></textarea></label><label>كود الإحالة<input name="referralCode" maxlength="24"></label><button type="submit" class="gold-btn">إرسال طلب عرض السعر</button><p role="status" aria-live="polite"></p></form></section>
         </div>
       </div>
     </section>

@@ -81,10 +81,9 @@ assert.ok(guestHtml.indexOf('invitation-renderer.js') < guestHtml.indexOf('guest
 assert.ok(guestHtml.indexOf('invitation-schemas.js') < guestHtml.indexOf('guest.js'), 'type schema must load before guest app');
 assert.match(indexHtml, /https:\/\/halainvites\.com\//, 'official domain metadata');
 assert.match(indexHtml, /دعوات إلكترونية فاخرة للزواج والمناسبات \| هلا HALA/, 'HALA public search metadata');
-assert.match(indexHtml, /لحظتك \.\./, 'Original HALA hero remains unchanged');
-assert.match(indexHtml, /<h4>هلا أعمال<\/h4>[\s\S]*?تبدأ من 2,999/, 'business informational price preserved');
-assert.match(indexHtml, /<h4>هلا المؤسسات<\/h4>[\s\S]*?يبدأ من 8,999/, 'enterprise informational price preserved');
-assert.match(indexHtml, /<span class="business-status">قريبًا<\/span>/, 'business plans remain coming soon');
+assert.match(indexHtml, /businessPriceGrid/, 'business prices load from central catalog');
+assert.match(indexHtml, /data-quote-request/, 'corporate requests stay inside the system');
+assert.doesNotMatch(indexHtml, /ريال \/ شهر|اشتراك شهري/, 'corporate prices are not monthly subscriptions');
 assert.match(indexHtml, /assets\/brand\/hala-icon\.svg/, 'HALA logo asset');
 assert.match(guestJs, /✦ هلا/, 'guest invitation uses HALA branding');
 assert.doesNotMatch(indexHtml, /قيد التجهيز|التحديث القادم|قالب جاهز أو محرر مرن أو AI/, 'no visible unfinished feature copy');
