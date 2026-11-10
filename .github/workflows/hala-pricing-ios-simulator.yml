@@ -1,0 +1,57 @@
+name: HALA pricing iOS simulator review
+on:
+  push:
+    branches: [feature/hala-pricing-packages-v2]
+    paths: [.github/workflows/hala-pricing-ios-simulator.yml]
+permissions:
+  contents: read
+concurrency:
+  group: hala-pricing-ios-simulator
+  cancel-in-progress: true
+jobs:
+  simulator:
+    runs-on: macos-latest
+    timeout-minutes: 45
+    env:
+      CI: '1'
+      EXPO_PUBLIC_API_URL: https://deploy-preview-29--noortoona.netlify.app
+      EXPO_PUBLIC_PAYMENTS_ENABLED: 'false'
+    defaults:
+      run:
+        working-directory: mobile
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v6
+        with:
+          node-version: '24.19.0'
+          cache: npm
+          cache-dependency-path: mobile/package-lock.json
+      - run: npm ci
+      - run: npm run typecheck && npm test
+      - name: Generate native iOS app with simulator dependencies
+        run: npx expo prebuild --platform ios
+      - name: Compile without Apple distribution credentials
+        run: |
+          workspace=$(python3 -c "import glob;print(glob.glob('ios/*.xcworkspace')[0])")
+          scheme=$(basename "$workspace" .xcworkspace)
+          xcodebuild -workspace "$workspace" -scheme "$scheme" -configuration Release -sdk iphonesimulator -destination 'generic/platform=iOS Simulator' -derivedDataPath ios/build CODE_SIGNING_ALLOWED=NO build > simulator-build.log 2>&1 || { tail -100 simulator-build.log; exit 1; }
+      - name: Launch on iPhone simulator and capture review
+        run: |
+          device=$(xcrun simctl list devices available -j | python3 -c "import sys,json;print(next(d['udid'] for ds in json.load(sys.stdin)['devices'].values() for d in ds if 'iPhone' in d['name']))")
+          xcrun simctl boot "$device"
+          xcrun simctl bootstatus "$device" -b
+          app=$(python3 -c "import glob;print(glob.glob('ios/build/Build/Products/Release-iphonesimulator/*.app')[0])")
+          xcrun simctl install "$device" "$app"
+          xcrun simctl launch "$device" com.noortoona.hala
+          xcrun simctl openurl "$device" hala://packages
+          sleep 8
+          xcrun simctl io "$device" screenshot pricing-iphone.png
+          echo 'Unsigned simulator review only. This is not TestFlight or an installable iPhone distribution build.' >> "$GITHUB_STEP_SUMMARY"
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: hala-pricing-ios-simulator
+          path: |
+            mobile/pricing-iphone.png
+            mobile/simulator-build.log
+          retention-days: 14

@@ -2,7 +2,7 @@ name: Hala Android review APK
 
 on:
   push:
-    branches: ["hala-stabilization-*"]
+    branches: ["hala-stabilization-*", "feature/hala-pricing-packages-v2"]
     paths: [".github/workflows/hala-android-review.yml"]
   workflow_dispatch:
 
@@ -18,7 +18,7 @@ jobs:
     runs-on: ubuntu-24.04
     timeout-minutes: 45
     env:
-      EXPO_PUBLIC_API_URL: https://deploy-preview-6--noortoona.netlify.app
+      EXPO_PUBLIC_API_URL: https://deploy-preview-29--noortoona.netlify.app
       EXPO_PUBLIC_PAYMENTS_ENABLED: "false"
       CI: "1"
     defaults:

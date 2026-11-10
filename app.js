@@ -166,7 +166,7 @@ async function createEvent(){
     localStorage.removeItem('noortoonaDraftV55');
     const booking=result.booking;
     body.innerHTML=`<section class="booking-success" role="status"><img class="auth-logo" src="/assets/brand/hala-logo-dark.svg?v=20261102" alt="هلا HALA"><h2>تم تسجيل طلب حجزك بنجاح! ✨</h2><p>شكرًا لاختيارك هلا.</p><p>تم استلام تفاصيل مناسبتك وحفظ طلبك برقم:</p><strong class="booking-number">${N.esc(booking.booking_number)}</strong><p>سيتواصل معك فريق هلا قريبًا لاستكمال إجراءات الدفع والتأكيد النهائي.</p><p>يمكنك متابعة تفاصيل طلبك من حسابك في هلا.</p><p class="booking-notice">تسجيل الطلب لا يعني إتمام الدفع أو اعتماد الحجز النهائي.</p><div class="event-actions"><a class="gold-btn" href="/booking.html?id=${encodeURIComponent(booking.id)}">عرض حجزي</a><a class="outline-btn dark-outline" href="${H.whatsapp(booking.booking_number)}" target="_blank" rel="noopener noreferrer">التواصل مع خدمة العملاء</a></div><p>لحظتك .. تبدأ بهلا 🤍</p></section>`;
-    nextBtn.style.display='none';prevBtn.style.display='none';
+    body.scrollTop=0;nextBtn.style.display='none';prevBtn.style.display='none';
     // Guest list import is a separate optional operation; booking remains saved if it fails.
     const guests=parseGuests();
     if(guests.length){try{await H.api('/api/guests',{method:'POST',headers:{'x-noortoona-owner-token':state.createdEvent.ownerToken},body:JSON.stringify({eventId:state.createdEvent.id,guests})});}catch{toast('حُفظ الحجز. يمكنك إكمال إضافة المدعوين من لوحة المناسبة لاحقًا.');}}

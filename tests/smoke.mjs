@@ -80,7 +80,7 @@ assert.match(guestJs, /safeExternalUrl/, 'guest links must be restricted to safe
 assert.ok(guestHtml.indexOf('invitation-renderer.js') < guestHtml.indexOf('guest.js'), 'shared renderer must load before guest app');
 assert.ok(guestHtml.indexOf('invitation-schemas.js') < guestHtml.indexOf('guest.js'), 'type schema must load before guest app');
 assert.match(indexHtml, /https:\/\/halainvites\.com\//, 'official domain metadata');
-assert.match(indexHtml, /هلا \| لحظتك \.\. تبدأ بهلا/, 'HALA public brand metadata');
+assert.match(indexHtml, /دعوات إلكترونية فاخرة للزواج والمناسبات \| هلا HALA/, 'HALA public search metadata');
 assert.match(indexHtml, /businessPriceGrid/, 'business prices load from central catalog');
 assert.match(indexHtml, /data-quote-request/, 'corporate requests stay inside the system');
 assert.doesNotMatch(indexHtml, /ريال \/ شهر|اشتراك شهري/, 'corporate prices are not monthly subscriptions');

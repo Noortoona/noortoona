@@ -3,6 +3,7 @@
   "use strict";
   var STORAGE_KEY = "hala.locale";
   var translations = Object.fromEntries([
+    ["دعوات إلكترونية فاخرة للزواج والمناسبات | هلا HALA", "Luxury Digital Wedding & Event Invitations | HALA"],
     ["المناسبات", "Occasions"], ["القوالب", "Templates"], ["كيف تعمل؟", "How it works"], ["الخدمات", "Services"], ["الباقات", "Packages"], ["الإطلاق", "Launch"],
     ["فتح القائمة", "Open menu"], ["دخول", "Sign in"], ["أنشئ مناسبتك", "Create your event"],
     ["من الفكرة إلى الدعوة… ومن الدعوة إلى لحظة لا تُنسى", "From an idea to an invitation, and an unforgettable moment"],
