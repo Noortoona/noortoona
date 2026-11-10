@@ -5,6 +5,7 @@ import { api } from "@/api";
 import { useRequireRole } from "@/roleGate";
 import { BrandHeader, Card, Empty, PrimaryButton, Screen, Stat } from "@/ui";
 import { theme } from "@/theme";
+import { useI18n } from "@/i18n";
 import { analyticsConsent, setAnalyticsConsent, track } from "@/prebooking";
 import { Switch } from "react-native";
 
@@ -16,6 +17,7 @@ type Home = {
 export default function CustomerHome() {
   const auth = useRequireRole("customer");
   const router = useRouter();
+  const { t, isRTL } = useI18n();
   const [data, setData] = useState<Home | null>(null);
   const [refreshing, setRefreshing] = useState(false);
   const [consent, setConsent] = useState(false);
@@ -23,7 +25,7 @@ export default function CustomerHome() {
 
   const load = useCallback(async () => {
     if (!auth.token) return;
-    try { setData(await api<Home>("/api/mobile/home", {}, auth.token)); } catch (error) { Alert.alert("تعذر تحميل البيانات", error instanceof Error ? error.message : "حاول مرة أخرى"); } finally { setRefreshing(false); }
+    try { setData(await api<Home>("/api/mobile/home", {}, auth.token)); } catch (error) { Alert.alert(t("تعذر تحميل البيانات"), error instanceof Error ? error.message : t("حاول مرة أخرى")); } finally { setRefreshing(false); }
   }, [auth.token]);
 
   useEffect(() => { load(); }, [load]);
@@ -34,27 +36,27 @@ export default function CustomerHome() {
       <BrandHeader title={`هلا، ${auth.user.name}`} subtitle="مناسباتك وضيوفك في مكان واحد" onLogout={auth.signOut} />
       <ScrollView contentContainerStyle={styles.body} refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => { setRefreshing(true); load(); }} />}>
         <View style={styles.hero}>
-          <Text style={styles.eyebrow}>مساحتك الخاصة</Text>
-          <Text style={styles.heroTitle}>من الفكرة إلى وصول الضيف</Text>
-          <Text style={styles.heroText}>أنشئ الدعوة، أرسلها، وتابع التأكيد والدخول من تطبيق واحد.</Text>
+          <Text style={[styles.eyebrow, { textAlign: isRTL ? "right" : "left", writingDirection: isRTL ? "rtl" : "ltr" }]}>{t("مساحتك الخاصة")}</Text>
+          <Text style={[styles.heroTitle, { textAlign: isRTL ? "right" : "left", writingDirection: isRTL ? "rtl" : "ltr" }]}>{t("من الفكرة إلى وصول الضيف")}</Text>
+          <Text style={[styles.heroText, { textAlign: isRTL ? "right" : "left", writingDirection: isRTL ? "rtl" : "ltr" }]}>{t("أنشئ الدعوة، أرسلها، وتابع التأكيد والدخول من تطبيق واحد.")}</Text>
           <PrimaryButton label="+ إنشاء دعوة جديدة" onPress={() => router.push("/customer/create" as never)} />
         </View>
         <PrimaryButton label="حجوزاتي ومتابعة الطلبات" onPress={() => router.push("/customer/bookings" as never)} secondary />
         <PrimaryButton label="كن من أوائل عملاء هلا" onPress={() => router.push("/launch" as never)} secondary />
-        <View style={{ flexDirection: "row", gap: 10, alignItems: "center" }}><Switch value={consent} accessibilityLabel="الموافقة الاختيارية على إحصائيات الاستخدام" onValueChange={value => { setConsent(value); void setAnalyticsConsent(value).then(() => { if (value) void track("page_view", "/mobile/customer"); }); }} /><Text style={[styles.eventMeta, { flex: 1 }]}>أوافق اختياريًا على قياس استخدام التطبيق بمعرّفات تقديرية لتحسين التجربة. هذا منفصل عن الرسائل التسويقية.</Text></View>
-        <View style={styles.stats}>
+        <View style={{ flexDirection: "row", gap: 10, alignItems: "center" }}><Switch value={consent} accessibilityLabel={t("الموافقة الاختيارية على إحصائيات الاستخدام")} onValueChange={value => { setConsent(value); void setAnalyticsConsent(value).then(() => { if (value) void track("page_view", "/mobile/customer"); }); }} /><Text style={[styles.eventMeta, { flex: 1 }]}>{t("أوافق اختياريًا على قياس استخدام التطبيق بمعرّفات تقديرية لتحسين التجربة. هذا منفصل عن الرسائل التسويقية.")}</Text></View>
+        <View style={[styles.stats, { flexDirection: isRTL ? "row-reverse" : "row" }]}>
           <Stat label="مناسباتي" value={data?.stats.events ?? "—"} accent />
           <Stat label="المدعوون" value={data?.stats.guests ?? "—"} />
           <Stat label="أكدوا الحضور" value={data?.stats.accepted ?? "—"} />
           <Stat label="تم دخولهم" value={data?.stats.checkedIn ?? "—"} />
         </View>
-        <Text style={styles.sectionTitle}>آخر المناسبات</Text>
+        <Text style={[styles.sectionTitle, { textAlign: isRTL ? "right" : "left", writingDirection: isRTL ? "rtl" : "ltr" }]}>{t("آخر المناسبات")}</Text>
         {data?.events?.length ? data.events.map(e => (
           <Card key={e.id}>
             <Pressable style={styles.eventRow} onPress={() => router.push({ pathname: "/customer/event/[id]" as never, params: { id: e.id } })}>
               <View style={styles.eventCopy}>
-                <Text style={styles.eventTitle}>{e.title}</Text>
-                <Text style={styles.eventMeta}>{[e.occasion, e.event_date, e.location].filter(Boolean).join(" • ")}</Text>
+                <Text style={[styles.eventTitle, { textAlign: isRTL ? "right" : "left" }]}>{e.title}</Text>
+                <Text style={[styles.eventMeta, { textAlign: isRTL ? "right" : "left" }]}>{[e.occasion, e.event_date, e.location].filter(Boolean).join(" • ")}</Text>
               </View>
               <Text style={styles.arrow}>‹</Text>
             </Pressable>
