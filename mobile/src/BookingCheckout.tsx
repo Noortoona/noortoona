@@ -8,11 +8,13 @@ import { normalizeDigits, normalizeSaudiPhone } from "./input";
 import { analyticsContext, attribution, bookingRetry, money, openSupport, rememberBooking, track, type Booking, type BookingQuote } from "./prebooking";
 import { BrandHeader, Card, PrimaryButton, Screen } from "./ui";
 import { theme } from "./theme";
+import { useI18n } from "./i18n";
 
 type Event = { title: string; occasion: string; event_date?: string; location?: string; package_name: string; template: string; design_json?: { supervisorPreference?: string } };
 export default function BookingCheckout({ eventId }: { eventId?: string }) {
   const auth = useAuth();
   const router = useRouter();
+  const { t, isRTL } = useI18n();
   const [event, setEvent] = useState<Event | null>(null);
   const [guests, setGuests] = useState("");
   const [name, setName] = useState(auth.user?.name || "");
@@ -42,20 +44,20 @@ export default function BookingCheckout({ eventId }: { eventId?: string }) {
   const requestQuote = useCallback(async () => {
     if (!eventId) return;
     const count = Number(normalizeDigits(guests));
-    if (!Number.isSafeInteger(count) || count < 1) { setError("أدخل عدد المدعوين الصحيح."); return; }
+    if (!Number.isSafeInteger(count) || count < 1) { setError(t("أدخل عدد المدعوين الصحيح.")); return; }
     const current = ++version.current;
     setQuoting(true); setError("");
     try {
       const response = await api<{ quote: BookingQuote }>("/api/bookings/quote", { method: "POST", body: JSON.stringify({ eventId, guestCount: count, services: supervisor ? ["supervisor"] : [], referralCode: coupon.trim() }) }, auth.token);
       if (current === version.current) { setQuote(response.quote); void track("price_viewed", "/mobile/customer/payment", { packageCode: response.quote.packageCode }); }
-    } catch (e) { if (current === version.current) setError(e instanceof Error ? e.message : "تعذر احتساب السعر"); }
+    } catch (e) { if (current === version.current) setError(e instanceof Error ? e.message : t("تعذر احتساب السعر")); }
     finally { setQuoting(false); }
   }, [eventId, auth.token, guests, supervisor, coupon]);
   async function submit() {
     if (lock.current || !quote || !eventId) return;
     const normalized = normalizeSaudiPhone(phone);
-    if (!name.trim() || !normalized || (email.trim() && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim()))) { setError("أدخل الاسم ورقم الجوال الصحيح والبريد إن رغبت."); return; }
-    if (supervisor && !event?.design_json?.supervisorPreference) { setError("عد إلى تفاصيل الدعوة وحدد مشرفًا أو مشرفة قبل إضافة الخدمة."); return; }
+    if (!name.trim() || !normalized || (email.trim() && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim()))) { setError(t("أدخل الاسم ورقم الجوال الصحيح والبريد إن رغبت.")); return; }
+    if (supervisor && !event?.design_json?.supervisorPreference) { setError(t("عد إلى تفاصيل الدعوة وحدد مشرفًا أو مشرفة قبل إضافة الخدمة.")); return; }
     lock.current = true; setBusy(true); setError("");
     try {
       const retry = await bookingRetry(auth.user?.id || "guest", eventId);
@@ -63,25 +65,25 @@ export default function BookingCheckout({ eventId }: { eventId?: string }) {
       // The saved booking is the only success signal. SecureStore failure must not hide it.
       setBooking(data.booking);
       await rememberBooking(data.booking.id, data.accessToken || retry.accessToken).catch(() => undefined);
-    } catch (e) { setError(e instanceof Error ? e.message : "تعذر حفظ الحجز. يمكنك المحاولة مجددًا دون إنشاء طلب آخر."); }
+    } catch (e) { setError(e instanceof Error ? e.message : t("تعذر حفظ الحجز. يمكنك المحاولة مجددًا دون إنشاء طلب آخر.")); }
     finally { setBusy(false); lock.current = false; }
   }
-  if (booking) return <Screen><BrandHeader title="تم تسجيل طلب حجزك بنجاح! ✨" /><ScrollView contentContainerStyle={styles.body}><Card><Text style={styles.heading}>شكرًا لاختيارك هلا.</Text><Text style={styles.text}>تم استلام تفاصيل مناسبتك وحفظ طلبك برقم:</Text><Text selectable style={styles.number}>{booking.booking_number}</Text><Text style={styles.text}>سيتواصل معك فريق هلا قريبًا لاستكمال إجراءات الدفع والتأكيد النهائي.</Text><Text style={styles.text}>يمكنك متابعة تفاصيل طلبك من حسابك في هلا.</Text><Text style={styles.text}>تسجيل الطلب لا يعني إتمام الدفع أو اعتماد الحجز النهائي.</Text><Text style={styles.heading}>لحظتك .. تبدأ بهلا 🤍</Text></Card><PrimaryButton label="عرض حجزي" onPress={() => router.replace({ pathname: "/customer/bookings" as never, params: { id: booking.id } })} /><PrimaryButton label="التواصل مع خدمة العملاء" secondary onPress={() => { void openSupport(booking.booking_number).catch(() => Alert.alert("تعذر فتح واتساب", "يمكنك العودة لحجزك من حسابك.")); }} /></ScrollView></Screen>;
+  if (booking) return <Screen><BrandHeader title="تم تسجيل طلب حجزك بنجاح! ✨" /><ScrollView contentContainerStyle={styles.body}><Card><Text style={[styles.heading, { textAlign: isRTL ? "right" : "left", writingDirection: isRTL ? "rtl" : "ltr" }]}>{t("شكرًا لاختيارك هلا.")}</Text><Text style={[styles.text, { textAlign: isRTL ? "right" : "left", writingDirection: isRTL ? "rtl" : "ltr" }]}>{t("تم استلام تفاصيل مناسبتك وحفظ طلبك برقم:")}</Text><Text selectable style={styles.number}>{booking.booking_number}</Text><Text style={[styles.text, { textAlign: isRTL ? "right" : "left", writingDirection: isRTL ? "rtl" : "ltr" }]}>{t("سيتواصل معك فريق هلا قريبًا لاستكمال إجراءات الدفع والتأكيد النهائي.")}</Text><Text style={[styles.text, { textAlign: isRTL ? "right" : "left", writingDirection: isRTL ? "rtl" : "ltr" }]}>{t("يمكنك متابعة تفاصيل طلبك من حسابك في هلا.")}</Text><Text style={[styles.text, { textAlign: isRTL ? "right" : "left", writingDirection: isRTL ? "rtl" : "ltr" }]}>{t("تسجيل الطلب لا يعني إتمام الدفع أو اعتماد الحجز النهائي.")}</Text><Text style={[styles.heading, { textAlign: isRTL ? "right" : "left", writingDirection: isRTL ? "rtl" : "ltr" }]}>{t("لحظتك .. تبدأ بهلا 🤍")}</Text></Card><PrimaryButton label="عرض حجزي" onPress={() => router.replace({ pathname: "/customer/bookings" as never, params: { id: booking.id } })} /><PrimaryButton label="التواصل مع خدمة العملاء" secondary onPress={() => { void openSupport(booking.booking_number).catch(() => Alert.alert(t("تعذر فتح واتساب"), t("يمكنك العودة لحجزك من حسابك."))); }} /></ScrollView></Screen>;
   return <Screen><BrandHeader title="تأكيد طلب الحجز" subtitle="احفظ طلبك الآن، وسنتواصل لاستكمال الدفع والتأكيد" /><ScrollView keyboardShouldPersistTaps="handled" contentContainerStyle={styles.body}>
-    {event ? <Card><Text style={styles.heading}>{event.title}</Text><Text style={styles.text}>{[event.occasion, event.event_date, event.location].filter(Boolean).join(" • ")}</Text><Text style={styles.text}>{event.template} • {event.package_name}</Text></Card> : <Text style={styles.text}>جاري تحميل تفاصيل المناسبة…</Text>}
-    <Text style={styles.label}>عدد المدعوين</Text><TextInput value={guests} onChangeText={setGuests} keyboardType="number-pad" style={styles.input} accessibilityLabel="عدد المدعوين" />
-    <View style={styles.row}><Switch value={supervisor} onValueChange={setSupervisor} accessibilityLabel="إضافة مشرف أو مشرفة" /><Text style={styles.text}>إضافة مشرف / مشرفة حسب التفضيل المحدد</Text></View>
-    <Text style={styles.label}>كود الخصم أو الإحالة</Text><TextInput value={coupon} onChangeText={setCoupon} autoCapitalize="characters" style={styles.input} accessibilityLabel="كود الخصم أو الإحالة" />
+    {event ? <Card><Text style={[styles.heading, { textAlign: isRTL ? "right" : "left", writingDirection: isRTL ? "rtl" : "ltr" }]}>{event.title}</Text><Text style={[styles.text, { textAlign: isRTL ? "right" : "left", writingDirection: isRTL ? "rtl" : "ltr" }]}>{[event.occasion, event.event_date, event.location].filter(Boolean).join(" • ")}</Text><Text style={[styles.text, { textAlign: isRTL ? "right" : "left", writingDirection: isRTL ? "rtl" : "ltr" }]}>{event.template} • {event.package_name}</Text></Card> : <Text style={[styles.text, { textAlign: isRTL ? "right" : "left", writingDirection: isRTL ? "rtl" : "ltr" }]}>{t("جاري تحميل تفاصيل المناسبة…")}</Text>}
+    <Text style={[styles.label, { textAlign: isRTL ? "right" : "left", writingDirection: isRTL ? "rtl" : "ltr" }]}>{t("عدد المدعوين")}</Text><TextInput value={guests} onChangeText={setGuests} keyboardType="number-pad" style={[styles.input, { textAlign: isRTL ? "right" : "left", writingDirection: isRTL ? "rtl" : "ltr" }]} accessibilityLabel={t("عدد المدعوين")} />
+    <View style={[styles.row, { flexDirection: isRTL ? "row-reverse" : "row" }]}><Switch value={supervisor} onValueChange={setSupervisor} accessibilityLabel={t("إضافة مشرف أو مشرفة")} /><Text style={[styles.text, { textAlign: isRTL ? "right" : "left", writingDirection: isRTL ? "rtl" : "ltr" }]}>{t("إضافة مشرف / مشرفة حسب التفضيل المحدد")}</Text></View>
+    <Text style={[styles.label, { textAlign: isRTL ? "right" : "left", writingDirection: isRTL ? "rtl" : "ltr" }]}>{t("كود الخصم أو الإحالة")}</Text><TextInput value={coupon} onChangeText={setCoupon} autoCapitalize="characters" style={[styles.input, { textAlign: isRTL ? "right" : "left", writingDirection: isRTL ? "rtl" : "ltr" }]} accessibilityLabel={t("كود الخصم أو الإحالة")} />
     <PrimaryButton label="عرض السعر النهائي" onPress={() => { void requestQuote(); }} loading={quoting} disabled={!event || busy} secondary />
-    {quote ? <Card><Text style={styles.text}>{quote.packageName}: {money(quote.baseAmount)}</Text><Text style={styles.text}>الخدمات الإضافية: {money(quote.addonAmount)}</Text><Text style={styles.text}>الخصم: {money(quote.discountAmount)}</Text><Text style={styles.heading}>الإجمالي: {money(quote.total)}</Text><Text style={styles.text}>لا يُخصم منك أي مبلغ عند تأكيد الطلب المبدئي.</Text></Card> : null}
-    <Text style={styles.label}>اسم العميل</Text><TextInput value={name} onFocus={markContact} onChangeText={setName} style={styles.input} accessibilityLabel="اسم العميل" autoComplete="name" />
-    <Text style={styles.label}>رقم الجوال</Text><TextInput value={phone} onFocus={markContact} onChangeText={setPhone} style={styles.input} keyboardType="phone-pad" accessibilityLabel="رقم الجوال" autoComplete="tel" />
-    <Text style={styles.label}>البريد الإلكتروني — اختياري</Text><TextInput value={email} onFocus={markContact} onChangeText={setEmail} style={styles.input} keyboardType="email-address" autoCapitalize="none" accessibilityLabel="البريد الإلكتروني" />
-    <View style={styles.row}><Switch value={consent} onValueChange={setConsent} accessibilityLabel="الموافقة الاختيارية على الرسائل التسويقية" /><Text style={styles.flexText}>أوافق اختياريًا على استقبال أخبار وعروض هلا. لا يؤثر اختياري على الحجز.</Text></View>
-    {error ? <Text accessibilityRole="alert" style={styles.error}>{error}</Text> : null}
-    <Text style={styles.text}>الحجز المبدئي لا يعني الدفع أو الاعتماد النهائي. واتساب للمساعدة فقط.</Text>
+    {quote ? <Card><Text style={[styles.text, { textAlign: isRTL ? "right" : "left", writingDirection: isRTL ? "rtl" : "ltr" }]}>{quote.packageName}: {money(quote.baseAmount)}</Text><Text style={[styles.text, { textAlign: isRTL ? "right" : "left", writingDirection: isRTL ? "rtl" : "ltr" }]}>{t("الخدمات الإضافية:")} {money(quote.addonAmount)}</Text><Text style={[styles.text, { textAlign: isRTL ? "right" : "left", writingDirection: isRTL ? "rtl" : "ltr" }]}>{t("الخصم:")} {money(quote.discountAmount)}</Text><Text style={[styles.heading, { textAlign: isRTL ? "right" : "left", writingDirection: isRTL ? "rtl" : "ltr" }]}>{t("الإجمالي:")} {money(quote.total)}</Text><Text style={[styles.text, { textAlign: isRTL ? "right" : "left", writingDirection: isRTL ? "rtl" : "ltr" }]}>{t("لا يُخصم منك أي مبلغ عند تأكيد الطلب المبدئي.")}</Text></Card> : null}
+    <Text style={[styles.label, { textAlign: isRTL ? "right" : "left", writingDirection: isRTL ? "rtl" : "ltr" }]}>{t("اسم العميل")}</Text><TextInput value={name} onFocus={markContact} onChangeText={setName} style={[styles.input, { textAlign: isRTL ? "right" : "left", writingDirection: isRTL ? "rtl" : "ltr" }]} accessibilityLabel={t("اسم العميل")} autoComplete="name" />
+    <Text style={[styles.label, { textAlign: isRTL ? "right" : "left", writingDirection: isRTL ? "rtl" : "ltr" }]}>{t("رقم الجوال")}</Text><TextInput value={phone} onFocus={markContact} onChangeText={setPhone} style={[styles.input, { textAlign: isRTL ? "right" : "left", writingDirection: isRTL ? "rtl" : "ltr" }]} keyboardType="phone-pad" accessibilityLabel={t("رقم الجوال")} autoComplete="tel" />
+    <Text style={[styles.label, { textAlign: isRTL ? "right" : "left", writingDirection: isRTL ? "rtl" : "ltr" }]}>{t("البريد الإلكتروني — اختياري")}</Text><TextInput value={email} onFocus={markContact} onChangeText={setEmail} style={[styles.input, { textAlign: isRTL ? "right" : "left", writingDirection: isRTL ? "rtl" : "ltr" }]} keyboardType="email-address" autoCapitalize="none" accessibilityLabel={t("البريد الإلكتروني")} />
+    <View style={[styles.row, { flexDirection: isRTL ? "row-reverse" : "row" }]}><Switch value={consent} onValueChange={setConsent} accessibilityLabel={t("الموافقة الاختيارية على الرسائل التسويقية")} /><Text style={[styles.flexText, { textAlign: isRTL ? "right" : "left", writingDirection: isRTL ? "rtl" : "ltr" }]}>{t("أوافق اختياريًا على استقبال أخبار وعروض هلا. لا يؤثر اختياري على الحجز.")}</Text></View>
+    {error ? <Text accessibilityRole="alert" style={[styles.error, { textAlign: isRTL ? "right" : "left", writingDirection: isRTL ? "rtl" : "ltr" }]}>{error}</Text> : null}
+    <Text style={[styles.text, { textAlign: isRTL ? "right" : "left", writingDirection: isRTL ? "rtl" : "ltr" }]}>{t("الحجز المبدئي لا يعني الدفع أو الاعتماد النهائي. واتساب للمساعدة فقط.")}</Text>
     <PrimaryButton label="تأكيد طلب الحجز" onPress={() => { void submit(); }} loading={busy} disabled={!quote || !event || quoting} />
-    <PrimaryButton label="خدمة العملاء" secondary onPress={() => { void openSupport().catch(() => Alert.alert("تعذر فتح واتساب")); }} />
+    <PrimaryButton label="خدمة العملاء" secondary onPress={() => { void openSupport().catch(() => Alert.alert(t("تعذر فتح واتساب"))); }} />
     <PrimaryButton label="رجوع" secondary onPress={() => router.back()} />
   </ScrollView></Screen>;
 }
