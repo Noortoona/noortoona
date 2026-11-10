@@ -113,6 +113,8 @@
   function translateText(node) {
     if (!node || !node.parentElement) return;
     if (node.parentElement.closest("script,style,noscript,textarea,code,pre,[data-no-i18n],.hala-language-picker")) return;
+    var option = node.parentElement.closest("option");
+    if (option && !option.hasAttribute("value")) return;
     if (!originals.has(node)) originals.set(node, node.nodeValue);
     var original = originals.get(node);
     var trimmed = original.trim();
@@ -153,7 +155,7 @@
     if (persist) { try { localStorage.setItem(STORAGE_KEY, locale); } catch (_error) {} }
     document.documentElement.lang = locale;
     document.documentElement.dir = locale === "ar" ? "rtl" : "ltr";
-    document.title = translate("هلا | لحظتك .. تبدأ بهلا", locale) === document.title ? document.title : (locale === "ar" ? (document.titleOriginal || document.title) : translate(document.titleOriginal || document.title, locale));
+    document.title = translate(document.titleOriginal || document.title, locale);
     if (document.body) localizeTree(document.body);
     updatePicker();
     document.dispatchEvent(new CustomEvent("hala:localechange", { detail: { locale: locale, dir: document.documentElement.dir } }));
@@ -165,7 +167,7 @@
     wrapper.className = "hala-language-picker" + (anchor ? "" : " hala-language-floating");
     wrapper.setAttribute("aria-label", "Language / اللغة");
     var icon = document.createElement("span");
-    icon.className = "hala-language-icon"; icon.textContent = "◎"; icon.setAttribute("aria-hidden", "true");
+    icon.className = "hala-language-icon"; icon.textContent = "🌐"; icon.setAttribute("aria-hidden", "true");
     var select = document.createElement("select");
     select.setAttribute("aria-label", "Language / اللغة");
     [["ar", "العربية"], ["en", "English"]].forEach(function (pair) {
