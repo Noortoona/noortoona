@@ -7,10 +7,12 @@ import { ApiError } from "@/api";
 import { homeByRole } from "@/roleGate";
 import { PrimaryButton } from "@/ui";
 import { theme } from "@/theme";
+import { LanguageToggle, useI18n } from "@/i18n";
 import { normalizeSaudiPhone, normalizeDigits, normalizeAdminEmail } from "@/input";
 
 export default function LoginScreen() {
   const auth = useAuth();
+  const { t, isRTL } = useI18n();
   const router = useRouter();
   const [entry, setEntry] = useState("العملاء");
   const [phone, setPhone] = useState("");
@@ -32,7 +34,7 @@ export default function LoginScreen() {
   }, [auth.loading, auth.user, router]);
   async function submit() {
     if (emailMode ? !validEmail : !validPhone) {
-      setError(emailMode ? "أدخل بريدًا إلكترونيًا صحيحًا." : "أدخل رقم جوال سعودي صحيحًا.");
+      setError(t(emailMode ? "أدخل بريدًا إلكترونيًا صحيحًا." : "أدخل رقم جوال سعودي صحيحًا."));
       return;
     }
     setError(""); setBusy(true);
@@ -42,36 +44,37 @@ export default function LoginScreen() {
         else { await auth.requestAdminEmailOtp(validEmail!); setSent(true); }
       } else if (sent) await auth.verifyOtp(validPhone!, normalizeDigits(code));
       else { await auth.requestOtp(validPhone!); setSent(true); }
-    } catch (e) { setError(e instanceof ApiError ? e.message : "تعذر إكمال العملية"); }
+    } catch (e) { setError(e instanceof ApiError ? e.message : t("تعذر إكمال العملية")); }
     finally { setBusy(false); }
   }
   return (
     <KeyboardAvoidingView style={styles.root} behavior={Platform.OS === "ios" ? "padding" : undefined}>
+      <View style={styles.languageRow}><LanguageToggle /></View>
       <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
-        <View style={styles.brandBlock}><Image source={require("../assets/hala-logo.png")} style={styles.logoImage} resizeMode="contain" accessibilityLabel="HALA | هلا" /><Text style={styles.tagline}>لحظتك .. تبدأ بهلا</Text></View>
+        <View style={styles.brandBlock}><Image source={require("../assets/hala-logo.png")} style={styles.logoImage} resizeMode="contain" accessibilityLabel="HALA | هلا" /><Text style={styles.tagline}>{t("لحظتك .. تبدأ بهلا")}</Text></View>
         <View style={styles.sheet}><PrimaryButton label="كن من أوائل عملاء هلا" secondary onPress={() => router.push("/launch" as never)} /><PrimaryButton label="تصفح واحجز دون تسجيل دخول" secondary onPress={() => router.push("/customer/create" as never)} /><PrimaryButton label="متابعة حجزي الأخير" secondary onPress={() => { void SecureStore.getItemAsync("hala.booking.last").then(id => id ? router.push({pathname:"/customer/bookings" as never,params:{id}}) : router.push("/customer/create" as never)); }} />
-          <Text style={styles.title}>{sent ? "رمز التحقق" : `دخول ${entry}`}</Text>
-          <View style={styles.entries}>{["العملاء", "الإدارة", "المشرفين", "الشركاء", "خدمة العملاء"].map(label => <Pressable key={label} accessibilityRole="button" accessibilityState={{ selected: entry === label }} onPress={() => changeEntry(label)} style={[styles.entry, entry === label && styles.entryActive]}><Text style={[styles.entryText, entry === label && styles.entryTextActive]}>{label}</Text></Pressable>)}</View>
-          <Text style={styles.help}>
-            {sent
+          <Text style={[styles.title, { textAlign: isRTL ? "right" : "left", writingDirection: isRTL ? "rtl" : "ltr" }]}>{sent ? t("رمز التحقق") : t("دخول " + entry)}</Text>
+          <View style={[styles.entries, { flexDirection: isRTL ? "row-reverse" : "row" }]}>{["العملاء", "الإدارة", "المشرفين", "الشركاء", "خدمة العملاء"].map(label => <Pressable key={label} accessibilityRole="button" accessibilityState={{ selected: entry === label }} onPress={() => changeEntry(label)} style={[styles.entry, entry === label && styles.entryActive]}><Text style={[styles.entryText, entry === label && styles.entryTextActive]}>{t(label)}</Text></Pressable>)}</View>
+          <Text style={[styles.help, { textAlign: isRTL ? "right" : "left", writingDirection: isRTL ? "rtl" : "ltr" }]}>
+            {t(sent
               ? emailMode ? "أدخل الرمز المرسل إلى البريد الإلكتروني. صلاحيته ٥ دقائق." : "أدخل رمز واتساب. صلاحيته ٥ دقائق."
-              : emailMode ? "أدخل البريد المعتمد للإدارة. لا يتطلب اشتراك واتساب." : "ادخل برقمك المسجل. تحدد صلاحيات حسابك اللوحة المتاحة لك."}
+              : emailMode ? "أدخل البريد المعتمد للإدارة. لا يتطلب اشتراك واتساب." : "ادخل برقمك المسجل. تحدد صلاحيات حسابك اللوحة المتاحة لك.")}
           </Text>
           {emailMode
             ? <TextInput value={email} onChangeText={value => { setEmail(value); resetStep(); }}
-                placeholder="البريد الإلكتروني للإدارة" placeholderTextColor="#9B8C91"
+                placeholder={t("البريد الإلكتروني للإدارة")} placeholderTextColor="#9B8C91"
                 style={styles.input} textAlign="left" keyboardType="email-address" autoCapitalize="none"
                 autoComplete="email" textContentType="emailAddress" editable={!busy && !sent}
-                accessibilityLabel="البريد الإلكتروني للإدارة" />
+                accessibilityLabel={t("البريد الإلكتروني للإدارة")} />
             : <TextInput value={phone} onChangeText={value => { setPhone(value); resetStep(); }}
-                placeholder="رقم الجوال" placeholderTextColor="#9B8C91" style={styles.input}
-                textAlign="right" keyboardType="phone-pad" editable={!busy && !sent}
-                accessibilityLabel="رقم الجوال" autoComplete="tel" />}
+                placeholder={t("رقم الجوال")} placeholderTextColor="#9B8C91" style={styles.input}
+                textAlign={isRTL ? "right" : "left"} keyboardType="phone-pad" editable={!busy && !sent}
+                accessibilityLabel={t("رقم الجوال")} autoComplete="tel" />}
           {sent ? <TextInput value={code} onChangeText={value => setCode(normalizeDigits(value))}
-              placeholder="رمز التحقق المكون من ٦ أرقام" placeholderTextColor="#9B8C91"
-              style={styles.input} textAlign="right" keyboardType="number-pad" maxLength={6}
+              placeholder={t("رمز التحقق المكون من ٦ أرقام")} placeholderTextColor="#9B8C91"
+              style={styles.input} textAlign={isRTL ? "right" : "left"} keyboardType="number-pad" maxLength={6}
               textContentType="oneTimeCode" autoComplete={emailMode ? "off" : "sms-otp"}
-              accessibilityLabel="رمز التحقق" /> : null}
+              accessibilityLabel={t("رمز التحقق")} /> : null}
           {error ? <Text style={styles.error}>{error}</Text> : null}
           <PrimaryButton label={sent ? "تأكيد والدخول" : emailMode ? "إرسال الرمز إلى البريد" : "إرسال الرمز عبر واتساب"}
             onPress={submit} loading={busy} disabled={(emailMode ? !validEmail : !validPhone) || (sent && !validCode)} />
@@ -91,6 +94,7 @@ const styles = StyleSheet.create({
   content: { flexGrow: 1, justifyContent: "flex-end" },
   brandBlock: { flex: 1, minHeight: 260, alignItems: "center", justifyContent: "center", paddingTop: 60 },
   logoImage: { width: 240, height: 107 },
+  languageRow: { position: "absolute", top: 48, right: 16, zIndex: 5 },
   entries: { flexDirection: "row-reverse", flexWrap: "wrap", gap: 7 },
   entry: { borderWidth: 1, borderColor: theme.colors.line, borderRadius: 12, paddingHorizontal: 12, paddingVertical: 10 },
   entryActive: { backgroundColor: theme.colors.burgundy, borderColor: theme.colors.burgundy },
