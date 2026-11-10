@@ -1,6 +1,6 @@
 # HALA — تقرير تنفيذ التسعير والباقات V2
 
-تاريخ التحقق: 10 نوفمبر 2026. هذا سجل إصدار للفرع `feature/hala-pricing-packages-v2` وطلب الدمج [#29](https://github.com/Noortoona/noortoona/pull/29). حالة الدمج والنشر النهائية ونتائج البناء محدثة في طلب الدمج.
+تاريخ التحقق: 10 نوفمبر 2026. دُمج الإصدار الأساسي [#29](https://github.com/Noortoona/noortoona/pull/29) من `feature/hala-pricing-packages-v2` إلى main ونُشر فعليًا. تتابع مراجعة اتساق المسارات القديمة والتحقق الأصلي للهاتف في [#33](https://github.com/Noortoona/noortoona/pull/33)، فرع `feature/hala-mobile-production-build`.
 
 ## التنفيذ الفعلي
 
@@ -23,20 +23,22 @@
 
 ## التحقق المنفذ
 
-- 128 اختبار خادم/قاعدة بيانات/بناء/أمان/كتالوج وحجوزات ناجح، إضافة إلى smoke. منها سياسة الأسعار التسعة، التلاعب بالسعر، الضريبة والإحالة، السعر التاريخي، صلاحيات العميل والإدارة، فريق الاستقبال، المسح المتزامن، الإلغاء والدفع المتأخر وطلبات الشركات.
+- 129 اختبار خادم/قاعدة بيانات/بناء/أمان/كتالوج وحجوزات ناجح، إضافة إلى smoke. منها توافق طلبات تنظيم الدخول التاريخية وسياسة الأسعار التسعة، التلاعب بالسعر، الضريبة والإحالة، السعر التاريخي، صلاحيات العميل والإدارة، فريق الاستقبال، المسح المتزامن، الإلغاء والدفع المتأخر وطلبات الشركات.
 - TypeScript للتطبيق ناجح و12 اختبار تدفق للهاتف ناجح. Expo Doctor وprebuild وتوليد حزم Hermes لـiOS وAndroid نجحت في CI.
 - اختبارات متصفح CI: 48 حالة على سطح المكتب وعرضي iPhone وAndroid؛ تتضمن الأسعار واللغتين والحجز وظهوره في الإدارة وإعادة استرجاعه. هذه محاكاة عرض الويب وليست إثبات اختبار جهازين فعليين.
-- [فحص الويب الناجح](https://github.com/Noortoona/noortoona/actions/runs/42814108802) و[فحص التطبيق الناجح](https://github.com/Noortoona/noortoona/actions/runs/42814108966) لمنطق الحجز والدفع قبل آخر تصحيح للأرقام العربية؛ الفحوص النهائية مرتبطة برأس PR.
+- [فحص الويب الناجح](https://github.com/Noortoona/noortoona/actions/runs/42814108802) و[فحص التطبيق الناجح](https://github.com/Noortoona/noortoona/actions/runs/42814108966) لمنطق الحجز والدفع ويعقبهما [فحص رأس الإصدار النهائي للويب](https://github.com/Noortoona/noortoona/actions/runs/42815087510) و[التطبيق](https://github.com/Noortoona/noortoona/actions/runs/42815087715)، وكلاهما ناجح. فحوص متابعة #33 مرتبطة برأسه.
 - اختبار متصفح فعلي في [المعاينة](https://deploy-preview-29--noortoona.netlify.app): حجز تجريبي معلّم بوضوح، بلس 500 = 2,999 ريال + منظّمان = 1,198، الإجمالي المبدئي 4,197 ريال، مرجع `HALA-D0CCF537D15A`. حُفظ في قاعدة المعاينة واستُرجع من صفحة الحجز؛ بقي بانتظار الدفع والتوفر والضريبة. لا رسائل أو مدفوعات حقيقية.
 - ظهور الحجز للإدارة ودور الموظف والمنظم مُثبت في قاعدة اختبار معزولة وCI. لم يُتجاوز دخول الإدارة لإجراء اختبار بشخصية المالك في المعاينة.
 - فشل عدد من اختبارات المتصفح المحلية بسبب عطل بيئة Chromium المحلية ثبت حتى بصفحة HTML مستقلة؛ نُفذت المجموعة نفسها بنجاح على مشغل GitHub. لم تُضعف الاختبارات لإخفاء المشكلة.
 
 ## البناء والتوزيع
 
-- [أول بناء APK ناجح](https://github.com/Noortoona/noortoona/actions/runs/42811310580) من `38414644`: arm64 بتوقيع debug للاختبار، مرتبط بخادم المعاينة والدفع معطل. ملف التحميل أُنشئ ويُستبدل بأحدث بناء ناجح؛ نتيجة البناء النهائي في PR. لم يُختبر على جهاز Android فعلي بعد.
-- [بناء محاكي iPhone](https://github.com/Noortoona/noortoona/actions/runs/42811310560): اكتمل تجميع Xcode دون شهادة توزيع؛ تشغيل المحاكي والتقاط الشاشة قيد التحقق وقت إعداد هذا السجل. ليس IPA توزيع ولا TestFlight.
-- لا عضوية Apple Developer/شهادات توزيع متاحة مثبتة في هذه المهمة؛ TestFlight والاختبار على iPhone فعلي غير مكتملين. لا إعلان جاهزية App Store أو Google Play أو AAB رسمي.
-- عند إنشاء هذا السجل، الإنتاج ما زال main السابق والمعاينة جاهزة؛ الدمج والنشر يتبعان نجاح فحوص رأس PR. الحالة النهائية في PR ورد التسليم.
+- [بناء APK النهائي للموقع الرسمي](https://github.com/Noortoona/noortoona/actions/runs/42815999861) نجح من `1e176774`: [تحميل HALA-Pricing-V2-Android.apk](https://chatgpt.com/library?file_id=libfile_1000fc211c688191a8f48ed89bb02b04&account_id=personal). معمارية arm64، توقيع debug للاختبار، API هو `https://halainvites.com`، والدفع الإلكتروني معطل. تحقق محتوى الحزمة من غياب عنوان المعاينة. SHA-256: `6847dab85119cd9399687c63efba86fa6ef1fc919ffcee1d21b4bf211a3e30a7`.
+- [بناء APK المعاينة النهائي](https://github.com/Noortoona/noortoona/actions/runs/42814773035) نجح من `7f76cbe4`: [تحميل نسخة المعاينة المعزولة](https://chatgpt.com/library?file_id=libfile_eabc7038604c819188bf124b4a6f0abd&account_id=personal). ترتبط بقاعدة المعاينة؛ SHA-256: `14f6ab32a4a23cf23f6670d60ab48ba4b5ec5d4d569236f1074ef25dcda1c35f`.
+- [محاكي iPhone الأول](https://github.com/Noortoona/noortoona/actions/runs/42811310560): نجح تجميع Xcode والتثبيت والتشغيل دون شهادة توزيع. فُحصت الصورة: التطبيق يعمل، لكن تأكيد iOS للرابط منع عرض صفحة الباقات. أُضيف اختبار تنقل أصلي عبر الزر بدل الرابط، مع تحقق الأسعار والعربية/الإنجليزية؛ [تشغيل الاختبار](https://github.com/Noortoona/noortoona/actions/runs/42816899977) وحالته النهائية في #33. ليس IPA توزيع ولا TestFlight.
+- لا عضوية Apple Developer/شهادات توزيع متاحة مثبتة في هذه المهمة؛ TestFlight والاختبار على iPhone فعلي غير مكتملين. لم يُختبر APK على جهاز Android فعلي. لا إعلان جاهزية App Store أو Google Play أو AAB رسمي.
+- الإنتاج: نُشر main `479be156fbf5d4262cfee105e7555bbe4f228652` عبر Netlify deploy `6af30d2e7166fb496c114210` بحالة ready، وطُبق الترحيل الإضافي على فرع قاعدة `production`. اجتاز فحصًا بعد النشر للأسعار التسعة ورفض الوصول إلى واجهتي إدارة الكتالوج والحجوزات دون دخول بـ401. لا حجوزات اختبار أو رسائل أو مدفوعات أُنشئت في الإنتاج.
+- متابعة اتساق تنظيم الدخول: لوحة العميل تعتمد بيانات الحجز، ومسارات المشرف القديمة لا تعدل فريق V2 ولا تلغي إضافته. إحصاءات الإدارة لا تكرر الطلب بين النظام القديم والحجز. أثبت اختبار قاعدة البيانات بقاء طلب تاريخي بقيمة 299 ريال قابلًا للقراءة والتعيين بعد سداد موثق، مع منع المسارات نفسها من تعديل V2. النشر النهائي لهذه المتابعة موثق في #33.
 
 ## المتبقي قبل اعتماد الاستخدام التجاري الكامل
 
@@ -53,6 +55,7 @@
 
 ## الملفات المعدلة
 
+- `.github/workflows/hala-android-production-trial.yml`
 - `.github/workflows/hala-android-review.yml`
 - `.github/workflows/hala-pricing-ios-simulator.yml`
 - `.github/workflows/hala-web-check.yml`
@@ -62,6 +65,8 @@
 - `booking-client.js`
 - `booking.html`
 - `booking.js`
+- `customer.js`
+- `docs/HALA_PRICING_V2_REPORT_AR.md`
 - `i18n.js`
 - `index.html`
 - `invitation-renderer.js`
@@ -73,6 +78,7 @@
 - `mobile/app/(supervisor)/supervisor/scanner.tsx`
 - `mobile/app/login.tsx`
 - `mobile/app/packages.tsx`
+- `mobile/e2e/pricing.yaml`
 - `mobile/metro.config.js`
 - `mobile/package-lock.json`
 - `mobile/package.json`
@@ -94,7 +100,10 @@
 - `netlify/functions/_shared/settings.mjs`
 - `netlify/functions/admin-bookings.mts`
 - `netlify/functions/admin-catalog.mts`
+- `netlify/functions/admin-event-members.mts`
+- `netlify/functions/admin-overview.mts`
 - `netlify/functions/admin-settings.mts`
+- `netlify/functions/admin-supervisors.mts`
 - `netlify/functions/booking-quote.mts`
 - `netlify/functions/bookings.mts`
 - `netlify/functions/catalog.mts`
@@ -103,6 +112,7 @@
 - `netlify/functions/payment-order.mts`
 - `netlify/functions/pricing-quote.mts`
 - `netlify/functions/referral-quote.mts`
+- `netlify/functions/supervisor-addon.mts`
 - `netlify/functions/whatsapp-send.mts`
 - `package.json`
 - `playwright.config.js`

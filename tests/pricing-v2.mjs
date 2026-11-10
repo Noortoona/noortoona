@@ -99,6 +99,13 @@ await test('V2 shared policy, persistence, operations, payment boundaries and sa
   assert.equal((await call('admin-bookings',{id:booking.id,entryStatus:'available',organizerIds:[]},tokens.admin,'PATCH')).status,200);
   assert.equal((await call('check-in',{eventId:e.event.id,code:'V2CHECK'},tokens.one)).status,403,'revoked organizer loses access immediately');
  });
+ await t.test('historical standalone entry amounts and paid assignments remain usable',async()=>{
+  const e=await ev();
+  await pg.query("INSERT INTO supervisor_requests(id,event_id,user_id,amount,status) VALUES('historic-request',$1,'customer',29900,'requested')",[e.event.id]);
+  const view=await call('supervisor-addon',undefined,tokens.customer,'GET','/api/events/supervisor?eventId='+e.event.id);assert.equal(view.status,200);assert.equal(view.data.request.amount,29900,'historical amount is not replaced by the current 599 rate');
+  await pg.query("INSERT INTO payment_orders(id,event_id,user_id,package_code,amount,guest_limit,status,supervisor_addon_amount) VALUES('historic-paid',$1,'customer','hala_basic',39800,100,'paid',29900)",[e.event.id]);
+  const assigned=await call('admin-supervisors',{requestId:'historic-request',supervisorId:'one'},tokens.admin);assert.equal(assigned.status,200);assert.equal(assigned.data.request.amount,29900);
+ });
  await t.test('late payment verification cannot revive cancellation or downgrade paid orders',async()=>{
   const e=await ev(),b=payload(e);const saved=await call('bookings',b,tokens.customer);assert.equal(saved.status,201);
   const p=await call('payment-order',{eventId:e.event.id},tokens.customer);assert.equal(p.status,201);
