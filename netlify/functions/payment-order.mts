@@ -60,13 +60,15 @@ export default async (req: Request) => {
     const body: any = await req.json();
     const eventId = String(body.eventId || "");
     const booking=(await db.sql`SELECT * FROM bookings WHERE event_id=${eventId} AND user_id=${auth.user.id} AND environment=${analyticsEnvironment()} LIMIT 1`)[0];
+    if(booking?.pricing_snapshot&&(booking.pricing_snapshot.tax.status==='unconfigured'||!['not_requested','available','assigned'].includes(booking.entry_status)))return secureJson({error:'يلزم استكمال الإعداد الضريبي ومراجعة تنظيم الدخول قبل الدفع',code:'BOOKING_REVIEW_REQUIRED'},409);
     if(booking?.booking_status==='cancelled')return secureJson({error:'الحجز ملغى'},409);
-    const selected = booking ? {code:booking.package_code,name:booking.package_name,amount:Number(booking.base_amount),guestLimit:booking.guest_limit,currency:booking.currency} : catalogPackage(await readCatalog(db),body.packageCode);
+    const selected = booking ? {code:booking.package_code,name:booking.package_name,amount:Number(booking.base_amount),guestLimit:booking.guest_limit,currency:booking.currency} : catalogPackage(await readCatalog(db),body.packageCode,Number(body.guestCount||100));
     if (!eventId || !selected) return secureJson({ error: "اختر باقة صحيحة" }, 400);
     if (!await canAccessEvent(auth.user, eventId)) return secureJson({ error: "غير مصرح" }, 403);
     const member = await db.sql`SELECT 1 FROM event_members WHERE event_id=${eventId} AND user_id=${auth.user.id} AND member_role='owner' LIMIT 1`;
     if (!member[0]) return secureJson({ error: "الدفع متاح لصاحب المناسبة فقط" }, 403);
 
+    if(!booking)return secureJson({error:'احفظ طلب الحجز أولًا قبل إنشاء عملية الدفع',code:'BOOKING_REQUIRED'},409);
     const features = moyasarFeatures();
     if (!features.configured) return secureJson({ error: "الدفع معطّل في النسخة التجريبية أو لم تكتمل إعداداته", code: "PAYMENT_NOT_CONFIGURED" }, 503);
 
@@ -104,13 +106,16 @@ export default async (req: Request) => {
       const rows = await db.sql`
         INSERT INTO payment_orders (id, event_id, user_id, package_code, amount, supervisor_addon_amount, currency, referral_code, referral_partner_id, discount_amount, commission_amount, guest_limit,booking_id,environment,payment_mode)
         VALUES (${id}, ${eventId}, ${auth.user.id}, ${selected.code}, ${total}, ${addon}, ${selected.currency}, ${booking?.referral_code||partner?.code || null}, ${booking?.partner_user_id||partner?.user_id || null}, ${discountAmount}, ${commissionAmount}, ${selected.guestLimit},${booking?.id||null},${analyticsEnvironment()},${features.mode})
+        ON CONFLICT (booking_id) WHERE booking_id IS NOT NULL AND status IN ('pending','paid') DO NOTHING
         RETURNING id, event_id, package_code, guest_limit, amount, supervisor_addon_amount, currency, status, referral_code, discount_amount, created_at
       `;
-      order = rows[0];
+      order = rows[0]||(await db.sql`SELECT id,event_id,package_code,guest_limit,amount,supervisor_addon_amount,currency,status,referral_code,discount_amount,created_at FROM payment_orders WHERE booking_id=${booking.id} AND user_id=${auth.user.id} AND status IN ('pending','paid') LIMIT 1`)[0];
+      if(!order)return secureJson({error:'تغيرت حالة الدفع؛ أعد تحميل الحجز'},409);
     }
 
     return secureJson({
       order,
+      alreadyPaid:order.status==='paid',
       publishableKey: features.publishableKey,
       features: {
         applePay: { enabled: features.applePay.enabled, merchantId: features.applePay.merchantId || null },

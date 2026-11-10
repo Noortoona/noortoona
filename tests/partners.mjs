@@ -25,7 +25,7 @@ test('venue and influencer rates apply only to base package, never supervisor', 
   assert.throws(()=>referralAmounts(9900,0,{kind:'influencer',discount_bps:10001,commission_bps:1000}),/INVALID_PARTNER_RATE/);
 });
 
-test('checkout ignores client prices, validates a code, and snapshots the discounted payment', async () => {
+test('checkout cannot bypass the saved booking and referral snapshot', async () => {
   globalThis.Netlify={env:{get:()=>undefined}};
   const inserts=[];
   const db={sql:async(parts,...args)=>{
@@ -48,12 +48,9 @@ test('checkout ignores client prices, validates a code, and snapshots the discou
     activePartner:async(_db,code)=>code==='STAR10'?{code,user_id:'star',kind:'influencer',discount_bps:1000,commission_bps:1000}:null
   });
   const invalid=await order(request({eventId:'event',packageCode:'hala_plus',referralCode:'invalid'}));
-  assert.equal(invalid.status,400);
+  assert.equal(invalid.status,409);
   const res=await order(request({eventId:'event',packageCode:'hala_plus',referralCode:'star10',amount:1,commissionAmount:1}));
-  assert.equal(res.status,201);
-  assert.equal((await res.json()).order.amount,158810);
-  assert.equal(inserts[0][7],'STAR10');assert.equal(inserts[0][8],'star');
-  assert.equal(inserts[0][9],10990);assert.equal(inserts[0][10],9891);
+  assert.equal(res.status,409);assert.equal((await res.json()).code,'BOOKING_REQUIRED');assert.equal(inserts.length,0);
 });
 
 test('first paid acquisition records one commission, retries and later orders do not duplicate it',async()=>{

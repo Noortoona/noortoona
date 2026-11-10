@@ -32,3 +32,12 @@ jobs:
         run: npm run test:e2e
       - name: Type-check Netlify functions
         run: npx tsc --noEmit --skipLibCheck --allowJs false --module nodenext --moduleResolution nodenext --target ES2022 --lib ES2022,DOM netlify/functions/*.mts
+
+      - name: Save browser evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: hala-pricing-browser-evidence
+          path: test-results/
+          if-no-files-found: ignore
+          retention-days: 14

@@ -36,6 +36,9 @@ export default async (req: Request) => {
       const action = body.action === "remove" ? "remove" : "assign";
       if (!eventId || !userId) return secureJson({ error: "المناسبة والمستخدم مطلوبان" }, 400);
 
+      const priced=await db.sql`SELECT id FROM bookings WHERE event_id=${eventId} AND pricing_snapshot IS NOT NULL LIMIT 1`;
+      if(priced[0])return secureJson({error:'أدر فريق تنظيم الدخول من تفاصيل الحجز لضمان تطابق الفريق والحالة',code:'ENTRY_MANAGED_IN_BOOKING'},409);
+
       if (action === "remove") {
         await db.sql`DELETE FROM event_members WHERE event_id = ${eventId} AND user_id = ${userId} AND member_role = 'supervisor'`;
         await db.sql`UPDATE supervisor_requests SET status='requested',assigned_supervisor_id=NULL,updated_at=NOW() WHERE event_id=${eventId} AND assigned_supervisor_id=${userId} AND status='assigned'`;

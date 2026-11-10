@@ -4,7 +4,9 @@
 
 PR #31 was already merged into `main` as `f385dd14fddaa8675128b80803a5870659e58605` and published by Netlify deploy `6af2c6db8ca0e2096bd51143`. Its working Arabic metadata, guides, robots and sitemap were retained.
 
-The original homepage `<main>`, invitation modal, styles.css, v2.css, app.js, booking.js, booking-client.js and account.js remain byte-for-byte unchanged. Browser comparison of the header and every main section returned identical positions and sizes at the same desktop viewport. The requested social/contact links are the only visible homepage addition, within its existing footer paragraph.
+Before release, this change was merged with current production commit `59e1693d220a6bfb3fac2f54d2fff2e52ccdc476`, retaining the newer pricing policy, entry organization, mobile updates and full iPhone/Desktop/Android test matrix.
+
+Relative to that production baseline, the homepage `<main>`, invitation modal, styles.css, v2.css, app.js, booking.js, booking-client.js and account.js remain byte-for-byte unchanged. Browser comparison of the header and every main section returned identical positions and sizes at the same desktop viewport. The requested social/contact links are the only visible homepage addition, within its existing footer paragraph.
 
 ## Delivered in this change
 
@@ -54,6 +56,6 @@ Lighthouse is a lab check. Search Console field Core Web Vitals and actual Googl
 
 - Local full `npm test` covers backend permissions, persisted prebookings, analytics consent, sanitization, private-token exclusion, web SEO and static publication boundaries.
 - Netlify Functions typecheck passes.
-- PR CI must pass the web test suite (including iPhone and desktop SEO browser projects) and mobile checks (typecheck, behavior tests, Expo Doctor, native prebuild, iOS/Android JS bundles).
+- PR CI must pass the web test suite (including iPhone, Desktop and Android browser projects) and mobile checks (typecheck, behavior tests, Expo Doctor, native prebuild, iOS/Android JS bundles).
 - Publish only after the GitHub checks and Netlify Deploy Preview pass. Verify the deployed HTML, schema, seven sitemap entries and HTTP noindex headers afterward.
 - Do not submit test bookings or dispatch messages against production. Protected data checks are anonymous and read-only; behavioral booking tests use isolated local PostgreSQL fixtures in CI.

@@ -1,0 +1,14 @@
+export type PackageFeature={id:string;ar:string;en:string;status:'included'|'assisted'|'external'};
+export type PricingPackage={code:string;name:string;nameEn:string;tagline:string;taglineEn:string;amount:number;amountSar:number;guestLimit:number;currency:string;enabled:boolean;recommended?:boolean;priceTiers:Record<number,number>;features:PackageFeature[];includedFeatures?:PackageFeature[]};
+export const POLICY_VERSION:string;
+export const GUEST_COUNTS:number[];
+export const PACKAGE_DEFAULTS:PricingPackage[];
+export const PACKAGE_FEATURES:Record<string,PackageFeature[]>;
+export const ENTRY_DEFAULTS:{unitAmount:number;standardHours:number|null;enabled:boolean};
+export const TAX_DEFAULTS:{status:string;rateBps:number|null;pricesIncludeTax:boolean|null;registrationNumber:string};
+export const BUSINESS_DEFAULTS:Array<{code:string;name:string;nameEn:string;startingAmount:number;features:string[];featuresEn:string[]}>;
+export function defaultPackages():PricingPackage[];
+export function tierFor(pkg:PricingPackage,count:number):PricingPackage|null;
+export function featuresFor(pkg:PricingPackage,packages?:PricingPackage[]):PackageFeature[];
+export function entryQuote(policy:typeof ENTRY_DEFAULTS,count:number,details?:Record<string,unknown>):{organizers:number;amount:number|null;customQuoteRequired:boolean;error?:string};
+export function taxQuote(subtotal:number,policy?:typeof TAX_DEFAULTS):{taxStatus:string;taxAmount:number|null;total:number;provisional:boolean};

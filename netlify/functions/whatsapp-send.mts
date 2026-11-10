@@ -100,6 +100,12 @@ export default async (req: Request) => {
     await client.query("SELECT id FROM events WHERE id=$1 FOR UPDATE", [eventId]);
     await client.query("SELECT id FROM guests WHERE id=$1 FOR UPDATE", [guestId]);
 
+    const booking=(await client.query('SELECT package_code,pricing_snapshot FROM bookings WHERE event_id=$1 LIMIT 1',[eventId])).rows[0];
+    if(booking?.pricing_snapshot?.version==='hala-packages-2026-11-v2'){
+      if(booking.package_code==='hala_basic'){await client.query('ROLLBACK');return json({error:'الأساسية تشمل المشاركة اليدوية؛ الإرسال الآلي يتطلب بلس أو بريميوم.',code:'PACKAGE_AUTOMATION_NOT_INCLUDED'},403);}
+      const enabled=Netlify.env.get('HALA_WHATSAPP_INVITES_ENABLED')==='true'&&Netlify.env.get('HALA_WHATSAPP_TEMPLATES_APPROVED')==='true';
+      if(!enabled){await client.query('ROLLBACK');return json({error:'إرسال واتساب الآلي بانتظار التفعيل الرسمي. شارك الرابط يدويًا.',code:'WHATSAPP_ACTIVATION_PENDING'},503);}
+    }
     let trialUserId: string | null = null;
     if (auth?.user?.role !== "admin") {
       const paid = await client.query(

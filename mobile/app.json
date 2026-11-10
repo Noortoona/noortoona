@@ -54,6 +54,13 @@
           "cameraPermission": "السماح لهلا بالكاميرا لمسح QR عند الاستقبال.",
           "microphonePermission": false
         }
+      ],
+      "@react-native-community/datetimepicker",
+      [
+        "expo-contacts",
+        {
+          "contactsPermission": "اختيار المدعوين من جهات اتصالك بإذنك فقط. / Select invited contacts with your permission."
+        }
       ]
     ],
     "extra": {

@@ -3,6 +3,42 @@
   "use strict";
   var STORAGE_KEY = "hala.locale";
   var translations = Object.fromEntries([
+    ["تفاصيل الحجز", "Booking details"],
+    ["لم تُطلب الخدمة ضمن الحجز", "Entry organization was not requested with this booking"],
+    ["بانتظار مراجعة التوفر", "Awaiting availability review"],
+    ["متاح بعد المراجعة", "Available after review"],
+    ["غير متاح", "Unavailable"],
+    ["تم توزيع الفريق", "Team assigned"],
+    ["اكتملت الخدمة", "Service completed"],
+    ["اطلب عرضًا لتنظيم الدخول", "Request an entry organization quote"],
+    ["تم تعيين منظم الدخول", "Entry organizer assigned"],
+    ["بانتظار تعيين منظم الدخول", "Awaiting organizer assignment"],
+    ["اكتملت خدمة تنظيم الدخول", "Entry organization completed"],
+    ["لم تُطلب الخدمة", "Service not requested"],
+    ["عدد المدعوين للأسعار", "Pricing guest count"],
+    ["عدد المدعوين", "Guest count"],
+    ["تنظيم الدخول", "Entry organization"],
+    ["اسم المؤسسة أو المناسبة", "Organization or event name"],
+    ["اسم مسؤول التواصل", "Contact name"],
+    ["نوع الحدث", "Event type"],
+    ["عدد الضيوف", "Guest count"],
+    ["عدد الفعاليات", "Event count"],
+    ["الخدمات المطلوبة", "Requested services"],
+    ["كود الإحالة", "Referral code"],
+    ["نوع العرض", "Quote type"],
+    ["مناسبة أو عدد مخصص", "Custom event or guest count"],
+    ["إرسال طلب عرض السعر", "Submit quote request"],
+    ["اطلب عرض سعر", "Request a quote"],
+    ["للأعمال والمؤسسات أو للأعداد والخدمات المخصصة.", "For business, enterprise, custom guest counts or services."],
+    ["أضفها أثناء الحجز", "Add it when booking"],
+    ["تنظيم الدخول — يبدأ من 599 ر.س", "Entry organization — from SAR 599"],
+    ["هلا أعمال", "HALA Business"],
+    ["هلا المؤسسات", "HALA Enterprise"],
+    ["تم حفظ طلب عرض السعر داخل هلا. سيتواصل معك الفريق.", "Your quote request was saved in HALA. The team will contact you."],
+    ["الدعم الميداني", "On-site support"],
+    ["تنظيم الدخول إضافة مستقلة لكل الباقات.", "Entry organization is a separate add-on for every package."],
+    ["موصى بها", "Recommended"],
+    ["مقارنة المميزات", "Compare features"],
     ["دعوات إلكترونية فاخرة للزواج والمناسبات | هلا HALA", "Luxury Digital Wedding & Event Invitations | HALA"],
     ["المناسبات", "Occasions"], ["القوالب", "Templates"], ["كيف تعمل؟", "How it works"], ["الخدمات", "Services"], ["الباقات", "Packages"], ["الإطلاق", "Launch"],
     ["فتح القائمة", "Open menu"], ["دخول", "Sign in"], ["أنشئ مناسبتك", "Create your event"],
@@ -203,6 +239,7 @@
     if (/^الخطوة ([0-9]+) من ([0-9]+)$/.test(raw)) return raw.replace(/^الخطوة ([0-9]+) من ([0-9]+)$/, "Step $1 of $2");
     if (/^حتى ([0-9]+) ضيف$/.test(raw)) return raw.replace(/^حتى ([0-9]+) ضيف$/, "Up to $1 guests");
     if (/^([0-9]+) ضيف$/.test(raw)) return raw.replace(/^([0-9]+) ضيف$/, "$1 guests");
+    if (/^([0-9]+) منظم • (.+) • (.+)$/.test(raw)) return raw.replace(/^([0-9]+) منظم • (.+) • (.+)$/, function (_, n, amount, status) { return n + " organizer(s) • " + amount + " • " + translate(status, "en"); });
     if (raw.startsWith("اختر قالب ")) return "Choose a " + translate(raw.slice(9), "en") + " template";
     return raw;
   }
