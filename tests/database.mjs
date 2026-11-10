@@ -102,7 +102,8 @@ await test('embedded PostgreSQL migrations and real HALA handlers',async t=>{
   });
   await t.test('payment remains disabled without producing an order or provider request',async()=>{
     const response=await handlers['payment-order'](request('/api/payments/order',{eventId:firstEvent.id,packageCode:'hala_plus'},customerSession.token));
-    assert.equal(response.status,503);
+    assert.equal(response.status,409);
+    assert.equal((await response.json()).code,'BOOKING_REQUIRED');
     assert.equal((await postgres.query('SELECT COUNT(*)::int count FROM payment_orders')).rows[0].count,0);
   });
   await t.test('paid package capacity applies to legacy and account callers inside the insert transaction',async()=>{

@@ -6,7 +6,7 @@ export const publicFiles = [
   'index.html', 'admin.html', 'customer.html', 'dashboard.html', 'guest.html', 'partner.html', 'supervisor.html',
   'account.js', 'admin.js', 'app.js', 'customer.js', 'dashboard.js', 'web-contacts.js', 'guest.js', 'guest-insights.js',
   'invitation-renderer.js', 'invitation-schemas.js', 'partner.js', 'supervisor.js',
-  'styles.css', 'v2.css', 'i18n.css', 'i18n.js', 'analytics.js', 'booking-client.js', 'booking.html', 'booking.js', 'prelaunch.js',
+  'styles.css', 'v2.css', 'i18n.css', 'i18n.js', 'analytics.js', 'booking-client.js', 'booking.html', 'booking.js', 'prelaunch.js', 'pricing-v2.css',
 ];
 
 async function assertRegularTree(path) {

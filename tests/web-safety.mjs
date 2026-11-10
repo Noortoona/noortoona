@@ -82,15 +82,15 @@ test('closing phone OTP resolves the pending create/login operation', async () =
 test('public builder replaces fallback prices, template visibility and service text from the actual catalog API response', async () => {
   const prices={innerHTML:''}, templates={innerHTML:''}, services={innerHTML:''};
   const elements={ '#builderModal':{classList:{contains:()=>false}}, '#builderBody':{}, '#nextBtn':{}, '#prevBtn':{}, '#priceGrid':prices, '#templateGrid':templates, '#services .service-grid':services };
-  const fixture={version:1,packages:[{code:'hala_basic',name:'هلا الأساسية',amount:16900,guestLimit:120,currency:'SAR'},{code:'hala_plus',name:'هلا بلس',amount:35900,guestLimit:260,currency:'SAR'},{code:'hala_premium',name:'هلا بريميوم',amount:70900,guestLimit:510,currency:'SAR'}],hiddenTemplateKeys:['wedding:ليلة كحلية'],services:[{id:'test',name:'خدمة خاصة',description:'<script>unsafe</script>',enabled:true}]};
+  const fixture={version:1,packages:[{code:'hala_basic',name:'هلا الأساسية',amount:16900,priceTiers:{100:16900,250:35900,500:70900},guestLimit:500,currency:'SAR'},{code:'hala_plus',name:'هلا بلس',amount:35900,priceTiers:{100:35900,250:75900,500:129900},guestLimit:500,currency:'SAR'},{code:'hala_premium',name:'هلا بريميوم',amount:70900,priceTiers:{100:70900,250:149900,500:229900},guestLimit:500,currency:'SAR'}],hiddenTemplateKeys:['wedding:ليلة كحلية'],services:[{id:'test',name:'خدمة خاصة',description:'<script>unsafe</script>',enabled:true}]};
   const requested=[];
   const context={window:{HALA_BOOKING:{money:v=>String(Number(v)/100),whatsapp:()=>"https://wa.me/966532763736"}},URL,URLSearchParams,location:{search:''},localStorage:{getItem:()=>null,setItem(){},removeItem(){}},document:{querySelector:selector=>elements[selector]||null,querySelectorAll:()=>[],addEventListener(){}},fetch:async path=>{requested.push(path);return {ok:true,json:async()=>fixture}},setTimeout,clearTimeout};
   vm.runInNewContext(renderer,context);
   vm.runInNewContext(await readFile(new URL('../app.js',import.meta.url),'utf8'),context);
   await new Promise(resolve=>setImmediate(resolve));
   assert.deepEqual(requested,['/api/catalog']);
-  assert.match(prices.innerHTML,/>(?:169|١٦٩)<small>/);
-  assert.match(prices.innerHTML,/حتى 120 ضيف/);
+  assert.match(prices.innerHTML,/>(?:169|١٦٩)<\/div>/);
+  assert.match(prices.innerHTML,/100 مدعو/);
   assert.doesNotMatch(templates.innerHTML,/ليلة كحلية/);
   assert.match(services.innerHTML,/خدمة خاصة/);
   assert.match(services.innerHTML,/&lt;script&gt;/);
@@ -105,7 +105,7 @@ test('admin catalog submits its revision and reloads rather than overwriting a c
   vm.runInNewContext(await readFile(new URL('../admin.js',import.meta.url),'utf8'),context);
   vm.runInNewContext('s={token:"fixture-token"};catalogRevision=4;',context);
   context.load=async()=>{reloads++};
-  await context.saveCatalog({packages:[{code:'hala_basic',amount:16900,guestLimit:120}]},{querySelector:()=>button});
+  await context.saveCatalog({packages:[{code:'hala_basic',amount:16900,priceTiers:{100:16900,250:35900,500:70900},guestLimit:500}]},{querySelector:()=>button});
   assert.equal(calls[0].path,'/api/admin/catalog');
   assert.equal(calls[0].body.expectedRevision,4);
   assert.equal(calls[0].body.packages[0].amount,16900);
@@ -135,7 +135,7 @@ test('premium fallback, required supervisor preference and promotional reference
   const send=vm.runInNewContext('renderSend()',initial.context);
   assert.match(send,/599|٥٩٩/);assert.match(send,/value="female" checked/);
   const verified=await appFor(packages.map(p=>p.code==='hala_basic'?{...p,promoLicenseId:'fixture-verified-license'}:p));
-  assert.match(verified.priceGrid.innerHTML,/<del>/);
+  assert.doesNotMatch(verified.priceGrid.innerHTML,/<del>/);
   const noSaving=await appFor(packages.map(p=>p.code==='hala_basic'?{...p,referenceAmountSar:300,promoLicenseId:'fixture-verified-license'}:p));
   assert.doesNotMatch(noSaving.priceGrid.innerHTML,/<del>/);
 });

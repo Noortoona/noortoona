@@ -51,7 +51,7 @@ test('OTP routes the two configured admin numbers, creates customer accounts, an
   assert.equal(wrongAttempts,4);
 });
 
-test('payment order uses server price plus 599 SAR supervisor addon and owner authorization',async()=>{
+test('payment order requires a saved booking and owner authorization',async()=>{
   globalThis.Netlify={env:{get:()=>undefined}};
   let owner=true, addon=59900, inserted=[];
   const db={sql:async(parts,...args)=>{
@@ -74,8 +74,7 @@ test('payment order uses server price plus 599 SAR supervisor addon and owner au
     activePartner:async()=>null,referralAmounts
   });
   let res=await order(request('/api/payments/order',{eventId:'event',packageCode:'hala_plus',amount:1}));
-  assert.equal(res.status,201);assert.equal((await res.json()).order.amount,169800);
-  assert.equal(inserted[5],59900);
+  assert.equal(res.status,409);assert.equal((await res.json()).code,'BOOKING_REQUIRED');assert.equal(inserted.length,0);
   owner=false;res=await order(request('/api/payments/order',{eventId:'event',packageCode:'hala_plus'}));assert.equal(res.status,403);
 });
 

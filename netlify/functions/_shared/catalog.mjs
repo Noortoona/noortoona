@@ -1,4 +1,5 @@
 import { publicPackages } from './payments.mjs';
+import { POLICY_VERSION, GUEST_COUNTS, ENTRY_DEFAULTS, TAX_DEFAULTS, BUSINESS_DEFAULTS, tierFor } from '../../../shared/pricing-policy.mjs';
 import { TEMPLATE_KEYS } from './template-registry.mjs';
 
 export const CATALOG_KEY = 'catalog_config_v1';
@@ -15,7 +16,7 @@ const templateSet = new Set(TEMPLATE_KEYS.map(t=>t.key));
 
 export function applyCatalogPatch(current, patch) {
   if(!patch || typeof patch!=='object'||Array.isArray(patch))throw invalid('بيانات الكتالوج غير صالحة');
-  const allowed=new Set(['packages','hiddenTemplateKeys','services','expectedRevision']);
+  const allowed=new Set(['packages','hiddenTemplateKeys','services','expectedRevision','entry','tax','business','effectiveAt']);
   if(Object.keys(patch).some(key=>!allowed.has(key)))throw invalid('حقل كتالوج غير معروف');
   const next={...current,packages:current.packages.map(p=>({...p})),hiddenTemplateKeys:[...current.hiddenTemplateKeys],services:current.services.map(s=>({...s}))};
   if(patch.packages!==undefined){
@@ -24,14 +25,37 @@ export function applyCatalogPatch(current, patch) {
     for(const value of patch.packages){
       const target=next.packages.find(p=>p.code===value?.code);
       if(!target||seen.has(value.code))throw invalid('كود الباقة غير صالح أو مكرر');seen.add(value.code);
-      if(!Number.isInteger(value.amount)||value.amount<100||value.amount>10_000_000||!Number.isInteger(value.guestLimit)||value.guestLimit<1||value.guestLimit>5000)throw invalid('سعر الباقة أو حد المدعوين غير صالح');
-      target.amount=value.amount;target.amountSar=value.amount/100;target.guestLimit=value.guestLimit;
-      if(target.referenceAmount){
-        if(target.amount<target.referenceAmount)target.savingsPercent=Math.round((1-target.amount/target.referenceAmount)*100);
-        else for(const key of ['referenceAmount','referenceAmountSar','savingsPercent','promoLicenseId'])delete target[key];
+      if(value.priceTiers!==undefined){
+        if(!value.priceTiers||Object.keys(value.priceTiers).length!==3||!GUEST_COUNTS.every(n=>Number.isInteger(value.priceTiers[n])&&value.priceTiers[n]>=100&&value.priceTiers[n]<=10_000_000))throw invalid('أسعار الأعداد الثلاثة غير صالحة');
+        target.priceTiers={...value.priceTiers};target.amount=target.priceTiers[100];target.amountSar=target.amount/100;target.guestLimit=500;
+      }else if(value.amount!==undefined||value.guestLimit!==undefined){
+        // Compatibility with older admin clients: edit the 100-guest tier only.
+        if(!Number.isInteger(value.amount)||value.amount<100||value.amount>10_000_000||!Number.isInteger(value.guestLimit)||value.guestLimit<1||value.guestLimit>5000)throw invalid('سعر الباقة أو حد المدعوين غير صالح');
+        target.amount=value.amount;target.amountSar=value.amount/100;target.guestLimit=value.guestLimit;target.priceTiers={...target.priceTiers,[value.guestLimit]:value.amount};
+      }
+      if(value.enabled!==undefined){if(typeof value.enabled!=='boolean')throw invalid('حالة الباقة غير صالحة');target.enabled=value.enabled;}
+      if(value.features!==undefined){
+        if(!Array.isArray(value.features)||value.features.length>30||value.features.some(f=>!f||typeof f.ar!=='string'||!f.ar.trim()||f.ar.length>300||typeof f.en!=='string'||!f.en.trim()||f.en.length>300||!['included','assisted','external'].includes(f.status)||!/^[a-z][a-z0-9_]{1,40}$/.test(f.id)))throw invalid('مميزات الباقة غير صالحة');
+        target.features=value.features.map(f=>({id:f.id,ar:f.ar,en:f.en,status:f.status}));
       }
     }
   }
+  if(!next.packages.some(p=>p.enabled!==false))throw invalid('يجب إبقاء باقة واحدة متاحة');
+  if(patch.entry!==undefined){
+    const e=patch.entry;
+    if(!e||!Number.isInteger(e.unitAmount)||e.unitAmount<100||e.unitAmount>1_000_000||typeof e.enabled!=='boolean'||e.standardHours!==null&&(!Number.isFinite(e.standardHours)||e.standardHours<=0||e.standardHours>24))throw invalid('قواعد تنظيم الدخول غير صالحة');
+    next.entry={unitAmount:e.unitAmount,standardHours:e.standardHours,enabled:e.enabled};
+  }
+  if(patch.tax!==undefined){
+    const t=patch.tax;
+    if(!t||!['unconfigured','not_registered','registered'].includes(t.status)||t.status==='registered'&&(!/^3[0-9]{13}3$/.test(t.registrationNumber)||!Number.isInteger(t.rateBps)||t.rateBps<0||t.rateBps>10000||typeof t.pricesIncludeTax!=='boolean'))throw invalid('تحقق من الإعداد الضريبي ورقم التسجيل');
+    next.tax=t.status==='registered'?{status:t.status,rateBps:t.rateBps,pricesIncludeTax:t.pricesIncludeTax,registrationNumber:t.registrationNumber}:{...TAX_DEFAULTS,status:t.status};
+  }
+  if(patch.business!==undefined){
+    if(!Array.isArray(patch.business)||patch.business.length!==2||!BUSINESS_DEFAULTS.every(d=>patch.business.some(p=>p.code===d.code&&Number.isInteger(p.startingAmount)&&p.startingAmount>=100&&p.startingAmount<=100_000_000)))throw invalid('أسعار الأعمال غير صالحة');
+    next.business=BUSINESS_DEFAULTS.map(d=>({...d,startingAmount:patch.business.find(p=>p.code===d.code).startingAmount}));
+  }
+  if(patch.effectiveAt!==undefined){if(patch.effectiveAt!==null&&(!Number.isFinite(Date.parse(patch.effectiveAt))||Date.parse(patch.effectiveAt)<Date.now()-60000))throw invalid('موعد سريان الأسعار غير صالح');next.effectiveAt=patch.effectiveAt;}
   if(patch.hiddenTemplateKeys!==undefined){
     if(!Array.isArray(patch.hiddenTemplateKeys)||patch.hiddenTemplateKeys.length>TEMPLATE_KEYS.length||patch.hiddenTemplateKeys.some(key=>!templateSet.has(key)))throw invalid('قالب غير معروف');
     next.hiddenTemplateKeys=[...new Set(patch.hiddenTemplateKeys)];
@@ -50,25 +74,30 @@ export function applyCatalogPatch(current, patch) {
 }
 
 export function normalizeCatalog(stored={}) {
-  const defaults={version:1,revision:0,packages:publicPackages(),hiddenTemplateKeys:[],services:DEFAULT_SERVICES.map(s=>({...s}))};
+  const defaults={version:2,policyVersion:POLICY_VERSION,revision:0,packages:publicPackages(),entry:{...ENTRY_DEFAULTS},tax:{...TAX_DEFAULTS},business:BUSINESS_DEFAULTS.map(p=>({...p})),hiddenTemplateKeys:[],services:DEFAULT_SERVICES.map(s=>({...s})),effectiveAt:null};
   if(!stored||typeof stored!=='object'||Array.isArray(stored))throw new Error('INVALID_STORED_CATALOG');
-  const patch={};for(const key of ['packages','hiddenTemplateKeys','services'])if(stored[key]!==undefined)patch[key]=stored[key];
+  // Existing bookings/orders keep their own amounts. V1 prices are not V2 tiers.
+  const patch={};for(const key of ['hiddenTemplateKeys','services',...(stored.version===2?['packages','entry','tax','business']:[])])if(stored[key]!==undefined)patch[key]=stored[key];
   const result=applyCatalogPatch(defaults,patch);
   result.revision=Number.isInteger(stored.revision)&&stored.revision>=0?stored.revision:0;
+  if(stored.scheduled)result.scheduled=stored.scheduled;
   return result;
 }
 
 export async function readCatalog(db) {
   const rows=await db.sql`SELECT value FROM platform_settings WHERE key=${CATALOG_KEY} LIMIT 1`;
-  return normalizeCatalog(rows[0]?.value?JSON.parse(rows[0].value):{});
+  const stored=rows[0]?.value?JSON.parse(rows[0].value):{};
+  if(stored.scheduled&&Date.parse(stored.scheduled.effectiveAt)<=Date.now())return normalizeCatalog(stored.scheduled.catalog);
+  return normalizeCatalog(stored);
 }
 
 export function publicCatalog(catalog) {
-  return {...catalog,services:catalog.services.filter(s=>s.enabled)};
+  const {scheduled,...safe}=catalog;return {...safe,packages:catalog.packages.filter(p=>p.enabled!==false),services:catalog.services.filter(s=>s.enabled)};
 }
 
-export function catalogPackage(catalog, code) {
-  return catalog.packages.find(p=>p.code===String(code||'')||p.name===String(code||''))||null;
+export function catalogPackage(catalog, code, count) {
+  const pkg=catalog.packages.find(p=>p.enabled!==false&&(p.code===String(code||'')||p.name===String(code||'')))||null;
+  return count===undefined?pkg:tierFor(pkg,count);
 }
 
 export function availableTemplate(catalog, design={}, template='') {

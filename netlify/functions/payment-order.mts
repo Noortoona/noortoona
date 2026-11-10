@@ -60,13 +60,15 @@ export default async (req: Request) => {
     const body: any = await req.json();
     const eventId = String(body.eventId || "");
     const booking=(await db.sql`SELECT * FROM bookings WHERE event_id=${eventId} AND user_id=${auth.user.id} AND environment=${analyticsEnvironment()} LIMIT 1`)[0];
+    if(booking?.pricing_snapshot&&(booking.pricing_snapshot.tax.status==='unconfigured'||!['not_requested','available','assigned'].includes(booking.entry_status)))return secureJson({error:'يلزم استكمال الإعداد الضريبي ومراجعة تنظيم الدخول قبل الدفع',code:'BOOKING_REVIEW_REQUIRED'},409);
     if(booking?.booking_status==='cancelled')return secureJson({error:'الحجز ملغى'},409);
-    const selected = booking ? {code:booking.package_code,name:booking.package_name,amount:Number(booking.base_amount),guestLimit:booking.guest_limit,currency:booking.currency} : catalogPackage(await readCatalog(db),body.packageCode);
+    const selected = booking ? {code:booking.package_code,name:booking.package_name,amount:Number(booking.base_amount),guestLimit:booking.guest_limit,currency:booking.currency} : catalogPackage(await readCatalog(db),body.packageCode,Number(body.guestCount||100));
     if (!eventId || !selected) return secureJson({ error: "اختر باقة صحيحة" }, 400);
     if (!await canAccessEvent(auth.user, eventId)) return secureJson({ error: "غير مصرح" }, 403);
     const member = await db.sql`SELECT 1 FROM event_members WHERE event_id=${eventId} AND user_id=${auth.user.id} AND member_role='owner' LIMIT 1`;
     if (!member[0]) return secureJson({ error: "الدفع متاح لصاحب المناسبة فقط" }, 403);
 
+    if(!booking)return secureJson({error:'احفظ طلب الحجز أولًا قبل إنشاء عملية الدفع',code:'BOOKING_REQUIRED'},409);
     const features = moyasarFeatures();
     if (!features.configured) return secureJson({ error: "الدفع معطّل في النسخة التجريبية أو لم تكتمل إعداداته", code: "PAYMENT_NOT_CONFIGURED" }, 503);
 

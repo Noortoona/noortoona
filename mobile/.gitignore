@@ -12,3 +12,5 @@ credentials.json
 *.p8
 *.p12
 *.mobileprovision
+
+dist-pricing/

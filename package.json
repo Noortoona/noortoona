@@ -3,14 +3,15 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "test": "node tests/smoke.mjs && node --test tests/whatsapp.mjs tests/payments.mjs tests/moyasar.mjs tests/accounts.mjs tests/admin-email-otp.mjs tests/admin-email-otp-behavior.mjs tests/partners.mjs && npm run test:build && npm run test:web && npm run test:database && npm run test:catalog && npm run test:prebooking",
+    "test": "node tests/smoke.mjs && node --test tests/whatsapp.mjs tests/payments.mjs tests/moyasar.mjs tests/accounts.mjs tests/admin-email-otp.mjs tests/admin-email-otp-behavior.mjs tests/partners.mjs && npm run test:build && npm run test:web && npm run test:database && npm run test:catalog && npm run test:prebooking && npm run test:pricing",
     "test:e2e": "playwright test",
     "build": "node scripts/build-static.mjs",
     "test:build": "node --test tests/build-static.mjs",
     "test:web": "node --test tests/web-safety.mjs tests/guest-insights.mjs tests/domain-routing.mjs tests/web-contacts.mjs tests/i18n.mjs",
     "test:database": "node --test tests/database.mjs tests/migrations.mjs",
     "test:catalog": "node --test tests/catalog.mjs",
-    "test:prebooking": "node --experimental-strip-types --test tests/prebookings.mjs tests/prebooking-analytics.mjs"
+    "test:prebooking": "node --experimental-strip-types --test tests/prebookings.mjs tests/prebooking-analytics.mjs",
+    "test:pricing": "node --experimental-strip-types --test tests/pricing-v2.mjs"
   },
   "dependencies": {
     "@netlify/database": "latest",

@@ -13,7 +13,7 @@ export type Booking = {
   assigned_user_id?: string; assigned_name?: string; last_followup_at?: string; followup_status?: string; next_followup_at?: string; notes?: string;
   [key: string]: unknown;
 };
-export type BookingQuote = { baseAmount: number; addonAmount: number; discountAmount: number; total: number; currency: string; packageCode: string; packageName: string; guestLimit: number };
+export type BookingQuote = { baseAmount: number; addonAmount: number; discountAmount: number; total: number; currency: string; packageCode: string; packageName: string; guestLimit: number;taxStatus:string;taxAmount:number|null;provisional:boolean;entry?:{organizers:number;availability:string};policyVersion:string;catalogRevision:number };
 export const money = (value: unknown) => `${(Number(value || 0) / 100).toLocaleString("ar-SA", { maximumFractionDigits: 2 })} ر.س`;
 export const bookingStatus = (value: string) => ({ pre_booking_received: "تم استلام الحجز المبدئي", contacted: "تم التواصل", awaiting_confirmation: "بانتظار التأكيد", confirmed: "مؤكد", cancelled: "ملغي" }[value] || value);
 export const paymentStatus = (value: string) => ({ pending_payment: "بانتظار الدفع", paid: "مدفوع", failed: "تعذر الدفع", cancelled: "ملغي" }[value] || value);

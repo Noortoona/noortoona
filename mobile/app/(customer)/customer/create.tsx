@@ -1,3 +1,5 @@
+import {DateTimeField} from "@/DateTimeField";
+import {PackagePicker} from "@/PackagePicker";
 import React, { useEffect, useMemo, useState } from "react";
 import { Alert, Image, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from "react-native";
 import { useRouter } from "expo-router";
@@ -58,6 +60,7 @@ export default function CreateEvent() {
   const [name2, setName2] = useState("");
   const [date, setDate] = useState("");
   const [time, setTime] = useState("");
+  const [guestCount,setGuestCount]=useState(100);
   const [location, setLocation] = useState("");
   const [mapsUrl, setMapsUrl] = useState("");
   const [occasionDetails, setOccasionDetails] = useState("");
@@ -75,7 +78,7 @@ export default function CreateEvent() {
   const [packageCode, setPackageCode] = useState("hala_plus");
   const [requestSupervisor, setRequestSupervisor] = useState(false);
   const [supervisorPrice, setSupervisorPrice] = useState(599);
-  const [supervisorPreference, setSupervisorPreference] = useState<"male" | "female" | null>(null);
+  const [supervisorPreference, setSupervisorPreference] = useState<"male" | "female" | "both" | null>(null);
   const [busy, setBusy] = useState(false);
   const [catalog, setCatalog] = useState<PublicCatalog>({ packages: DEFAULT_PACKAGES, hiddenTemplateKeys: [], services: [] });
 
@@ -181,9 +184,10 @@ export default function CreateEvent() {
           waitlistEnabled: occasionKey === "activity",
           template: selectedTemplate?.name || "",
           package: pkg.name,
+          guestCount,
           requestSupervisor: false,
           supervisorPreference: requestSupervisor ? supervisorPreference : null,
-          design: { occasionKey, activityKey, headline, accent, font, image, audio, supervisorPreference: requestSupervisor ? supervisorPreference : "" },
+          design: { guestCount,occasionKey, activityKey, headline, accent, font, image, audio, supervisorPreference: requestSupervisor ? supervisorPreference : "" },
         }),
       }, auth.token);
 
@@ -246,8 +250,8 @@ export default function CreateEvent() {
             ) : null}
 
             <View style={[styles.row, { flexDirection: isRTL ? "row-reverse" : "row" }]}>
-              <View style={styles.half}><Text style={[styles.label, { textAlign: isRTL ? "right" : "left", writingDirection: isRTL ? "rtl" : "ltr" }]}>{t("التاريخ")}</Text><TextInput value={date} onChangeText={setDate} style={[styles.input, { writingDirection: isRTL ? "rtl" : "ltr" }]} textAlign={isRTL ? "right" : "left"} placeholder="2026-12-20" /></View>
-              <View style={styles.half}><Text style={[styles.label, { textAlign: isRTL ? "right" : "left", writingDirection: isRTL ? "rtl" : "ltr" }]}>{t("الوقت")}</Text><TextInput value={time} onChangeText={setTime} style={[styles.input, { writingDirection: isRTL ? "rtl" : "ltr" }]} textAlign={isRTL ? "right" : "left"} placeholder="20:30" /></View>
+              <View style={styles.half}><DateTimeField label={t("التاريخ")} value={date} mode="date" onChange={setDate}/></View>
+              <View style={styles.half}><DateTimeField label={t("الوقت")} value={time} mode="time" onChange={setTime}/></View>
             </View>
             <Text style={[styles.label, { textAlign: isRTL ? "right" : "left", writingDirection: isRTL ? "rtl" : "ltr" }]}>{t("الموقع")}</Text>
             <TextInput value={location} onChangeText={setLocation} style={[styles.input, { writingDirection: isRTL ? "rtl" : "ltr" }]} textAlign={isRTL ? "right" : "left"} placeholder={t("اسم القاعة أو الموقع")} />
@@ -307,18 +311,9 @@ export default function CreateEvent() {
             <InvitationPreview data={{ occasionKey, activityKey, occasion: occasionForApi(occasionKey, selected.label), activityType: occasionKey === "activity" ? (activityKey === "activityCustom" ? customActivity : activity.label) : "", name1, name2, date, time, location, message, template: selectedTemplate?.name || "", design: { headline, accent, font, image, audio } }} />
 
             <Text style={[styles.sectionTitle, { textAlign: isRTL ? "right" : "left", writingDirection: isRTL ? "rtl" : "ltr" }]}>{t("اختر الباقة")}</Text>
-            {packages.map(p => (
-              <Pressable key={p.code} onPress={() => setPackageCode(p.code)} style={[styles.package, packageCode === p.code && styles.packageActive, { flexDirection: isRTL ? "row-reverse" : "row" }]}>
-                <View style={styles.packageCopy}><Text style={[styles.packageName, packageCode === p.code && styles.packageNameActive]}>{p.name}</Text><Text style={[styles.packageGuests, packageCode === p.code && styles.packageGuestsActive]}>{isRTL ? `حتى ${p.guestLimit} مدعو` : `Up to ${p.guestLimit} guests`}</Text></View>
-                <View>{p.promoLicenseId && Number.isFinite(p.referenceAmountSar) && p.referenceAmountSar! > p.amountSar ? <Text style={{ textDecorationLine: "line-through", color: theme.colors.muted, fontSize: 12 }}>{p.referenceAmountSar} {t("ر.س")}</Text> : null}<Text style={[styles.price, packageCode === p.code && styles.priceActive]}>{p.amountSar} {t("ر.س")}</Text></View>
-              </Pressable>
-            ))}
-            <Pressable onPress={() => setRequestSupervisor(value => !value)} style={[styles.package, requestSupervisor && styles.packageActive, { flexDirection: isRTL ? "row-reverse" : "row" }]} accessibilityRole="checkbox" accessibilityState={{ checked: requestSupervisor }}>
-              <Text style={[styles.packageName, requestSupervisor && styles.packageNameActive]}>{requestSupervisor ? "☑" : "□"} {t("إضافة مشرف أو مشرفة للمناسبة")}</Text>
-              <Text style={[styles.price, requestSupervisor && styles.priceActive]}>+{supervisorPrice} {t("ر.س")}</Text>
-            </Pressable>
-            {requestSupervisor ? <View style={{ gap: 8 }}><Text style={[styles.label, { textAlign: isRTL ? "right" : "left", writingDirection: isRTL ? "rtl" : "ltr" }]}>{t("تفضيل خدمة الاستقبال")}</Text><View style={[styles.activityChoices, { flexDirection: isRTL ? "row-reverse" : "row" }]}>{([{ key: "male", label: "مشرف" }, { key: "female", label: "مشرفة" }] as const).map(option => <Pressable key={option.key} accessibilityRole="radio" accessibilityState={{ checked: supervisorPreference === option.key }} onPress={() => setSupervisorPreference(option.key)} style={[styles.activityChoice, supervisorPreference === option.key && styles.activityChoiceActive]}><Text style={[styles.activityChoiceText, supervisorPreference === option.key && styles.activityChoiceTextActive]}>{option.label}</Text></Pressable>)}</View><Text style={[styles.help, { textAlign: isRTL ? "right" : "left", writingDirection: isRTL ? "rtl" : "ltr" }]}>{t("حسب توفر الكادر في مدينة المناسبة وموعدها.")}</Text></View> : null}
-            <Text style={[styles.trial, { textAlign: isRTL ? "right" : "left", writingDirection: isRTL ? "rtl" : "ltr" }]}>{t("الإجمالي:")} {packages.find(p => p.code === packageCode)!.amountSar + (requestSupervisor ? supervisorPrice : 0)} {t("ر.س")}</Text>
+            <View style={{gap:10}}><Text style={styles.label}>{isRTL?'عدد المدعوين':'Guest count'}</Text>{[100,250,500].map(n=><PrimaryButton key={n} label={String(n)+(guestCount===n?' ✓':'')} secondary onPress={()=>setGuestCount(n)}/>)}</View>
+            <PackagePicker packages={packages} code={packageCode} count={guestCount} onSelect={setPackageCode}/>
+            <Text style={styles.help}>{isRTL?'يمكنك إضافة تنظيم الدخول واختيار المشرف أو المشرفة في الخطوة التالية.':'Add entry organization and choose organizers in the next step.'}</Text>
             {catalog.services.length ? <><Text style={[styles.sectionTitle, { textAlign: isRTL ? "right" : "left", writingDirection: isRTL ? "rtl" : "ltr" }]}>{t("خدمات المناسبة")}</Text>{catalog.services.map(service => <View key={service.id} style={styles.previewCard}><Text style={[styles.label, { textAlign: isRTL ? "right" : "left", writingDirection: isRTL ? "rtl" : "ltr" }]}>{service.name}</Text><Text style={[styles.help, { textAlign: isRTL ? "right" : "left", writingDirection: isRTL ? "rtl" : "ltr" }]}>{service.description}</Text></View>)}</> : null}
             <Text style={[styles.trial, { textAlign: isRTL ? "right" : "left", writingDirection: isRTL ? "rtl" : "ltr" }]}>{t("قبل الدفع لديك إرسال تجريبي مجاني واحد للتأكد من شكل الدعوة ووصولها.")}</Text>
             <PrimaryButton label="إنشاء المناسبة وتجربتها" onPress={create} loading={busy} disabled={mediaBusy} />
