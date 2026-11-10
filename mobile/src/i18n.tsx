@@ -184,7 +184,6 @@ const translations: Record<string, string> = {
   "لا يُخصم منك أي مبلغ عند تأكيد الطلب المبدئي.": "No amount is charged when you confirm a preliminary booking.",
   "أوافق اختياريًا على استقبال أخبار وعروض هلا. لا يؤثر اختياري على الحجز.": "I optionally agree to receive HALA news and offers. This does not affect my booking.",
   "الحجز المبدئي لا يعني الدفع أو الاعتماد النهائي. واتساب للمساعدة فقط.": "A preliminary booking is not payment or final confirmation. WhatsApp is for support only.",
-  "خدمة العملاء": "Customer support",
   "سيتواصل معك فريق هلا قريبًا لاستكمال إجراءات الدفع والتأكيد النهائي.": "Our team will contact you to complete payment and final confirmation.",
   "يمكنك متابعة تفاصيل طلبك من حسابك في هلا.": "You can track your request in your HALA account.",
   "تسجيل الطلب لا يعني إتمام الدفع أو اعتماد الحجز النهائي.": "Submitting a request does not complete payment or confirm the booking.",
