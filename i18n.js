@@ -187,6 +187,39 @@
     "السعودية": "Saudi Arabia",
     "أدخل اسم العميل ورقم جواله": "Enter the customer name and mobile number"
   });
+  Object.assign(translations, {
+  "دعوات إلكترونية فاخرة للزواج والمناسبات | هلا HALA": "Luxury Digital Wedding & Event Invitations | HALA",
+  "الرئيسية": "Home",
+  "دعوات إلكترونية بتصميم يليق بلحظتك": "Digital invitations designed for your most meaningful moments",
+  "لحظتك تبدأ بـ": "Your moment starts with",
+  "هلا": "HALA",
+  "منصة دعوات إلكترونية فاخرة للزواج والملكة والتخرج والمناسبات، تجمع تصميم الدعوة وإدارة المدعوين وتأكيد الحضور في مكان واحد.": "Premium digital invitations for weddings, engagements, graduations and special occasions. Design invitations, manage guests and track RSVPs in one place.",
+  "ابدأ دعوتك الآن": "Create your invitation",
+  "استعرض القوالب": "Explore templates",
+  "قوالب دعوات فاخرة": "Luxury invitation templates",
+  "تصميم حسب مناسبتك": "Designed for your occasion",
+  "تخصيص مرن": "Flexible customization",
+  "ألوان وخطوط وصور": "Colors, fonts and photos",
+  "إدارة المدعوين": "Guest management",
+  "تأكيد الحضور": "RSVP confirmations",
+  "روابط شخصية": "Personal guest links",
+  "RSVP واعتذار": "Accept or decline",
+  "دخول برمز QR": "QR check-in",
+  "تسجيل الحضور": "Guest check-in",
+  "مشاركة عبر واتساب": "WhatsApp sharing",
+  "حسب توفر الخدمة": "Subject to availability",
+  "دعوات رقمية بطابع هلا": "Digital invitations, the HALA way",
+  "تصميم دعوات زواج إلكترونية ودعوات ملكة وتخرج بأسلوب فاخر": "Elegant digital wedding, engagement and graduation invitations",
+  "مع هلا يمكنك إنشاء": "With HALA, you can create",
+  "دعوة زواج إلكترونية": "a digital wedding invitation",
+  "أو دعوة ملكة أو تخرج أو مناسبة خاصة، واختيار القالب المناسب ثم تخصيص النص والخط والألوان. شارك رابط الدعوة مع ضيوفك وتابع ردودهم من لوحة واحدة.": "or invitations for engagements, graduations and other occasions. Choose a template, personalize the wording, fonts and colors, and share your invitation with guests.",
+  "تساعدك أدوات": "Tools for",
+  "تأكيد الحضور RSVP": "RSVP confirmations",
+  "وروابط المدعوين الشخصية ورموز": "personal guest links and",
+  "QR لتنظيم الدخول": "QR check-in",
+  "على إدارة مناسبتك من بداية الدعوة حتى استقبال الضيوف. تتوفر بعض خدمات الإرسال والإضافات حسب حالة التفعيل والتوفر.": "help manage your event from the first invitation to guest check-in. Some sharing and add-on features depend on activation and availability.",
+  "تعرّف على أنواع المناسبات": "Explore occasions"
+});
   var originals = new WeakMap();
   var originalAttributes = new WeakMap();
   var locale = "ar";
